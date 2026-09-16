@@ -340,6 +340,31 @@ input[type="checkbox"]:hover {
   flex: 1;
 }
 
+/*
+ * For a panel whose child is an editor. The editor needs a bounded height to
+ * virtualize, which it cannot get from an `overflow: auto` parent, so the panel
+ * stops scrolling and hands that job to the editor.
+ */
+.ac-scroll--flush {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* The body editor fills the panel so CodeMirror has a height to work with. */
+.ac-body-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ac-body-editor > .ac-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ---------- top bar ---------- */
 
 .ac-topbar {
@@ -799,6 +824,10 @@ option[value="OPTIONS"] {
   overflow: auto;
 }
 
+.ac-editor .cm-scroller {
+  contain: paint;
+}
+
 .ac-editor .cm-editor {
   height: 100%;
   background: var(--ac-bg-input);
@@ -1127,6 +1156,12 @@ option[value="OPTIONS"] {
 .ac-dialog__body {
   flex: 1;
   overflow: auto;
+  /*
+   * The dialog floats over a translucent full-screen backdrop. Without paint
+   * containment, scrolling here can make the compositor repaint everything
+   * underneath rather than just the scrolled region.
+   */
+  contain: paint;
 }
 
 .ac-dialog__footer {
@@ -1364,6 +1399,9 @@ body.ac-dragging--columns * {
 .ac-response-body__rich .ac-editor {
   flex: 1;
   min-height: 0;
+  /* Only `.cm-scroller` scrolls; a second scroll container here would take the
+     height constraint away again. */
+  overflow: hidden;
 }
 
 .ac-editor .cm-foldGutter span {

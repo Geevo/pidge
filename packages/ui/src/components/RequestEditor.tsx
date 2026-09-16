@@ -23,6 +23,11 @@ export function RequestEditor({ request, pane, onPaneChange, onChange, onSubmit 
     { id: "auth", label: "Auth", marked: request.auth.type !== "none" },
   ];
 
+  // The body editor needs a bounded height to virtualize, exactly as the
+  // response one does; see `.ac-scroll--flush`.
+  const editorOwnsScrolling =
+    pane === "body" && (request.body.type === "json" || request.body.type === "text");
+
   return (
     <section className="ac-pane ac-pane--request" aria-label="Request">
       <div className="ac-subtabs" role="tablist" aria-label="Request sections">
@@ -42,7 +47,7 @@ export function RequestEditor({ request, pane, onPaneChange, onChange, onSubmit 
         ))}
       </div>
 
-      <div className="ac-scroll" role="tabpanel">
+      <div className={`ac-scroll${editorOwnsScrolling ? " ac-scroll--flush" : ""}`} role="tabpanel">
         {pane === "params" ? <ParamsEditor request={request} onChange={onChange} /> : null}
         {pane === "body" ? (
           <BodyEditor request={request} onChange={onChange} onSubmit={onSubmit} />
