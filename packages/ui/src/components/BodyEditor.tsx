@@ -4,6 +4,7 @@ import { prettyJson } from "../lib/mime";
 import { CodeEditor } from "./CodeEditor";
 import { CloseIcon } from "./icons";
 import { KeyValueTable } from "./KeyValueTable";
+import { Select } from "./Select";
 
 interface Props {
   request: HttpRequest;
@@ -19,6 +20,11 @@ const BODY_KINDS: readonly { kind: BodyKind; label: string }[] = [
   { kind: "text", label: "Text" },
   { kind: "urlEncoded", label: "URL Encoded" },
   { kind: "multipart", label: "Multipart" },
+];
+
+const PART_KINDS = [
+  { value: "text", label: "Text" },
+  { value: "file", label: "File" },
 ];
 
 export function BodyEditor({ request, onChange, onSubmit }: Props) {
@@ -50,18 +56,16 @@ export function BodyEditor({ request, onChange, onSubmit }: Props) {
   return (
     <div className="ac-body-editor">
       <div className="ac-field">
-        <label htmlFor="ac-body-kind">Body</label>
-        <select
+        <label id="ac-body-kind-label" htmlFor="ac-body-kind">
+          Body
+        </label>
+        <Select
           id="ac-body-kind"
+          labelledBy="ac-body-kind-label"
           value={body.type}
-          onChange={(event) => changeKind(event.target.value as BodyKind)}
-        >
-          {BODY_KINDS.map(({ kind, label }) => (
-            <option key={kind} value={kind}>
-              {label}
-            </option>
-          ))}
-        </select>
+          options={BODY_KINDS.map(({ kind, label }) => ({ value: kind, label }))}
+          onChange={(value) => changeKind(value as BodyKind)}
+        />
 
         {body.type === "json" ? (
           <button
@@ -195,21 +199,19 @@ function MultipartEditor({ entries, onChange }: MultipartProps) {
               />
             </td>
             <td>
-              <select
-                aria-label={`Part kind ${index + 1}`}
+              <Select
+                label={`Part kind ${index + 1}`}
                 value={entry.value.kind}
-                onChange={(event) =>
+                options={PART_KINDS}
+                onChange={(value) =>
                   update(index, {
                     value:
-                      event.target.value === "file"
+                      value === "file"
                         ? { kind: "file", path: "", fileName: null, contentType: null }
                         : { kind: "text", value: "" },
                   })
                 }
-              >
-                <option value="text">Text</option>
-                <option value="file">File</option>
-              </select>
+              />
             </td>
             <td>
               <input

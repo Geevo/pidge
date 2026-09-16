@@ -1,4 +1,5 @@
 import type { AuthConfig, HttpRequest } from "../types";
+import { Select } from "./Select";
 
 interface Props {
   request: HttpRequest;
@@ -8,6 +9,12 @@ interface Props {
 type AuthKind = AuthConfig["type"];
 
 /** None, Bearer, Basic. Anything else is a header you type yourself. */
+const AUTH_KINDS = [
+  { value: "none", label: "None" },
+  { value: "bearer", label: "Bearer token" },
+  { value: "basic", label: "Basic" },
+];
+
 export function AuthEditor({ request, onChange }: Props) {
   const setAuth = (auth: AuthConfig) => onChange({ ...request, auth });
 
@@ -21,16 +28,16 @@ export function AuthEditor({ request, onChange }: Props) {
   return (
     <div>
       <div className="ac-field">
-        <label htmlFor="ac-auth-kind">Auth</label>
-        <select
+        <label id="ac-auth-kind-label" htmlFor="ac-auth-kind">
+          Auth
+        </label>
+        <Select
           id="ac-auth-kind"
+          labelledBy="ac-auth-kind-label"
           value={request.auth.type}
-          onChange={(event) => changeKind(event.target.value as AuthKind)}
-        >
-          <option value="none">None</option>
-          <option value="bearer">Bearer token</option>
-          <option value="basic">Basic</option>
-        </select>
+          options={AUTH_KINDS}
+          onChange={(value) => changeKind(value as AuthKind)}
+        />
       </div>
 
       {request.auth.type === "bearer" ? (

@@ -56,10 +56,10 @@ export interface WindowControls {
   /**
    * Tells the host which way the palette leans, or `null` to follow the system.
    *
-   * A `<select>` popup is drawn by the platform, not by the page, and on Linux
-   * that is a GTK menu following the desktop's own light/dark preference. A
-   * light palette on a dark desktop therefore got a black list. CSS cannot
-   * reach it; this can.
+   * The menus the webview itself puts up — the right-click menu — are the
+   * platform's and take no notice of CSS. This is the only handle on them. It
+   * is a hint rather than a guarantee: on Linux it sets the GTK dark
+   * preference, which a theme shipping its dark variant separately ignores.
    */
   setTheme(theme: "light" | "dark" | null): Promise<void>;
 }

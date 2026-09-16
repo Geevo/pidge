@@ -276,36 +276,10 @@ body {
 
 button,
 input,
-select,
 textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
-}
-
-/*
- * A select is drawn by the platform unless you take it over, and a WebKit
- * webview on Linux draws it with the GTK theme: on a dark desktop a light
- * palette got a black control back, whatever `background-color` said. So the
- * box is drawn here, arrow included, the way the checkbox below is.
- *
- * The list that drops down is still the platform's — nothing in CSS reaches
- * it — which is why the window is told which way the palette leans as well.
- */
-select {
-  appearance: none;
-  background-color: var(--ac-bg-input);
-  background-image: var(--ac-select-arrow);
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  /* The right side is the chevron's; a select that repads sets the left only. */
-  padding: 0 20px 0 6px;
-  color: var(--ac-text);
-}
-
-option {
-  background-color: var(--ac-bg-raised);
-  color: var(--ac-text);
 }
 
 /*
@@ -476,14 +450,69 @@ input[type="checkbox"]:hover {
   font-variant-ligatures: none;
 }
 
-/* A select in the top bar: the environment picker and anything like it. */
+/*
+ * The dropdown from `Select.tsx`: a button, and a list drawn into the body.
+ *
+ * Both are ours because a native `<select>` can be styled shut but not open —
+ * see the note in that file.
+ */
 .ac-select {
+  display: inline-flex;
+  align-items: center;
   height: var(--ac-row-height);
-  max-width: 180px;
-  padding-left: 4px;
+  /* The right side belongs to the chevron. */
+  padding: 0 20px 0 6px;
   border: 1px solid var(--ac-border-strong);
   border-radius: var(--ac-radius);
   background-color: var(--ac-bg-input);
+  background-image: var(--ac-select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  color: var(--ac-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ac-select__value {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The environment name can be anything; the top bar cannot give it everything. */
+.ac-select--environment {
+  max-width: 180px;
+}
+
+.ac-select__list {
+  position: fixed;
+  z-index: 50;
+  max-height: 280px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--ac-border-strong);
+  border-radius: var(--ac-radius);
+  background: var(--ac-bg-raised);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  list-style: none;
+}
+
+.ac-select__option {
+  padding: 4px 8px;
+  border-radius: var(--ac-radius);
+  color: var(--ac-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* One highlight for the pointer and the arrow keys alike. */
+.ac-select__option--active {
+  background: var(--ac-border);
+}
+
+.ac-select__option[aria-selected="true"] {
+  font-weight: 600;
 }
 
 /*
@@ -491,42 +520,37 @@ input[type="checkbox"]:hover {
  * that should line up with the URL beside it. Nothing else wants that.
  */
 .ac-method {
-  height: var(--ac-row-height);
-  padding-left: 4px;
-  border: 1px solid var(--ac-border-strong);
-  border-radius: var(--ac-radius);
-  background-color: var(--ac-bg-input);
   font-family: var(--ac-font-mono);
   font-weight: 700;
 }
 
 /* The selected method is colour-coded, and so is each row of the open list. */
-.ac-method[data-method="GET"],
-option[value="GET"] {
+.ac-method[data-value="GET"],
+.ac-select__option[data-value="GET"] {
   color: var(--ac-method-get-text);
 }
-.ac-method[data-method="POST"],
-option[value="POST"] {
+.ac-method[data-value="POST"],
+.ac-select__option[data-value="POST"] {
   color: var(--ac-method-post-text);
 }
-.ac-method[data-method="PUT"],
-option[value="PUT"] {
+.ac-method[data-value="PUT"],
+.ac-select__option[data-value="PUT"] {
   color: var(--ac-method-put-text);
 }
-.ac-method[data-method="PATCH"],
-option[value="PATCH"] {
+.ac-method[data-value="PATCH"],
+.ac-select__option[data-value="PATCH"] {
   color: var(--ac-method-patch-text);
 }
-.ac-method[data-method="DELETE"],
-option[value="DELETE"] {
+.ac-method[data-value="DELETE"],
+.ac-select__option[data-value="DELETE"] {
   color: var(--ac-method-delete-text);
 }
-.ac-method[data-method="HEAD"],
-option[value="HEAD"] {
+.ac-method[data-value="HEAD"],
+.ac-select__option[data-value="HEAD"] {
   color: var(--ac-method-head-text);
 }
-.ac-method[data-method="OPTIONS"],
-option[value="OPTIONS"] {
+.ac-method[data-value="OPTIONS"],
+.ac-select__option[data-value="OPTIONS"] {
   color: var(--ac-method-options-text);
 }
 
@@ -893,7 +917,7 @@ option[value="OPTIONS"] {
 
 .ac-field input[type="text"],
 .ac-field input[type="password"],
-.ac-field select {
+.ac-field .ac-select {
   flex: 1;
   height: var(--ac-row-height);
   border: 1px solid var(--ac-border-strong);
