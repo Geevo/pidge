@@ -151,9 +151,9 @@ friends) are never written to a log.
 
 ## Typography
 
-The app bundles Inter and JetBrains Mono (88 KB together, latin subset, variable
-weight) rather than using whatever each platform provides, so a request looks the
-same on Windows and Linux. Nothing is fetched at runtime; both CSPs forbid it.
+The app bundles IBM Plex Sans and IBM Plex Mono (75 KB together, latin subset)
+rather than using whatever each platform provides, so a request looks the same on
+Windows and Linux. Nothing is fetched at runtime; both CSPs forbid it.
 
 Both fonts are SIL Open Font License 1.1. See
 [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

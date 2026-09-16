@@ -60,7 +60,7 @@ at the first request.
 
 ## Fonts and their licences
 
-Inter and JetBrains Mono are bundled from `packages/ui/src/fonts/` and emitted
+IBM Plex Sans and IBM Plex Mono are bundled from `packages/ui/src/fonts/` and emitted
 into the build output as hashed `.woff2` files. They are never fetched at
 runtime.
 
