@@ -31,6 +31,11 @@
   --ac-status-server: var(--vscode-errorForeground, #f0776a);
   --ac-status-other: var(--vscode-descriptionForeground);
 
+  /*
+   * The Swagger method palette is deliberately not remapped: a POST should be
+   * the same green here as in the desktop app and in the API docs.
+   */
+
   --ac-font: var(--vscode-font-family);
   --ac-font-mono: var(--vscode-editor-font-family, ui-monospace, monospace);
   --ac-font-size: var(--vscode-font-size, 13px);

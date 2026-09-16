@@ -27,6 +27,36 @@
   --ac-status-server: #c0392f;
   --ac-status-other: #5b6472;
 
+  /*
+   * Swagger UI's method palette, so a method reads the same here as it does in
+   * the docs you had open a moment ago. The plain values are pill backgrounds
+   * and are identical in both themes, because a pill carries its own contrast.
+   * The `-text` variants are for a bare method on the app background, where
+   * Swagger's originals are too washed out (or too dark) to read.
+   */
+  --ac-method-get: #61affe;
+  --ac-method-post: #49cc90;
+  --ac-method-put: #fca130;
+  --ac-method-patch: #50e3c2;
+  --ac-method-delete: #f93e3e;
+  --ac-method-head: #9012fe;
+  --ac-method-options: #0d5aa7;
+
+  --ac-method-get-text: #2f7ecb;
+  --ac-method-post-text: #1f9d63;
+  --ac-method-put-text: #b8720d;
+  --ac-method-patch-text: #1a9e86;
+  --ac-method-delete-text: #d32020;
+  --ac-method-head-text: #7a0fd6;
+  --ac-method-options-text: #0d5aa7;
+
+  /*
+   * Native controls (the <select> popup, scrollbars, the text caret) are drawn
+   * by the browser, not by us, and they follow this rather than our colours.
+   * Without it a dark theme gets a white dropdown with white text in it.
+   */
+  color-scheme: light;
+
   --ac-radius: 4px;
   --ac-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --ac-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
@@ -55,6 +85,17 @@
   --ac-status-client: #f0883e;
   --ac-status-server: #f0776a;
   --ac-status-other: #9aa3b2;
+
+  /* Pill backgrounds stay Swagger's; only the bare-text variants lighten. */
+  --ac-method-get-text: #61affe;
+  --ac-method-post-text: #49cc90;
+  --ac-method-put-text: #fca130;
+  --ac-method-patch-text: #50e3c2;
+  --ac-method-delete-text: #ff6b6b;
+  --ac-method-head-text: #b07cff;
+  --ac-method-options-text: #5aa9e6;
+
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,6 +119,17 @@
     --ac-status-client: #f0883e;
     --ac-status-server: #f0776a;
     --ac-status-other: #9aa3b2;
+
+    /* Pill backgrounds stay Swagger's; only the bare-text variants lighten. */
+    --ac-method-get-text: #61affe;
+    --ac-method-post-text: #49cc90;
+    --ac-method-put-text: #fca130;
+    --ac-method-patch-text: #50e3c2;
+    --ac-method-delete-text: #ff6b6b;
+    --ac-method-head-text: #b07cff;
+    --ac-method-options-text: #5aa9e6;
+
+    color-scheme: dark;
   }
 }
 
@@ -107,6 +159,21 @@ textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
+}
+
+/*
+ * Selects need their colours spelled out. `color: inherit` alone leaves the
+ * closed control transparent over the page, and the popup is drawn by the
+ * browser from `color-scheme` plus whatever the <option> carries.
+ */
+select {
+  background-color: var(--ac-bg-input);
+  color: var(--ac-text);
+}
+
+option {
+  background-color: var(--ac-bg-raised);
+  color: var(--ac-text);
 }
 
 :focus-visible {
@@ -204,7 +271,84 @@ textarea {
   border-radius: var(--ac-radius);
   background: var(--ac-bg-input);
   font-family: var(--ac-font-mono);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+/* The selected method is colour-coded, and so is each row of the open list. */
+.ac-method[data-method="GET"],
+option[value="GET"] {
+  color: var(--ac-method-get-text);
+}
+.ac-method[data-method="POST"],
+option[value="POST"] {
+  color: var(--ac-method-post-text);
+}
+.ac-method[data-method="PUT"],
+option[value="PUT"] {
+  color: var(--ac-method-put-text);
+}
+.ac-method[data-method="PATCH"],
+option[value="PATCH"] {
+  color: var(--ac-method-patch-text);
+}
+.ac-method[data-method="DELETE"],
+option[value="DELETE"] {
+  color: var(--ac-method-delete-text);
+}
+.ac-method[data-method="HEAD"],
+option[value="HEAD"] {
+  color: var(--ac-method-head-text);
+}
+.ac-method[data-method="OPTIONS"],
+option[value="OPTIONS"] {
+  color: var(--ac-method-options-text);
+}
+
+/* ---------- method badge ---------- */
+
+.ac-method-badge {
+  display: inline-block;
+  min-width: 46px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--ac-method-other, var(--ac-text-faint));
+  color: #ffffff;
+  font-family: var(--ac-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ac-method-badge[data-method="GET"] {
+  background: var(--ac-method-get);
+}
+.ac-method-badge[data-method="POST"] {
+  background: var(--ac-method-post);
+}
+.ac-method-badge[data-method="PUT"] {
+  background: var(--ac-method-put);
+}
+.ac-method-badge[data-method="PATCH"] {
+  background: var(--ac-method-patch);
+  /* The only pill light enough to need dark text. */
+  color: #10302a;
+}
+.ac-method-badge[data-method="DELETE"] {
+  background: var(--ac-method-delete);
+}
+.ac-method-badge[data-method="HEAD"] {
+  background: var(--ac-method-head);
+}
+.ac-method-badge[data-method="OPTIONS"] {
+  background: var(--ac-method-options);
+}
+
+.ac-method-badge--small {
+  min-width: 38px;
+  font-size: 9px;
 }
 
 /* ---------- buttons ---------- */
@@ -300,13 +444,6 @@ textarea {
   background: var(--ac-bg);
   color: var(--ac-text);
   box-shadow: inset 0 -2px 0 var(--ac-accent);
-}
-
-.ac-tab__method {
-  font-family: var(--ac-font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--ac-text-faint);
 }
 
 .ac-tab__label {
@@ -452,8 +589,19 @@ textarea {
   background: color-mix(in srgb, var(--ac-accent) 8%, transparent);
 }
 
-.ac-editor .cm-cursor {
-  border-left-color: var(--ac-text);
+.ac-editor .cm-content {
+  caret-color: var(--ac-text);
+}
+
+/*
+ * CodeMirror draws its own caret once drawSelection() is on. Its base theme
+ * hard-codes black, which is invisible on a dark background, so recolour it and
+ * make it wide enough to spot in a wall of JSON.
+ */
+.ac-editor .cm-cursor,
+.ac-editor .cm-cursor-primary,
+.ac-editor .cm-dropCursor {
+  border-left: 2px solid var(--ac-text);
 }
 
 .ac-editor .cm-selectionBackground,

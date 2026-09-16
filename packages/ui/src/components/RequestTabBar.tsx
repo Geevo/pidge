@@ -1,5 +1,6 @@
 import type { ScratchTab } from "../types";
 import { requestLabel } from "../lib/format";
+import { MethodBadge } from "./MethodBadge";
 
 interface Props {
   tabs: readonly ScratchTab[];
@@ -28,7 +29,7 @@ export function RequestTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: P
                 if (event.button === 1) onClose(tab.id);
               }}
             >
-              <span className="ac-tab__method">{tab.request.method}</span>
+              <MethodBadge method={tab.request.method} small />
               <span className="ac-tab__label">{label}</span>
               {tab.savedRequestId && tab.dirty ? (
                 <span className="ac-tab__dot" aria-label="Unsaved changes" />

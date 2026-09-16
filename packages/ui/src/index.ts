@@ -5,6 +5,7 @@ export { RequestTabBar } from "./components/RequestTabBar";
 export { HistoryPanel } from "./components/HistoryPanel";
 export { SavedRequestsPanel } from "./components/SavedRequestsPanel";
 export { EnvironmentSelector } from "./components/EnvironmentSelector";
+export { MethodBadge } from "./components/MethodBadge";
 export { StatusSummary } from "./components/StatusSummary";
 export { UrlBar } from "./components/UrlBar";
 

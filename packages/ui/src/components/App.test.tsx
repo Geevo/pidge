@@ -338,7 +338,11 @@ describe("history and saved requests", () => {
     await screen.findByText("200 OK");
 
     await user.click(screen.getByRole("button", { name: "History" }));
-    const entry = await screen.findByText(/GET localhost:3000\/api\/test/);
+    const drawer = await screen.findByRole("complementary");
+    const entry = within(drawer).getByText(/localhost:3000\/api\/test/);
+
+    // The method is its own colour-coded badge rather than part of the label.
+    expect(within(drawer).getAllByText("GET").length).toBeGreaterThan(0);
 
     await user.click(entry);
     expect(screen.getAllByRole("tab", { name: /localhost:3000/ }).length).toBeGreaterThan(0);
