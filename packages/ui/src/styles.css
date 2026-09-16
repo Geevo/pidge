@@ -1153,3 +1153,60 @@ option[value="OPTIONS"] {
 .ac-response-header-name {
   color: var(--ac-text-muted);
 }
+
+/* ---------- settings ---------- */
+
+.ac-section {
+  margin: 14px 0 2px;
+  padding: 0 12px;
+  font-size: var(--ac-font-size);
+  font-weight: 600;
+}
+
+.ac-section__body {
+  padding: 2px 0 6px;
+}
+
+.ac-section__label {
+  padding: 6px 12px 2px;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+}
+
+/* A checkbox and its wrapping label, rather than a row of aligned inputs. */
+.ac-field--toggle {
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.ac-field--toggle input[type="checkbox"] {
+  flex: none;
+  margin-top: 2px;
+}
+
+.ac-field--toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ac-field--toggle small {
+  color: var(--ac-text-faint);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-field--danger input[type="checkbox"]:checked {
+  border-color: var(--ac-danger);
+  background: var(--ac-danger);
+}
+
+.ac-field__suffix {
+  color: var(--ac-text-faint);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-hint code {
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+  word-break: break-all;
+}

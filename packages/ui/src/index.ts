@@ -4,6 +4,7 @@ export { ResponseViewer, renderBody } from "./components/ResponseViewer";
 export { RequestTabBar } from "./components/RequestTabBar";
 export { HistoryPanel } from "./components/HistoryPanel";
 export { SavedRequestsPanel } from "./components/SavedRequestsPanel";
+export { SettingsDialog } from "./components/SettingsDialog";
 export { EnvironmentSelector } from "./components/EnvironmentSelector";
 export { MethodBadge } from "./components/MethodBadge";
 export { StatusSummary } from "./components/StatusSummary";

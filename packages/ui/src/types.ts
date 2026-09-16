@@ -23,7 +23,9 @@ export type { ScratchTab } from "./generated/ScratchTab";
 export type { ServerEnvelope } from "./generated/ServerEnvelope";
 export type { ServerMessage } from "./generated/ServerMessage";
 export type { Settings } from "./generated/Settings";
+export type { ClientIdentitySettings } from "./generated/ClientIdentitySettings";
 export type { Theme } from "./generated/Theme";
+export type { TlsSettings } from "./generated/TlsSettings";
 
 import type { HttpMethod } from "./generated/HttpMethod";
 import type { HttpResponse } from "./generated/HttpResponse";

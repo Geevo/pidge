@@ -13,8 +13,9 @@ import { RequestEditor } from "./RequestEditor";
 import { RequestTabBar } from "./RequestTabBar";
 import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
+import { SettingsDialog } from "./SettingsDialog";
 import { UrlBar } from "./UrlBar";
-import { BookmarkIcon, CloseIcon, HistoryIcon } from "./icons";
+import { BookmarkIcon, CloseIcon, HistoryIcon, SettingsIcon } from "./icons";
 
 interface Props {
   bridge: PlatformBridge;
@@ -33,6 +34,7 @@ export function App({ bridge }: Props) {
 
   const urlRef = useRef<HTMLInputElement>(null);
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useTheme(state.app.settings.theme);
 
@@ -168,6 +170,16 @@ export function App({ bridge }: Props) {
           >
             <BookmarkIcon size={16} />
           </button>
+          <span className="ac-spacer" />
+          <button
+            type="button"
+            className="ac-rail-button"
+            title="Settings"
+            aria-label="Settings"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <SettingsIcon size={16} />
+          </button>
         </nav>
 
         {state.drawer ? (
@@ -210,6 +222,15 @@ export function App({ bridge }: Props) {
           </div>
         </main>
       </div>
+
+      {settingsOpen ? (
+        <SettingsDialog
+          settings={state.app.settings}
+          storagePath={state.storagePath}
+          onSave={client.setSettings}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
 
       {environmentsOpen ? (
         <EnvironmentsDialog
