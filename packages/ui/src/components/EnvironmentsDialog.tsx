@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Environment } from "../types";
 import { newId } from "../lib/ids";
 import { KeyValueTable } from "./KeyValueTable";
+import { PlusIcon, TrashIcon } from "./icons";
 
 interface Props {
   environments: readonly Environment[];
@@ -50,18 +51,24 @@ export function EnvironmentsDialog({ environments, activeEnvironmentId, onSave, 
         aria-label="Environments"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="ac-drawer__header">
-          <span>Environments</span>
-          <button type="button" className="ac-button ac-button--quiet" onClick={add}>
-            New
+        <div className="ac-dialog__header">
+          <h2 className="ac-dialog__title">Environments</h2>
+          <button type="button" className="ac-button ac-button--icon" onClick={add}>
+            <PlusIcon size={13} />
+            New environment
           </button>
         </div>
 
         <div className="ac-dialog__body">
           {draft.length === 0 ? (
-            <p className="ac-hint">
-              No environments yet. Add one to use <code>{"{{variables}}"}</code> in requests.
-            </p>
+            <div className="ac-empty ac-empty--dialog">
+              <p>
+                No environments yet. Add one to use <code>{"{{variables}}"}</code> in requests.
+              </p>
+              <button type="button" className="ac-button ac-button--primary" onClick={add}>
+                New environment
+              </button>
+            </div>
           ) : (
             <>
               <div className="ac-field">
@@ -80,7 +87,7 @@ export function EnvironmentsDialog({ environments, activeEnvironmentId, onSave, 
                 {selected ? (
                   <button
                     type="button"
-                    className="ac-button ac-button--quiet ac-button--danger"
+                    className="ac-button ac-button--icon ac-button--danger"
                     onClick={() => {
                       setDraft((current) =>
                         current.filter((environment) => environment.id !== selected.id),
@@ -88,6 +95,7 @@ export function EnvironmentsDialog({ environments, activeEnvironmentId, onSave, 
                       setSelectedId(null);
                     }}
                   >
+                    <TrashIcon size={13} />
                     Delete
                   </button>
                 ) : null}
