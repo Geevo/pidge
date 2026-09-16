@@ -1,0 +1,13 @@
+[package]
+name = "api-client-variables"
+description = "{{variable}} substitution for requests."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+api-client-core.workspace = true
+serde.workspace = true
+ts-rs.workspace = true

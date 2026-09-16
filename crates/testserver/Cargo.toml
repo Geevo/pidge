@@ -1,0 +1,13 @@
+[package]
+name = "api-client-testserver"
+description = "Minimal local HTTP server used by the engine tests."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "net", "io-util", "time", "sync"] }

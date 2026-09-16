@@ -1,0 +1,8 @@
+packages:
+  - "packages/*"
+  - "apps/desktop"
+  - "apps/vscode"
+
+# esbuild needs its postinstall to link the platform binary.
+allowBuilds:
+  esbuild: true
