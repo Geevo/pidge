@@ -16,4 +16,11 @@ savedRequestId: string | null,
 /**
  * True when the tab differs from the saved request it is linked to.
  */
-dirty: boolean, };
+dirty: boolean, 
+/**
+ * This tab's own split position, as the request pane's percentage share.
+ * `None` uses `Settings::split_percent`, which is also what a new tab
+ * starts from. Defaulted so a state file written before this existed
+ * still loads.
+ */
+splitPercent: number | null, };

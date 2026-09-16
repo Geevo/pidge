@@ -67,7 +67,8 @@ export type Action =
   | { type: "setActiveEnvironment"; environmentId: string | null }
   | { type: "setSavedRequests"; savedRequests: SavedRequest[] }
   | { type: "markTabSaved"; tabId: string; saved: SavedRequest }
-  | { type: "setHistory"; history: HistoryEntry[] };
+  | { type: "setHistory"; history: HistoryEntry[] }
+  | { type: "setSplitPercent"; tabId: string; percent: number };
 
 export function reducer(state: UiState, action: Action): UiState {
   switch (action.type) {
@@ -189,6 +190,23 @@ export function reducer(state: UiState, action: Action): UiState {
 
     case "setHistory":
       return { ...state, app: { ...state.app, history: action.history } };
+
+    /*
+     * The tab keeps its own position, and the setting follows as the default
+     * for tabs opened later — so existing tabs stay where you put them, and a
+     * new one opens where you were last working rather than always at 42%.
+     */
+    case "setSplitPercent":
+      return {
+        ...state,
+        app: {
+          ...state.app,
+          settings: { ...state.app.settings, splitPercent: action.percent },
+          tabs: state.app.tabs.map((tab) =>
+            tab.id === action.tabId ? { ...tab, splitPercent: action.percent } : tab,
+          ),
+        },
+      };
   }
 }
 

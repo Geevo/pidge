@@ -22,6 +22,8 @@ export function blankTab(): ScratchTab {
     request: blankRequest(),
     savedRequestId: null,
     dirty: false,
+    // Unset means "start from the settings default".
+    splitPercent: null,
   };
 }
 

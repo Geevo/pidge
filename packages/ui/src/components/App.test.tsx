@@ -678,3 +678,58 @@ describe("window chrome", () => {
     expect(screen.getByRole("textbox", { name: "URL" })).toBeInTheDocument();
   });
 });
+
+describe("split position per tab", () => {
+  const divider = () => screen.getByRole("separator");
+  const position = () => divider().getAttribute("aria-valuenow");
+
+  it("keeps each tab's divider where that tab left it", async () => {
+    const { user } = setup();
+    await ready();
+
+    // Move the first tab's divider.
+    divider().focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(position()).toBe("46");
+
+    await user.keyboard("{Control>}n{/Control}");
+    const tabs = screen.getAllByRole("tab", { name: /New request/ });
+    expect(tabs).toHaveLength(2);
+
+    // The new tab starts from the default, then moves independently.
+    divider().focus();
+    await user.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}");
+    expect(position()).toBe("40");
+
+    // Back to the first tab: still where it was, not 40.
+    await user.click(tabs[0]!);
+    expect(position()).toBe("46");
+
+    await user.click(screen.getAllByRole("tab", { name: /New request/ })[1]!);
+    expect(position()).toBe("40");
+  });
+
+  it("opens a new tab at the position last used rather than always the default", async () => {
+    const { user } = setup();
+    await ready();
+
+    divider().focus();
+    await user.keyboard("{PageDown}");
+    expect(position()).toBe("52");
+
+    await user.keyboard("{Control>}n{/Control}");
+    expect(position()).toBe("52");
+  });
+
+  it("persists each tab's position", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    divider().focus();
+    await user.keyboard("{ArrowDown}");
+
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.tabs[0]?.splitPercent).toBe(44);
+    });
+  });
+});

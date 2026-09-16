@@ -229,13 +229,14 @@ export function App({ bridge }: Props) {
         <main className="ac-main">
           <SplitPane
             layout={state.app.settings.paneLayout}
-            percent={state.app.settings.splitPercent}
+            percent={tab.splitPercent ?? state.app.settings.splitPercent}
             firstLabel="request"
             secondLabel="response"
-            onCommit={(splitPercent) =>
-              client.setSettings({
-                ...state.app.settings,
-                splitPercent: clampPercent(splitPercent),
+            onCommit={(percent) =>
+              client.dispatch({
+                type: "setSplitPercent",
+                tabId: tab.id,
+                percent: clampPercent(percent),
               })
             }
             first={
