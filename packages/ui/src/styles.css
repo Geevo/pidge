@@ -1239,52 +1239,109 @@ option[value="OPTIONS"] {
   flex: 1 1 0;
 }
 
+/*
+ * A wide, invisible track holding a thin, visible line. The track is the hit
+ * area — a 1px target is unusable — and the line plus its centre grip is what
+ * makes it look like something you can pull.
+ */
 .ac-split__divider {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  background: var(--ac-border);
-  transition: background-color 120ms ease;
+  background: transparent;
   touch-action: none;
+  /* The divider itself is never selectable, drag or no drag. */
+  user-select: none;
 }
 
 .ac-split--rows > .ac-split__divider {
-  height: 1px;
-  /* A 1px line is impossible to grab, so the hit area is padded outwards. */
-  margin: 3px 0;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-  background-clip: padding-box;
+  height: 9px;
   cursor: row-resize;
 }
 
 .ac-split--columns > .ac-split__divider {
-  width: 1px;
-  margin: 0 3px;
-  border-right: 3px solid transparent;
-  border-left: 3px solid transparent;
-  background-clip: padding-box;
+  width: 9px;
   cursor: col-resize;
 }
 
-.ac-split__divider:hover,
-.ac-split__divider:focus-visible,
-.ac-split--dragging > .ac-split__divider {
+/* The hairline, drawn across the full length of the track. */
+.ac-split__divider::before {
+  content: "";
+  position: absolute;
+  background: var(--ac-border);
+  transition: background-color 120ms ease;
+}
+
+.ac-split--rows > .ac-split__divider::before {
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.ac-split--columns > .ac-split__divider::before {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.ac-split__divider {
+  position: relative;
+}
+
+/* The grip: a short bar in the middle, so the line reads as draggable. */
+.ac-split__grip {
+  position: relative;
+  border-radius: 999px;
+  background: var(--ac-border-strong);
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.ac-split--rows .ac-split__grip {
+  width: 34px;
+  height: 3px;
+}
+
+.ac-split--columns .ac-split__grip {
+  width: 3px;
+  height: 34px;
+}
+
+.ac-split__divider:hover::before,
+.ac-split__divider:focus-visible::before,
+.ac-split--dragging > .ac-split__divider::before {
   background: var(--ac-accent);
-  background-clip: padding-box;
 }
 
-/* Keeps the cursor from flickering over the panes mid-drag. */
-.ac-split--dragging {
+.ac-split__divider:hover .ac-split__grip,
+.ac-split__divider:focus-visible .ac-split__grip,
+.ac-split--dragging .ac-split__grip {
+  background: var(--ac-accent);
+  transform: scale(1.1);
+}
+
+.ac-split__divider:focus-visible {
+  outline: none;
+}
+
+/*
+ * Applied to <body> the moment a drag starts, rather than through a render,
+ * so the browser never gets a chance to begin selecting text.
+ */
+body.ac-dragging {
   user-select: none;
+  -webkit-user-select: none;
 }
 
-.ac-split--dragging.ac-split--rows * {
+body.ac-dragging--rows,
+body.ac-dragging--rows * {
   cursor: row-resize !important;
 }
 
-.ac-split--dragging.ac-split--columns * {
+body.ac-dragging--columns,
+body.ac-dragging--columns * {
   cursor: col-resize !important;
 }
 

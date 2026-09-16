@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -577,5 +577,34 @@ describe("json responses", () => {
 
     expect(await screen.findByText(/too large to highlight/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
+  });
+});
+
+describe("dragging the divider", () => {
+  it("suppresses text selection for the duration of the drag", async () => {
+    setup();
+    await ready();
+
+    const divider = screen.getByRole("separator");
+
+    fireEvent.pointerDown(divider, { pointerId: 1, clientX: 0, clientY: 100 });
+    // Applied straight to the body, so the browser never starts a selection.
+    expect(document.body).toHaveClass("ac-dragging");
+    expect(document.body).toHaveClass("ac-dragging--rows");
+
+    fireEvent.pointerUp(divider, { pointerId: 1, clientX: 0, clientY: 200 });
+    expect(document.body).not.toHaveClass("ac-dragging");
+  });
+
+  it("releases the page if the gesture is cancelled", async () => {
+    setup();
+    await ready();
+
+    const divider = screen.getByRole("separator");
+    fireEvent.pointerDown(divider, { pointerId: 1, clientX: 0, clientY: 100 });
+    expect(document.body).toHaveClass("ac-dragging");
+
+    fireEvent.lostPointerCapture(divider, { pointerId: 1 });
+    expect(document.body).not.toHaveClass("ac-dragging");
   });
 });

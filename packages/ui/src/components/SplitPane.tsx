@@ -59,6 +59,25 @@ export function SplitPane({
     setLive(next);
   }, []);
 
+  /*
+   * Selection is suppressed by touching the DOM directly rather than by
+   * rendering a class. The browser begins selecting text on the very first
+   * mousedown, which is before React has re-rendered anything, so a class
+   * driven by state arrives too late to stop it.
+   */
+  const setBodyDragging = useCallback(
+    (active: boolean) => {
+      const { classList } = document.body;
+      classList.toggle("ac-dragging", active);
+      classList.toggle("ac-dragging--columns", active && layout === "columns");
+      classList.toggle("ac-dragging--rows", active && layout === "rows");
+    },
+    [layout],
+  );
+
+  // A drag interrupted by an unmount must not leave the whole page unselectable.
+  useEffect(() => () => setBodyDragging(false), [setBodyDragging]);
+
   // Follow the persisted value unless the user is actively dragging.
   useEffect(() => {
     if (!draggingRef.current) setPercent(clampPercent(percent));
@@ -121,10 +140,19 @@ export function SplitPane({
         onKeyDown={nudge}
         onDoubleClick={() => commit(50)}
         onPointerDown={(event) => {
+          // Stops the browser starting a text selection from this press.
+          event.preventDefault();
           // Capture so the drag survives the pointer leaving the divider, and
-          // keeps working over the CodeMirror instance next to it.
-          event.currentTarget.setPointerCapture(event.pointerId);
+          // keeps working over the CodeMirror instance next to it. It is an
+          // enhancement, not a requirement: without it the drag still tracks,
+          // it just stops if the pointer leaves the window.
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          } catch {
+            // Not supported here; carry on.
+          }
           draggingRef.current = true;
+          setBodyDragging(true);
           setDragging(true);
         }}
         onPointerMove={(event) => {
@@ -134,8 +162,21 @@ export function SplitPane({
         }}
         onPointerUp={(event) => {
           if (!draggingRef.current) return;
-          event.currentTarget.releasePointerCapture(event.pointerId);
+          try {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          } catch {
+            // Never captured; nothing to release.
+          }
           draggingRef.current = false;
+          setBodyDragging(false);
+          setDragging(false);
+          onCommit(liveRef.current);
+        }}
+        onLostPointerCapture={() => {
+          // A cancelled gesture must still release the page.
+          if (!draggingRef.current) return;
+          draggingRef.current = false;
+          setBodyDragging(false);
           setDragging(false);
           onCommit(liveRef.current);
         }}
