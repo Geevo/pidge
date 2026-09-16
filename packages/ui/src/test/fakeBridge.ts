@@ -9,6 +9,7 @@ import type {
   SaveRequestInput,
   SendOutcome,
   SavedRequest,
+  WindowControls,
 } from "../index";
 import { blankTab, newId } from "../index";
 
@@ -23,6 +24,8 @@ export class FakeBridge implements PlatformBridge {
 
   state: AppState = defaultState();
   recovery: string | null = null;
+  /** Set by tests that need the app to draw its own title bar. */
+  window?: WindowControls;
 
   readonly sent: HttpRequest[] = [];
   readonly cancelled: string[] = [];

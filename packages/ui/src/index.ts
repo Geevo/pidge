@@ -15,9 +15,12 @@ export type {
   HostCommand,
   LoadedState,
   PlatformBridge,
+  ResizeEdge,
   SaveRequestInput,
   SendOutcome,
+  WindowControls,
 } from "./bridge";
+export { ResizeEdges, WindowButtons } from "./components/WindowChrome";
 export { BridgeRequestError, isRequestError, toRequestError } from "./bridge";
 
 export * from "./types";

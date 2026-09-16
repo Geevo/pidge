@@ -15,6 +15,7 @@ import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
 import { SettingsDialog } from "./SettingsDialog";
 import { SplitPane, clampPercent } from "./SplitPane";
+import { ResizeEdges } from "./WindowChrome";
 import { UrlBar } from "./UrlBar";
 import { BookmarkIcon, CloseIcon, ColumnsIcon, HistoryIcon, RowsIcon, SettingsIcon } from "./icons";
 
@@ -96,6 +97,7 @@ export function App({ bridge }: Props) {
 
   return (
     <div className="ac-app">
+      {bridge.window ? <ResizeEdges controls={bridge.window} /> : null}
       {state.notice ? (
         <div className="ac-notice" role="status">
           <span>{state.notice}</span>
@@ -117,6 +119,7 @@ export function App({ bridge }: Props) {
         onSelect={(tabId) => client.dispatch({ type: "selectTab", tabId })}
         onClose={client.closeTab}
         onNew={() => client.newTab()}
+        windowControls={bridge.window}
       />
 
       <div className="ac-topbar">

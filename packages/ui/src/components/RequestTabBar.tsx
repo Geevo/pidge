@@ -1,6 +1,8 @@
 import type { ScratchTab } from "../types";
 import { requestLabel } from "../lib/format";
 import { MethodBadge } from "./MethodBadge";
+import type { WindowControls } from "../bridge";
+import { WindowButtons } from "./WindowChrome";
 import { CloseIcon, PlusIcon } from "./icons";
 
 interface Props {
@@ -9,6 +11,8 @@ interface Props {
   onSelect: (tabId: string) => void;
   onClose: (tabId: string) => void;
   onNew: () => void;
+  /** Supplied only when the app draws its own title bar. */
+  windowControls?: WindowControls;
 }
 
 /**
@@ -19,7 +23,14 @@ interface Props {
  * is invalid, and putting the highlight on the button alone leaves the close
  * control sitting outside its own tab.
  */
-export function RequestTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: Props) {
+export function RequestTabBar({
+  tabs,
+  activeTabId,
+  onSelect,
+  onClose,
+  onNew,
+  windowControls,
+}: Props) {
   return (
     <div className="ac-tabbar">
       <div className="ac-tabbar__list" role="tablist" aria-label="Open requests">
@@ -74,7 +85,25 @@ export function RequestTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: P
         >
           <PlusIcon size={15} />
         </button>
+
+        {/*
+          The leftover strip doubles as the title bar. `data-tauri-drag-region`
+          is handled by the host, so this stays inert everywhere else.
+        */}
+        {windowControls ? (
+          <div
+            className="ac-tabbar__drag"
+            data-tauri-drag-region
+            onDoubleClick={() => {
+              windowControls.toggleMaximize().catch(() => undefined);
+            }}
+          />
+        ) : (
+          <div className="ac-tabbar__drag" />
+        )}
       </div>
+
+      {windowControls ? <WindowButtons controls={windowControls} /> : null}
     </div>
   );
 }

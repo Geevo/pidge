@@ -1,12 +1,44 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type {
   AppState,
   HttpRequest,
   LoadedState,
   PlatformBridge,
+  ResizeEdge,
   SaveRequestInput,
   SendOutcome,
+  WindowControls,
 } from "@api-client/ui";
+
+/**
+ * Turns a synchronous throw into a rejected promise.
+ *
+ * `getCurrentWindow()` throws outright when the Tauri internals are missing —
+ * running the frontend in a plain browser, for instance. Called from an effect
+ * that would unmount the whole app, so window chrome is kept unable to take the
+ * application down with it.
+ */
+function attempt<T>(action: () => Promise<T>): Promise<T> {
+  try {
+    return action();
+  } catch (error) {
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * The window is undecorated, because GTK draws a header far taller than the
+ * platform's own, so the app supplies the title bar and resize edges itself.
+ */
+const windowControls: WindowControls = {
+  minimize: () => attempt(() => getCurrentWindow().minimize()),
+  toggleMaximize: () => attempt(() => getCurrentWindow().toggleMaximize()),
+  close: () => attempt(() => getCurrentWindow().close()),
+  isMaximized: () => attempt(() => getCurrentWindow().isMaximized()),
+  startDragging: () => attempt(() => getCurrentWindow().startDragging()),
+  startResizing: (edge: ResizeEdge) => attempt(() => getCurrentWindow().startResizeDragging(edge)),
+};
 
 /**
  * The desktop bridge.
@@ -16,6 +48,7 @@ import type {
  */
 export const tauriBridge: PlatformBridge = {
   platform: "desktop",
+  window: windowControls,
 
   sendRequest(request: HttpRequest): Promise<SendOutcome> {
     return invoke<SendOutcome>("send_http_request", { request });

@@ -1421,3 +1421,122 @@ body.ac-dragging--columns * {
   background: var(--ac-bg-subtle);
   color: var(--ac-text-muted);
 }
+
+/* ---------- window chrome ---------- */
+
+/*
+ * The desktop window is undecorated, so the tab strip doubles as the title bar:
+ * the leftover space drags the window and the buttons sit at its end. That costs
+ * one row of chrome rather than two.
+ */
+.ac-tabbar__drag {
+  flex: 1;
+  min-width: 24px;
+  align-self: stretch;
+}
+
+.ac-window-buttons {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  border-left: 1px solid var(--ac-border);
+}
+
+.ac-window-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--ac-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-window-button:hover {
+  background: var(--ac-bg-raised);
+  color: var(--ac-text);
+}
+
+.ac-window-button--close:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+/*
+ * An undecorated window gets no resize edges from the platform, so these
+ * supply them. They sit above everything and are only a few pixels wide.
+ */
+.ac-resize-edges {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.ac-resize-edge {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.ac-resize-edge--north,
+.ac-resize-edge--south {
+  right: 0;
+  left: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.ac-resize-edge--north {
+  top: 0;
+}
+.ac-resize-edge--south {
+  bottom: 0;
+}
+
+.ac-resize-edge--east,
+.ac-resize-edge--west {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.ac-resize-edge--east {
+  right: 0;
+}
+.ac-resize-edge--west {
+  left: 0;
+}
+
+/* Corners sit on top of the edges, so they win the hit test. */
+.ac-resize-edge--northwest,
+.ac-resize-edge--northeast,
+.ac-resize-edge--southwest,
+.ac-resize-edge--southeast {
+  width: 12px;
+  height: 12px;
+}
+
+.ac-resize-edge--northwest {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.ac-resize-edge--northeast {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+.ac-resize-edge--southwest {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+.ac-resize-edge--southeast {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
