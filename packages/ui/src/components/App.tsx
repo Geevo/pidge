@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { PlatformBridge } from "../bridge";
+import type { PlatformBridge, WindowControls } from "../bridge";
 import { matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, runtimeFor } from "../state/reducer";
@@ -45,7 +45,7 @@ export function App({ bridge }: Props) {
    */
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
 
-  useTheme(previewTheme ?? state.app.settings.theme);
+  useTheme(previewTheme ?? state.app.settings.theme, bridge.window);
 
   // The host can ask for things too, e.g. the VS Code Command Palette.
   useEffect(
@@ -297,13 +297,33 @@ export function App({ bridge }: Props) {
 }
 
 /**
+ * Which way each palette leans, for the host's benefit.
+ *
+ * A `<select>` popup is drawn by the platform rather than by the page, so no
+ * amount of CSS reaches it: on Linux it is a GTK menu following the desktop's
+ * light/dark preference, which left a light palette with a black list on a dark
+ * desktop. Telling the window makes the two agree.
+ */
+const NATIVE_THEME: Record<Theme, "light" | "dark" | null> = {
+  system: null,
+  light: "light",
+  warmLight: "light",
+  dark: "dark",
+  warmDark: "dark",
+};
+
+/**
  * The desktop app sets the theme explicitly; the VS Code build leaves it on
  * "system" so it follows the editor's own colours.
  */
-function useTheme(theme: Theme) {
+function useTheme(theme: Theme, controls?: WindowControls) {
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", theme);
-  }, [theme]);
+
+    // Chrome failing is not the app failing; the palette is already applied.
+    // Chrome failing is not the app failing; the palette is already applied.
+    controls?.setTheme(NATIVE_THEME[theme]).catch(() => undefined);
+  }, [controls, theme]);
 }

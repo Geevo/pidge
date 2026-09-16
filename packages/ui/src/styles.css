@@ -99,6 +99,9 @@
    */
   color-scheme: light;
 
+  /* The chevron on a select, drawn here because the native one goes with it. */
+  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6472' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+
   --ac-radius: 4px;
 
   /* The bundled faces first; the rest is insurance if a file fails to load. */
@@ -145,6 +148,8 @@
   --ac-method-head-text: #b07cff;
   --ac-method-options-text: #5aa9e6;
 
+  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+
   color-scheme: dark;
 }
 
@@ -182,6 +187,8 @@
     --ac-method-delete-text: #ff6b6b;
     --ac-method-head-text: #b07cff;
     --ac-method-options-text: #5aa9e6;
+
+    --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 
     color-scheme: dark;
   }
@@ -221,6 +228,8 @@
   --ac-method-head-text: #b07cff;
   --ac-method-options-text: #5aa9e6;
 
+  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b4b2a7' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+
   color-scheme: dark;
 }
 
@@ -239,6 +248,8 @@
   --ac-text: #1f1e1d;
   --ac-text-muted: #5e5d57;
   --ac-text-faint: #8c8a80;
+
+  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235e5d57' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 * {
@@ -273,12 +284,22 @@ textarea {
 }
 
 /*
- * Selects need their colours spelled out. `color: inherit` alone leaves the
- * closed control transparent over the page, and the popup is drawn by the
- * browser from `color-scheme` plus whatever the <option> carries.
+ * A select is drawn by the platform unless you take it over, and a WebKit
+ * webview on Linux draws it with the GTK theme: on a dark desktop a light
+ * palette got a black control back, whatever `background-color` said. So the
+ * box is drawn here, arrow included, the way the checkbox below is.
+ *
+ * The list that drops down is still the platform's — nothing in CSS reaches
+ * it — which is why the window is told which way the palette leans as well.
  */
 select {
+  appearance: none;
   background-color: var(--ac-bg-input);
+  background-image: var(--ac-select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  /* The right side is the chevron's; a select that repads sets the left only. */
+  padding: 0 20px 0 6px;
   color: var(--ac-text);
 }
 
@@ -459,10 +480,10 @@ input[type="checkbox"]:hover {
 .ac-select {
   height: var(--ac-row-height);
   max-width: 180px;
-  padding: 0 4px;
+  padding-left: 4px;
   border: 1px solid var(--ac-border-strong);
   border-radius: var(--ac-radius);
-  background: var(--ac-bg-input);
+  background-color: var(--ac-bg-input);
 }
 
 /*
@@ -471,10 +492,10 @@ input[type="checkbox"]:hover {
  */
 .ac-method {
   height: var(--ac-row-height);
-  padding: 0 4px;
+  padding-left: 4px;
   border: 1px solid var(--ac-border-strong);
   border-radius: var(--ac-radius);
-  background: var(--ac-bg-input);
+  background-color: var(--ac-bg-input);
   font-family: var(--ac-font-mono);
   font-weight: 700;
 }
@@ -875,10 +896,19 @@ option[value="OPTIONS"] {
 .ac-field select {
   flex: 1;
   height: var(--ac-row-height);
-  padding: 0 6px;
   border: 1px solid var(--ac-border-strong);
   border-radius: var(--ac-radius);
-  background: var(--ac-bg-input);
+  background-color: var(--ac-bg-input);
+}
+
+/*
+ * The text fields here hold paths and numbers, which are easier to check
+ * character by character. A dropdown holds prose the app wrote itself, so it
+ * stays in the UI face — and keeps the padding that leaves room for its arrow.
+ */
+.ac-field input[type="text"],
+.ac-field input[type="password"] {
+  padding: 0 6px;
   font-family: var(--ac-font-mono);
 }
 

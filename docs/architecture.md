@@ -125,6 +125,20 @@ warm dark one rather than a copy.
 `color-scheme` is set per theme as well as the colours, so the browser's own
 furniture — select popups, scrollbars, the caret — follows.
 
+### The controls the platform draws
+
+A `<select>` is drawn by the platform unless you take it over, and a WebKit
+webview on Linux draws it with the GTK theme: on a dark desktop a light palette
+came back with a black control whatever `background-color` said. So the closed
+box is drawn here — `appearance: none`, our border, and a chevron from
+`--ac-select-arrow` — the same treatment the checkbox gets.
+
+The list that drops down is the platform's own and no CSS reaches it. That one
+is handled from the other end: `WindowControls.setTheme` passes "light", "dark"
+or null to the host, which on Linux is `gtk-application-prefer-dark-theme`. It
+is best effort, since a GTK theme with no dark variant will ignore it, and the
+call is caught like the rest of the window chrome.
+
 A palette cannot be judged from its name, so Settings applies one as soon as it
 is picked and `App` holds that choice separately from the saved settings.
 Cancelling drops it and the saved theme comes back. The preview lives in `App`

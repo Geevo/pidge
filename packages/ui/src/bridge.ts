@@ -53,6 +53,15 @@ export interface WindowControls {
   startDragging(): Promise<void>;
   /** Undecorated windows get no resize edges for free; these supply them. */
   startResizing(edge: ResizeEdge): Promise<void>;
+  /**
+   * Tells the host which way the palette leans, or `null` to follow the system.
+   *
+   * A `<select>` popup is drawn by the platform, not by the page, and on Linux
+   * that is a GTK menu following the desktop's own light/dark preference. A
+   * light palette on a dark desktop therefore got a black list. CSS cannot
+   * reach it; this can.
+   */
+  setTheme(theme: "light" | "dark" | null): Promise<void>;
 }
 
 /**
