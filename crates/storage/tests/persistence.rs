@@ -107,6 +107,7 @@ fn history_keeps_the_request_but_not_the_response_body() {
         truncated: false,
         final_url: "https://example.com".into(),
         warnings: vec![],
+        tls: None,
     };
 
     let entry = HistoryEntry::success(HttpRequest::get("https://example.com"), &response);

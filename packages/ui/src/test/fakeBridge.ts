@@ -128,6 +128,7 @@ export function response(overrides: Partial<HttpResponse> = {}): HttpResponse {
     truncated: false,
     finalUrl: "http://localhost:3000/api/test",
     warnings: [],
+    tls: null,
     ...overrides,
   };
 }

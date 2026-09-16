@@ -26,6 +26,8 @@ export type { ServerMessage } from "./generated/ServerMessage";
 export type { Settings } from "./generated/Settings";
 export type { ClientIdentitySettings } from "./generated/ClientIdentitySettings";
 export type { Theme } from "./generated/Theme";
+export type { PeerCertificate } from "./generated/PeerCertificate";
+export type { TlsDetails } from "./generated/TlsDetails";
 export type { TlsSettings } from "./generated/TlsSettings";
 
 import type { HttpMethod } from "./generated/HttpMethod";

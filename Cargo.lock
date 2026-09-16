@@ -122,11 +122,13 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "tokio",
  "tokio-util",
  "tracing",
  "url",
+ "x509-parser",
 ]
 
 [[package]]

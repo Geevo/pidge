@@ -15,7 +15,7 @@ pub use request::{
     AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry, MultipartValue, RequestBody,
 };
 pub use response::HttpResponse;
-pub use tls::{ClientIdentitySettings, TlsSettings};
+pub use tls::{ClientIdentitySettings, PeerCertificate, TlsDetails, TlsSettings};
 
 /// Generates an identifier for a request, tab, or key/value row.
 pub fn new_id() -> String {

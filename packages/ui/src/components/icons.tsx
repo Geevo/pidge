@@ -100,3 +100,12 @@ export function TrashIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.2 7.2V5.4a3.8 3.8 0 0 1 7.6 0v1.8" />
+      <rect x="2.9" y="7.2" width="10.2" height="6.4" rx="1.2" />
+    </Svg>
+  );
+}

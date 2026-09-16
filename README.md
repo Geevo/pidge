@@ -171,6 +171,13 @@ friends) are never written to a log.
 - [Packaging](docs/packaging.md)
 - [Development](docs/development.md)
 
+## HTTPS
+
+An encrypted response gets a padlock in the status line, with the protocol
+beside it. It opens the certificate the server presented: subject, issuer, the
+names it is valid for, its dates, serial and SHA-256 fingerprint. An expired or
+self-signed certificate says so.
+
 ## Themes
 
 System, light and dark, plus a warm variant of each: the same palette with the

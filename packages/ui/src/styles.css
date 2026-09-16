@@ -1064,6 +1064,81 @@ input[type="checkbox"]:hover {
   color: var(--ac-text-faint);
 }
 
+/*
+ * The padlock. A button rather than an icon, because it opens the certificate,
+ * and it says which protocol beside it: "encrypted" on its own answers less
+ * than people assume it does.
+ */
+.ac-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius);
+  background: transparent;
+  color: var(--ac-status-ok);
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.ac-lock:hover {
+  border-color: var(--ac-border-strong);
+  background: var(--ac-bg-raised);
+}
+
+/* An expired certificate is still a lock, but not a reassuring one. */
+.ac-lock--bad {
+  color: var(--ac-danger);
+}
+
+/* ---------- certificate ---------- */
+
+.ac-cert {
+  margin: 0;
+  padding: 4px 8px 8px;
+}
+
+.ac-cert__row {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-cert__row:last-child {
+  border-bottom: 0;
+}
+
+.ac-cert dt {
+  flex: none;
+  width: 92px;
+  color: var(--ac-text-muted);
+}
+
+.ac-cert__value {
+  /* A fingerprint and a DN both need to wrap rather than widen the dialog. */
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ac-cert__value--mono {
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-cert-note {
+  margin: 0;
+  padding: 8px;
+  border-bottom: 1px solid var(--ac-border);
+  color: var(--ac-text-muted);
+}
+
+.ac-cert-note--bad {
+  color: var(--ac-danger);
+}
+
 .ac-response-body {
   margin: 0;
   padding: 8px;

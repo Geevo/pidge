@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::KeyValueEntry;
+use crate::tls::TlsDetails;
 
 /// The result of one successful round trip. "Successful" means we got a
 /// response, not that the status code was 2xx.
@@ -27,6 +28,13 @@ pub struct HttpResponse {
     pub final_url: String,
     /// Non-fatal notes for the user, e.g. an auth helper that was overridden.
     pub warnings: Vec<String>,
+    /// The connection's TLS, for the padlock. `None` for plain HTTP.
+    ///
+    /// Boxed because it is several hundred bytes of certificate that most
+    /// responses do not carry, and `HttpResponse` travels inside the sidecar's
+    /// message enum, which is as large as its largest variant.
+    #[serde(default)]
+    pub tls: Option<Box<TlsDetails>>,
 }
 
 impl HttpResponse {

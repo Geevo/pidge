@@ -1056,3 +1056,104 @@ describe("confirming destructive things", () => {
     await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(0));
   });
 });
+
+describe("the padlock", () => {
+  const certificate = {
+    subject: "CN=api.example.com",
+    issuer: "CN=Example CA, O=Example",
+    subjectAltNames: ["api.example.com", "www.example.com"],
+    notBefore: "2026-01-01T00:00:00Z",
+    notAfter: "2027-01-01T00:00:00Z",
+    serial: "2E:BF:82:C4",
+    signatureAlgorithm: "ecdsa-with-SHA256",
+    sha256Fingerprint: "AB:CD:EF:01",
+    expired: false,
+    selfSigned: false,
+  };
+
+  it("is absent for a plain HTTP response", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(screen.queryByRole("button", { name: "View certificate" })).not.toBeInTheDocument();
+  });
+
+  it("shows the certificate the server presented", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({
+        finalUrl: "https://api.example.com/v1/users",
+        tls: { protocol: "TLS 1.3", certificate },
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", { name: "URL" }),
+      "https://api.example.com/v1/users",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await user.click(screen.getByRole("button", { name: "View certificate" }));
+    const dialog = await screen.findByRole("dialog", { name: "Certificate" });
+
+    // The host, not the path: that is what the certificate was issued for.
+    expect(within(dialog).getByText("api.example.com")).toBeInTheDocument();
+    expect(within(dialog).getByText("CN=Example CA, O=Example")).toBeInTheDocument();
+    expect(within(dialog).getByText("api.example.com, www.example.com")).toBeInTheDocument();
+    expect(within(dialog).getByText("AB:CD:EF:01")).toBeInTheDocument();
+    expect(within(dialog).getByText("TLS 1.3")).toBeInTheDocument();
+  });
+
+  it("says so when the certificate has expired", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({
+        finalUrl: "https://api.example.com/v1/users",
+        tls: { protocol: "TLS 1.2", certificate: { ...certificate, expired: true } },
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", { name: "URL" }),
+      "https://api.example.com/v1/users",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await user.click(screen.getByRole("button", { name: "View certificate" }));
+    const dialog = await screen.findByRole("dialog", { name: "Certificate" });
+
+    expect(within(dialog).getByText(/expired on/)).toBeInTheDocument();
+  });
+
+  it("copes with a connection whose certificate could not be read", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({
+        finalUrl: "https://api.example.com/v1/users",
+        tls: { protocol: "TLS 1.3", certificate: null },
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", { name: "URL" }),
+      "https://api.example.com/v1/users",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await user.click(screen.getByRole("button", { name: "View certificate" }));
+    const dialog = await screen.findByRole("dialog", { name: "Certificate" });
+
+    expect(within(dialog).getByText(/could not be read/)).toBeInTheDocument();
+  });
+});

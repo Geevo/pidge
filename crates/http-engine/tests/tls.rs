@@ -323,3 +323,64 @@ async fn plain_http_still_works_with_tls_settings_present() {
 
     assert_eq!(response.status, 200);
 }
+
+#[tokio::test]
+async fn a_response_carries_the_certificate_the_server_presented() {
+    let ca = TestCa::new();
+    let ca_file = temp_file("ca", ca.pem().as_bytes());
+    let server = TestServer::start_tls(&ca, ClientAuth::None).await.unwrap();
+
+    let response = engine(TlsSettings {
+        extra_ca_files: vec![path_of(&ca_file)],
+        ..TlsSettings::default()
+    })
+    .execute(
+        HttpRequest::get(server.url("/json")),
+        CancellationHandle::new(),
+    )
+    .await
+    .unwrap();
+
+    let tls = response.tls.expect("tls details on an https response");
+    assert_eq!(tls.protocol.as_deref(), Some("TLS 1.3"));
+
+    let cert = tls.certificate.expect("a parsed certificate");
+    assert!(
+        cert.subject.contains("localhost"),
+        "subject: {}",
+        cert.subject
+    );
+    assert!(
+        cert.issuer.contains("api-client test CA"),
+        "issuer: {}",
+        cert.issuer
+    );
+    // Signed by the CA, so it vouches for itself only if something went wrong.
+    assert!(!cert.self_signed);
+    assert!(!cert.expired);
+
+    // The names it is actually valid for, which is what the handshake checked.
+    assert!(cert.subject_alt_names.contains(&"localhost".to_string()));
+    assert!(cert.subject_alt_names.contains(&"127.0.0.1".to_string()));
+
+    // 32 bytes as AB:CD:…
+    assert_eq!(cert.sha256_fingerprint.len(), 32 * 3 - 1);
+    assert!(!cert.serial.is_empty());
+    assert!(!cert.signature_algorithm.is_empty());
+    assert!(cert.not_after > cert.not_before);
+}
+
+#[tokio::test]
+async fn plain_http_has_no_certificate_to_show() {
+    let server = TestServer::start().await.unwrap();
+
+    let response = engine(TlsSettings::default())
+        .execute(
+            HttpRequest::get(server.url("/json")),
+            CancellationHandle::new(),
+        )
+        .await
+        .unwrap();
+
+    assert!(response.tls.is_none());
+}
