@@ -754,6 +754,44 @@ describe("themes", () => {
     );
   });
 
+  it("previews the palette as it is picked, before anything is saved", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
+    });
+    expect(bridge.saved.at(-1)?.settings.theme ?? "system").toBe("system");
+  });
+
+  it("puts the saved palette back when the dialog is cancelled", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(document.documentElement).not.toHaveAttribute("data-theme");
+    });
+    expect(bridge.saved.at(-1)?.settings.theme ?? "system").toBe("system");
+
+    // The draft goes with it: reopening starts from the saved theme again.
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const again = await screen.findByRole("dialog", { name: "Settings" });
+    expect(within(again).getByLabelText("Theme")).toHaveValue("system");
+  });
+
   it("applies the chosen palette to the document", async () => {
     const { bridge, user } = setup();
     await ready();

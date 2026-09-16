@@ -125,6 +125,12 @@ warm dark one rather than a copy.
 `color-scheme` is set per theme as well as the colours, so the browser's own
 furniture — select popups, scrollbars, the caret — follows.
 
+A palette cannot be judged from its name, so Settings applies one as soon as it
+is picked and `App` holds that choice separately from the saved settings.
+Cancelling drops it and the saved theme comes back. The preview lives in `App`
+rather than in the dialog because `App` is what writes `data-theme`; two writers
+of the same attribute would make the result depend on the order of effects.
+
 Method colours are deliberately not themed. They are Swagger's palette because
 they carry meaning, and a POST should be the same green wherever it is read.
 
