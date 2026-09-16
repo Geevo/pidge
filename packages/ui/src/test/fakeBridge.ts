@@ -173,6 +173,12 @@ export function defaultState(): AppState {
       maxResponseBytes: 50 * 1024 * 1024,
       restoreTabs: true,
       wrapResponseLines: false,
+      tls: {
+        useSystemRoots: true,
+        extraCaFiles: [],
+        clientIdentity: null,
+        acceptInvalidCerts: false,
+      },
     },
     savedRequests: [],
     history: [],

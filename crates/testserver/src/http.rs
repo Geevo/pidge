@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 use std::io;
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 
 use crate::routes;
+
+/// Anything the server can talk over: a plain socket or a TLS stream.
+pub trait Stream: AsyncRead + AsyncWrite + Unpin + Send {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> Stream for T {}
 
 /// A parsed request. Header names are lowercased.
 pub struct Request {
@@ -106,7 +109,7 @@ impl Response {
     }
 }
 
-pub async fn serve_connection(stream: TcpStream) -> io::Result<()> {
+pub async fn serve_connection<S: Stream>(stream: S) -> io::Result<()> {
     let mut reader = BufReader::new(stream);
     let Some(request) = read_request(&mut reader).await? else {
         return Ok(());
@@ -116,7 +119,7 @@ pub async fn serve_connection(stream: TcpStream) -> io::Result<()> {
     routes::dispatch(request, stream).await
 }
 
-async fn read_request(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Request>> {
+async fn read_request<S: Stream>(reader: &mut BufReader<S>) -> io::Result<Option<Request>> {
     let head = match read_until_double_crlf(reader).await? {
         Some(head) => head,
         None => return Ok(None),
@@ -158,7 +161,9 @@ async fn read_request(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Re
     Ok(Some(request))
 }
 
-async fn read_until_double_crlf(reader: &mut BufReader<TcpStream>) -> io::Result<Option<Vec<u8>>> {
+async fn read_until_double_crlf<S: Stream>(
+    reader: &mut BufReader<S>,
+) -> io::Result<Option<Vec<u8>>> {
     let mut head = Vec::new();
     let mut byte = [0u8; 1];
     loop {
@@ -177,7 +182,7 @@ async fn read_until_double_crlf(reader: &mut BufReader<TcpStream>) -> io::Result
     }
 }
 
-async fn read_body(reader: &mut BufReader<TcpStream>, request: &Request) -> io::Result<Vec<u8>> {
+async fn read_body<S: Stream>(reader: &mut BufReader<S>, request: &Request) -> io::Result<Vec<u8>> {
     if request
         .header("transfer-encoding")
         .is_some_and(|value| value.to_ascii_lowercase().contains("chunked"))
@@ -197,7 +202,7 @@ async fn read_body(reader: &mut BufReader<TcpStream>, request: &Request) -> io::
     Ok(body)
 }
 
-async fn read_chunked(reader: &mut BufReader<TcpStream>) -> io::Result<Vec<u8>> {
+async fn read_chunked<S: Stream>(reader: &mut BufReader<S>) -> io::Result<Vec<u8>> {
     let mut body = Vec::new();
     loop {
         let line = read_line(reader).await?;
@@ -217,7 +222,7 @@ async fn read_chunked(reader: &mut BufReader<TcpStream>) -> io::Result<Vec<u8>> 
     Ok(body)
 }
 
-async fn read_line(reader: &mut BufReader<TcpStream>) -> io::Result<String> {
+async fn read_line<S: Stream>(reader: &mut BufReader<S>) -> io::Result<String> {
     let mut line = Vec::new();
     let mut byte = [0u8; 1];
     loop {
@@ -234,7 +239,7 @@ async fn read_line(reader: &mut BufReader<TcpStream>) -> io::Result<String> {
     Ok(String::from_utf8_lossy(&line).into_owned())
 }
 
-pub async fn write_response(stream: &mut TcpStream, response: Response) -> io::Result<()> {
+pub async fn write_response<S: Stream>(stream: &mut S, response: Response) -> io::Result<()> {
     let mut head = format!("HTTP/1.1 {} {}\r\n", response.status, response.reason);
     for (name, value) in &response.headers {
         head.push_str(&format!("{name}: {value}\r\n"));

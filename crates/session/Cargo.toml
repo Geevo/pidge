@@ -13,6 +13,7 @@ api-client-http-engine.workspace = true
 api-client-storage.workspace = true
 api-client-variables.workspace = true
 serde.workspace = true
+thiserror.workspace = true
 ts-rs.workspace = true
 tracing.workspace = true
 

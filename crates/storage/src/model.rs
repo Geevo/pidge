@@ -1,4 +1,4 @@
-use api_client_core::{HttpRequest, HttpResponse, RequestError};
+use api_client_core::{HttpRequest, HttpResponse, RequestError, TlsSettings};
 use api_client_variables::Environment;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -38,6 +38,9 @@ pub struct Settings {
     /// Reopen the scratch tabs that were open last time.
     pub restore_tabs: bool,
     pub wrap_response_lines: bool,
+    /// Trust and client-certificate settings. Changing any of these rebuilds
+    /// the HTTP client, so they take effect on the next send.
+    pub tls: TlsSettings,
 }
 
 impl Default for Settings {
@@ -50,6 +53,7 @@ impl Default for Settings {
             max_response_bytes: 50 * 1024 * 1024,
             restore_tabs: true,
             wrap_response_lines: false,
+            tls: TlsSettings::default(),
         }
     }
 }

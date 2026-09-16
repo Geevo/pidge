@@ -3,11 +3,10 @@ use std::time::Duration;
 
 use serde_json::json;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
 
-use crate::http::{Request, Response, write_response};
+use crate::http::{Request, Response, Stream, write_response};
 
-pub async fn dispatch(request: Request, mut stream: TcpStream) -> io::Result<()> {
+pub async fn dispatch<S: Stream>(request: Request, mut stream: S) -> io::Result<()> {
     let segments = request.segments();
 
     match segments.as_slice() {
@@ -116,7 +115,7 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
 
 /// Sends the head immediately, then dribbles out chunks. Used to test
 /// cancellation and timeouts that land while the body is in flight.
-async fn slow_body(stream: &mut TcpStream, chunks: usize, delay_ms: usize) -> io::Result<()> {
+async fn slow_body<S: Stream>(stream: &mut S, chunks: usize, delay_ms: usize) -> io::Result<()> {
     let head = "HTTP/1.1 200 OK\r\n\
                 content-type: text/plain\r\n\
                 transfer-encoding: chunked\r\n\

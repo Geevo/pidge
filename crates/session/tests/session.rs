@@ -276,3 +276,75 @@ async fn clear_history_still_clears_it() {
 
     assert!(session.snapshot().history.is_empty());
 }
+
+#[tokio::test]
+async fn changing_tls_settings_rebuilds_the_engine() {
+    use api_client_testserver::{ClientAuth, TestCa};
+
+    let ca = TestCa::new();
+    let server = TestServer::start_tls(&ca, ClientAuth::None).await.unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let ca_path = dir.path().join("ca.pem");
+    std::fs::write(&ca_path, ca.pem()).unwrap();
+
+    let session = Session::start(Store::in_dir(dir.path())).unwrap();
+
+    // The CA is unknown to the machine, so this fails first.
+    let error = session
+        .send(HttpRequest::get(server.url("/json")))
+        .await
+        .unwrap_err();
+    assert_eq!(error.kind, RequestErrorKind::Tls);
+
+    let mut state = session.snapshot();
+    state.settings.tls.extra_ca_files = vec![ca_path.display().to_string()];
+    session.replace_state(state).expect("settings should apply");
+
+    // No restart: the same session now trusts it.
+    let response = session
+        .send(HttpRequest::get(server.url("/json")))
+        .await
+        .expect("the new CA should be in effect");
+    assert_eq!(response.status, 200);
+}
+
+#[tokio::test]
+async fn an_unusable_certificate_is_reported_but_the_setting_is_still_saved() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = Session::start(Store::in_dir(dir.path())).unwrap();
+
+    let mut state = session.snapshot();
+    state.settings.tls.extra_ca_files = vec!["/definitely/not/here.pem".into()];
+    let error = session.replace_state(state).unwrap_err();
+
+    assert!(error.to_string().contains("/definitely/not/here.pem"));
+
+    // Saved anyway, so the settings dialog has something to correct.
+    let reopened = Session::start(Store::in_dir(dir.path()));
+    assert!(
+        reopened.is_err()
+            || !reopened
+                .unwrap()
+                .snapshot()
+                .settings
+                .tls
+                .extra_ca_files
+                .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn settings_that_do_not_touch_the_engine_leave_it_alone() {
+    let server = TestServer::start().await.unwrap();
+    let (_dir, session) = session();
+
+    let mut state = session.snapshot();
+    state.settings.wrap_response_lines = true;
+    session.replace_state(state).unwrap();
+
+    let response = session
+        .send(HttpRequest::get(server.url("/json")))
+        .await
+        .unwrap();
+    assert_eq!(response.status, 200);
+}

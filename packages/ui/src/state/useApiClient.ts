@@ -22,6 +22,12 @@ function initialState(): UiState {
         maxResponseBytes: 50 * 1024 * 1024,
         restoreTabs: true,
         wrapResponseLines: false,
+        tls: {
+          useSystemRoots: true,
+          extraCaFiles: [],
+          clientIdentity: null,
+          acceptInvalidCerts: false,
+        },
       },
       savedRequests: [],
       history: [],

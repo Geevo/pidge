@@ -143,9 +143,47 @@ Bodies are streamed and cut off at `max_response_bytes` (50 MB by default), with
 `truncated: true` on the response and a note in the status line. Truncating
 beats erroring: you still get to look at the first 50 MB.
 
+## TLS
+
+reqwest is built on rustls here, and reqwest's `rustls` feature pulls in
+`rustls-platform-verifier`. That means the client already trusts whatever the
+operating system trusts — the Windows certificate store, the macOS keychain, the
+system CA bundle on Linux — with no configuration at all.
+
+`crates/http-engine/src/tls.rs` covers the two things the OS store cannot:
+
+- **An extra CA.** `tls_certs_merge()` maps to `Verifier::new_with_extra_roots`,
+  so an internal root is _added_ to the system store rather than replacing it. A
+  corporate CA should not cost you the ability to reach the rest of the internet.
+  Turning `useSystemRoots` off switches to `tls_certs_only()`, for talking to one
+  internal host and nothing else. Asking for neither is refused rather than
+  quietly trusting nothing.
+- **A client certificate.** rustls accepts PEM only, but Windows exports
+  `.p12`/`.pfx`, so a PKCS#12 bundle is unpacked in process with `p12-keystore`
+  and re-encoded as PEM. In process deliberately: shelling out to `openssl`
+  would add a tool Windows does not ship, and would put the password in the
+  process list where any other user could read it.
+
+The format is detected from the file contents, not the extension, so a `.crt`
+holding PEM works and a `.pem` holding DER does too.
+
+reqwest defers parsing a DER certificate until the client is built, so a bad
+certificate surfaces at `build()` rather than where it was loaded. When any TLS
+setting is non-default, a build failure is reported as a TLS error naming the
+certificate settings, because that is what it will be.
+
+### Rebuilding the engine
+
+TLS settings shape the reqwest client, which is built once. `Session` therefore
+holds its engine behind a `Mutex` and rebuilds it when `replace_state` sees an
+`EngineConfig` that differs from the live one, so adding a CA takes effect on the
+next send rather than the next launch.
+
+State is saved _before_ the rebuild is attempted. If a certificate path is wrong
+the error still reaches the UI, but the setting persists — otherwise the dialog
+reporting the error would have nothing left to correct.
+
 ## Room left deliberately
 
-`EngineConfig` already carries `accept_invalid_certs`, and the reqwest client
-builder is the one place that would need to change for custom CAs, proxies, or
-client certificates. None of it is wired to UI, because none of it is needed to
-type a URL and press Send.
+Proxies and client-certificate selection per host are not wired up. The reqwest
+client builder in `HttpEngine::new` is the one place either would go.

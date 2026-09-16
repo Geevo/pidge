@@ -22,6 +22,8 @@ request, and a request never has to be named or saved before you send it.
 - Multiple scratch tabs, keyboard-driven
 - Local history and a flat list of saved requests
 - `{{variable}}` substitution from flat environments
+- TLS: the OS certificate store by default, plus extra CAs and client
+  certificates (PEM or `.p12`/`.pfx`)
 
 ## Try it
 
@@ -133,6 +135,24 @@ If that file is ever unreadable it is preserved alongside the new one and the
 app starts from defaults rather than refusing to open.
 
 See [docs/storage.md](docs/storage.md).
+
+## Certificates
+
+The client trusts whatever your operating system trusts — the Windows
+certificate store, the macOS keychain, the system CA bundle on Linux — without
+being told to.
+
+Settings adds the rest:
+
+- **Additional trusted CAs.** PEM or DER files, _merged_ with the system store
+  rather than replacing it.
+- **A client certificate** for mutual TLS. A PEM holding the certificate and
+  key, or a PKCS#12 `.p12`/`.pfx` bundle, which is unpacked for you — no
+  `openssl` conversion step.
+- **Accept invalid certificates**, for a dev server whose CA you would rather
+  not install. Adding the CA is the better answer and the UI says so.
+
+See [docs/architecture.md](docs/architecture.md#tls).
 
 ## Privacy
 

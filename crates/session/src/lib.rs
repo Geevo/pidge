@@ -15,6 +15,19 @@ use api_client_storage::{
 use serde::Serialize;
 use ts_rs::TS;
 
+/// Anything a state change can fail with.
+///
+/// Settings and storage fail in different ways and the UI shows both the same
+/// way, but keeping them apart means a bad certificate path is not reported as
+/// a disk problem.
+#[derive(Debug, thiserror::Error)]
+pub enum SessionError {
+    #[error("{0}")]
+    Storage(#[from] StorageError),
+    #[error("{}", .0.message)]
+    Engine(#[from] RequestError),
+}
+
 /// What a send produced: a response or an error, plus the history row it
 /// created. Returning the row lets a frontend keep its history list live
 /// without re-fetching the whole state.
@@ -35,7 +48,9 @@ pub struct Session {
 }
 
 struct Inner {
-    engine: HttpEngine,
+    /// Rebuilt when the settings that shape it change, so a new CA or client
+    /// certificate takes effect without restarting the app.
+    engine: Mutex<HttpEngine>,
     cancellations: CancellationRegistry,
     store: Store,
     state: Mutex<AppState>,
@@ -56,7 +71,7 @@ impl Session {
 
         Ok(Self {
             inner: Arc::new(Inner {
-                engine,
+                engine: Mutex::new(engine),
                 cancellations: CancellationRegistry::new(),
                 store,
                 state: Mutex::new(state),
@@ -104,9 +119,10 @@ impl Session {
         }
         let handle = self.inner.cancellations.register(&request.id);
 
-        let result = self
-            .inner
-            .engine
+        // Cloned out of the lock: the guard must not be held across an await,
+        // and the engine is a handle to a shared connection pool anyway.
+        let engine = self.engine();
+        let result = engine
             .execute_with_variables(request.clone(), &variables, handle)
             .await;
         self.inner.cancellations.finish(&request.id);
@@ -165,14 +181,39 @@ impl Session {
     /// changes through [`Session::send`] and [`Session::clear_history`]. A UI
     /// saving a snapshot it took before its last send must not erase the row
     /// that send created.
-    pub fn replace_state(&self, mut next: AppState) -> Result<(), StorageError> {
+    pub fn replace_state(&self, mut next: AppState) -> Result<(), SessionError> {
         next.ensure_one_tab();
+
+        let wanted = engine_config(&next.settings);
+        let rebuild = wanted != *self.engine().config();
+
         {
             let mut current = self.state();
             next.history = std::mem::take(&mut current.history);
             *current = next;
         }
-        self.persist()
+
+        // Saved first. If a certificate path is wrong the setting still needs
+        // to persist, or the dialog that reported the error would have nothing
+        // to correct.
+        self.persist()?;
+
+        if rebuild {
+            let engine = HttpEngine::new(wanted)?;
+            *self.engine_slot() = engine;
+        }
+        Ok(())
+    }
+
+    fn engine(&self) -> HttpEngine {
+        self.engine_slot().clone()
+    }
+
+    fn engine_slot(&self) -> MutexGuard<'_, HttpEngine> {
+        self.inner
+            .engine
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Creates or updates a saved request. Passing `id` updates in place.
@@ -225,6 +266,7 @@ fn engine_config(settings: &Settings) -> EngineConfig {
         default_timeout_ms: settings.timeout_ms,
         max_response_bytes: settings.max_response_bytes,
         follow_redirects: settings.follow_redirects,
+        tls: settings.tls.clone(),
         ..EngineConfig::default()
     }
 }

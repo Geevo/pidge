@@ -64,6 +64,15 @@ export function BookmarkIcon(props: IconProps) {
   );
 }
 
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="8" cy="8" r="2.2" />
+      <path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5" />
+    </Svg>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Svg {...props}>

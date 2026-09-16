@@ -7,11 +7,14 @@
 mod build;
 mod cancel;
 mod error;
+mod tls;
 mod url_input;
 
 use std::time::{Duration, Instant};
 
-use api_client_core::{HttpRequest, HttpResponse, KeyValueEntry, RequestError, RequestErrorKind};
+use api_client_core::{
+    HttpRequest, HttpResponse, KeyValueEntry, RequestError, RequestErrorKind, TlsSettings,
+};
 use api_client_variables::VariableSet;
 
 pub use cancel::{CancellationHandle, CancellationRegistry};
@@ -26,7 +29,7 @@ pub const DEFAULT_MAX_REDIRECTS: usize = 10;
 
 /// Knobs the engine exposes. Everything has a sensible default; the UI does not
 /// need to set any of it to send a request.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngineConfig {
     pub default_timeout_ms: u64,
     pub max_response_bytes: u64,
@@ -34,8 +37,8 @@ pub struct EngineConfig {
     pub max_redirects: usize,
     pub store_cookies: bool,
     pub user_agent: String,
-    /// Reserved for the settings screen; see `docs/architecture.md`.
-    pub accept_invalid_certs: bool,
+    /// Trust and client-certificate settings.
+    pub tls: TlsSettings,
 }
 
 impl Default for EngineConfig {
@@ -47,7 +50,7 @@ impl Default for EngineConfig {
             max_redirects: DEFAULT_MAX_REDIRECTS,
             store_cookies: true,
             user_agent: concat!("api-client/", env!("CARGO_PKG_VERSION")).to_string(),
-            accept_invalid_certs: false,
+            tls: TlsSettings::default(),
         }
     }
 }
@@ -67,16 +70,26 @@ impl HttpEngine {
             reqwest::redirect::Policy::none()
         };
 
-        let client = reqwest::Client::builder()
+        let builder = reqwest::Client::builder()
             .user_agent(config.user_agent.clone())
             .redirect(redirect)
-            .cookie_store(config.store_cookies)
-            .danger_accept_invalid_certs(config.accept_invalid_certs)
-            .build()
-            .map_err(|err| {
+            .cookie_store(config.store_cookies);
+
+        let client = tls::apply(builder, &config.tls)?.build().map_err(|err| {
+            // reqwest defers parsing a DER certificate until the client is
+            // built, so a bad certificate surfaces here rather than where it
+            // was loaded. If TLS was configured at all, that is the cause worth
+            // pointing at.
+            if config.tls.is_default() {
                 RequestError::new(RequestErrorKind::Other, "Could not start the HTTP client.")
-                    .with_detail(error::chain(&err))
-            })?;
+            } else {
+                RequestError::new(
+                    RequestErrorKind::Tls,
+                    "Could not apply the certificate settings. Check that each file is a valid certificate.",
+                )
+            }
+            .with_detail(error::chain(&err))
+        })?;
 
         Ok(Self { client, config })
     }

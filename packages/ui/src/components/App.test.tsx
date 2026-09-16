@@ -394,3 +394,76 @@ describe("persistence", () => {
     expect(bridge.saved.at(-1)!.tabs[0]!.request.url).toBe("localhost:3000");
   });
 });
+
+describe("settings", () => {
+  it("saves certificate settings back to the host", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    await user.click(within(dialog).getByRole("button", { name: "Add CA file" }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "CA file 1" }),
+      "/etc/ssl/internal-ca.pem",
+    );
+
+    await user.type(within(dialog).getByLabelText("File"), "/home/me/client.p12");
+    await user.type(within(dialog).getByLabelText("Password"), "hunter2");
+
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    // Saves are debounced and hydration already caused one, so wait for the
+    // content rather than for any save at all.
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.tls.extraCaFiles).toEqual(["/etc/ssl/internal-ca.pem"]);
+    });
+
+    const tls = bridge.saved.at(-1)!.settings.tls;
+    expect(tls.clientIdentity).toEqual({ path: "/home/me/client.p12", password: "hunter2" });
+    // The system store stays on: an internal CA is added to it, not swapped in.
+    expect(tls.useSystemRoots).toBe(true);
+  });
+
+  it("clears the client certificate when the path is emptied", async () => {
+    const bridge = new FakeBridge();
+    bridge.state = {
+      ...defaultState(),
+      settings: {
+        ...defaultState().settings,
+        tls: {
+          useSystemRoots: true,
+          extraCaFiles: [],
+          clientIdentity: { path: "/old/client.pem", password: null },
+          acceptInvalidCerts: false,
+        },
+      },
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    await user.clear(within(dialog).getByLabelText("File"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.tls.clientIdentity).toBeNull();
+    });
+  });
+
+  it("does not offer a password field until a certificate is chosen", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    expect(within(dialog).queryByLabelText("Password")).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("File"), "/home/me/client.p12");
+    expect(within(dialog).getByLabelText("Password")).toBeInTheDocument();
+  });
+});
