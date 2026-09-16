@@ -641,6 +641,10 @@ describe("window chrome", () => {
         calls.push(`resize:${edge}`);
         return Promise.resolve();
       },
+      setTheme: (theme: string | null) => {
+        calls.push(`theme:${theme}`);
+        return Promise.resolve();
+      },
     };
     bridge.window = controls;
     const user = userEvent.setup();
@@ -666,6 +670,7 @@ describe("window chrome", () => {
       isMaximized: () => Promise.reject(new Error("no window")),
       startDragging: () => Promise.reject(new Error("no window")),
       startResizing: () => Promise.reject(new Error("no window")),
+      setTheme: () => Promise.reject(new Error("no window")),
     };
     bridge.window = controls;
     const user = userEvent.setup();
@@ -790,6 +795,40 @@ describe("themes", () => {
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const again = await screen.findByRole("dialog", { name: "Settings" });
     expect(within(again).getByLabelText("Theme")).toHaveValue("system");
+  });
+
+  it("tells the host which way the palette leans, so native popups match", async () => {
+    const bridge = new FakeBridge();
+    const themes: (string | null)[] = [];
+    bridge.window = {
+      minimize: () => Promise.resolve(),
+      toggleMaximize: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+      isMaximized: () => Promise.resolve(false),
+      startDragging: () => Promise.resolve(),
+      startResizing: () => Promise.resolve(),
+      setTheme: (theme) => {
+        themes.push(theme);
+        return Promise.resolve();
+      },
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    // A warm palette is still a light or a dark one as far as GTK is concerned.
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmLight");
+    await waitFor(() => expect(themes.at(-1)).toBe("light"));
+
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await waitFor(() => expect(themes.at(-1)).toBe("dark"));
+
+    // "Follow the system" hands the choice back rather than pinning it.
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "system");
+    await waitFor(() => expect(themes.at(-1)).toBeNull());
   });
 
   it("applies the chosen palette to the document", async () => {
