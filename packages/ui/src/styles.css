@@ -454,7 +454,20 @@ option[value="OPTIONS"] {
 }
 
 .ac-button--danger {
+  border-color: color-mix(in srgb, var(--ac-danger) 45%, transparent);
   color: var(--ac-danger);
+}
+
+.ac-button--danger:hover:not(:disabled) {
+  border-color: var(--ac-danger);
+  background: color-mix(in srgb, var(--ac-danger) 10%, transparent);
+}
+
+/* A button whose label is preceded by an icon. */
+.ac-button--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .ac-icon-button {
@@ -825,6 +838,12 @@ option[value="OPTIONS"] {
   word-break: break-word;
 }
 
+.ac-empty--dialog {
+  gap: 12px;
+  height: auto;
+  padding: 32px 24px;
+}
+
 .ac-empty {
   display: flex;
   flex-direction: column;
@@ -1030,6 +1049,26 @@ option[value="OPTIONS"] {
   border-radius: var(--ac-radius);
   background: var(--ac-bg);
   box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+}
+
+/*
+ * A dialog title is not a drawer section label: it gets normal-size text, and
+ * the action beside it gets a real button rather than a quiet one, because it
+ * is the only way to create the thing the dialog is about.
+ */
+.ac-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-dialog__title {
+  margin: 0;
+  font-size: var(--ac-font-size);
+  font-weight: 600;
 }
 
 .ac-dialog__body {
