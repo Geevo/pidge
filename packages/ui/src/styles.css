@@ -229,6 +229,63 @@ option {
   color: var(--ac-text);
 }
 
+/*
+ * The native checkbox is whatever the platform draws, which in a WebKit webview
+ * is a bare square that ignores the theme. This is the one control the params
+ * and headers tables lean on constantly, so it gets drawn here instead.
+ */
+input[type="checkbox"] {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--ac-border-strong);
+  border-radius: 3px;
+  background: var(--ac-bg-input);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  background: var(--ac-accent-text);
+  /* A tick, rather than a font glyph that would differ per platform. */
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: transform 120ms ease;
+}
+
+input[type="checkbox"]:checked {
+  border-color: var(--ac-accent);
+  background: var(--ac-accent);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--ac-accent);
+}
+
+/*
+ * A 14px target in a 28px row is a miss waiting to happen, so the label fills
+ * the cell and the whole thing toggles.
+ */
+.ac-check {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--ac-row-height);
+  cursor: pointer;
+}
+
 :focus-visible {
   outline: 2px solid var(--ac-focus);
   outline-offset: 1px;

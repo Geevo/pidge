@@ -175,12 +175,14 @@ function MultipartEditor({ entries, onChange }: MultipartProps) {
         {displayed.map((entry, index) => (
           <tr key={entry.id}>
             <td className="ac-kv__check">
-              <input
-                type="checkbox"
-                aria-label={`Enable part ${index + 1}`}
-                checked={entry.enabled}
-                onChange={(event) => update(index, { enabled: event.target.checked })}
-              />
+              <label className="ac-check">
+                <input
+                  type="checkbox"
+                  aria-label={`Enable part ${index + 1}`}
+                  checked={entry.enabled}
+                  onChange={(event) => update(index, { enabled: event.target.checked })}
+                />
+              </label>
             </td>
             <td>
               <input

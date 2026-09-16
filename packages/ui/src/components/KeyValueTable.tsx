@@ -60,12 +60,14 @@ export function KeyValueTable({
         {displayed.map((row, index) => (
           <tr key={row.id}>
             <td className="ac-kv__check">
-              <input
-                type="checkbox"
-                aria-label={`Enable ${row.name || `row ${index + 1}`}`}
-                checked={row.enabled}
-                onChange={(event) => update(index, { enabled: event.target.checked })}
-              />
+              <label className="ac-check">
+                <input
+                  type="checkbox"
+                  aria-label={`Enable ${row.name || `row ${index + 1}`}`}
+                  checked={row.enabled}
+                  onChange={(event) => update(index, { enabled: event.target.checked })}
+                />
+              </label>
             </td>
             <td>
               <input
