@@ -672,6 +672,24 @@ input[type="checkbox"]:hover {
   background: color-mix(in srgb, var(--ac-danger) 10%, transparent);
 }
 
+/*
+ * The confirm button of something destructive: solid, so it reads as the act
+ * rather than as a way out of the dialog. `--ac-accent-text` is the text colour
+ * for a strong block of theme colour, which is exactly what this is.
+ */
+.ac-button--danger-solid {
+  min-width: 68px;
+  border-color: var(--ac-danger);
+  background: var(--ac-danger);
+  color: var(--ac-accent-text);
+  font-weight: 600;
+}
+
+.ac-button--danger-solid:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ac-danger) 80%, black);
+  background: color-mix(in srgb, var(--ac-danger) 80%, black);
+}
+
 /* A button whose label is preceded by an icon. */
 .ac-button--icon {
   display: inline-flex;
@@ -1315,6 +1333,11 @@ input[type="checkbox"]:hover {
    * underneath rather than just the scrolled region.
    */
   contain: paint;
+}
+
+.ac-dialog__message {
+  margin: 0;
+  padding: 10px 8px;
 }
 
 .ac-dialog__footer {

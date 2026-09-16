@@ -146,11 +146,17 @@ close. The list is rendered into `document.body` and positioned against the
 trigger, because the dialog and the tab strip both clip. It closes on scroll and
 on resize rather than following the trigger around.
 
-`window.prompt` went the same way, and for the same reason: saving a request
-asks for a name in `PromptDialog` rather than in the platform's prompt, whose
-entry is sized by the platform and was too narrow in a WebKit webview to show
-the URL it was suggesting. The suggestion is selected backwards so a long one is
-shown from its start rather than its query string.
+`window.prompt` and `window.confirm` went the same way, and for the same reason.
+The prompt's entry is sized by the platform and was too narrow in a WebKit
+webview to show the URL it was suggesting, and both look like a different
+application on each operating system. `PromptDialog` asks for a name — the
+suggestion selected backwards, so a long URL shows from its start rather than
+its query string — and `ConfirmDialog` asks the three yes-or-no questions:
+discarding a tab's changes, clearing history, deleting a saved request.
+
+Whether to ask before closing a tab is `needsCloseConfirmation`, and it moved
+out of `useApiClient` when the dialog did. A hook that puts a dialog up cannot
+be driven by anything without a screen, and the sidecar has none.
 
 That leaves the menu the webview puts up on a right click, which is still the
 platform's and stays in the desktop's colours. Passing the palette down to the

@@ -82,9 +82,7 @@ function responseBodyText(): string {
   return document.querySelector(".ac-response-body")?.textContent ?? "";
 }
 
-beforeEach(() => {
-  vi.spyOn(window, "confirm").mockReturnValue(true);
-});
+beforeEach(() => {});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -423,7 +421,26 @@ describe("history and saved requests", () => {
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(await screen.findByRole("button", { name: "Clear" }));
 
+    const dialog = await screen.findByRole("dialog", { name: "Clear history" });
+    await user.click(within(dialog).getByRole("button", { name: "Clear" }));
+
     expect(await screen.findByText("Nothing sent yet.")).toBeInTheDocument();
+  });
+
+  it("keeps history when the clear is cancelled", async () => {
+    const bridge = new FakeBridge();
+    bridge.state = { ...defaultState(), history: [historyEntry(response())] };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "History" }));
+    await user.click(await screen.findByRole("button", { name: "Clear" }));
+    const dialog = await screen.findByRole("dialog", { name: "Clear history" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("Nothing sent yet.")).not.toBeInTheDocument();
+    expect(bridge.state.history).toHaveLength(1);
   });
 
   it("saves a request and opens it from the Saved panel", async () => {
@@ -971,5 +988,71 @@ describe("saving a request", () => {
 
     await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(1));
     expect(bridge.state.savedRequests[0]!.name).toBe("localhost:3000/users");
+  });
+});
+
+describe("confirming destructive things", () => {
+  it("asks before closing a tab with work in it, and keeps it on cancel", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/nearly-done");
+    await user.keyboard("{Control>}w{/Control}");
+
+    const dialog = await screen.findByRole("dialog", { name: "Discard changes" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByRole("textbox", { name: "URL" })).toHaveValue("localhost:3000/nearly-done");
+  });
+
+  it("closes the tab once the discard is confirmed", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/nearly-done");
+    await user.keyboard("{Control>}w{/Control}");
+
+    const dialog = await screen.findByRole("dialog", { name: "Discard changes" });
+    await user.click(within(dialog).getByRole("button", { name: "Discard" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "URL" })).toHaveValue("");
+    });
+  });
+
+  it("closes an untouched tab without asking", async () => {
+    const { user } = setup();
+    await ready();
+
+    // Scoped to the tab strip: the request pane's Params/Body/… are tabs too.
+    const strip = () =>
+      within(screen.getByRole("tablist", { name: "Open requests" })).getAllByRole("tab");
+
+    await user.keyboard("{Control>}n{/Control}");
+    await waitFor(() => expect(strip()).toHaveLength(2));
+
+    await user.keyboard("{Control>}w{/Control}");
+
+    await waitFor(() => expect(strip()).toHaveLength(1));
+    expect(screen.queryByRole("dialog", { name: "Discard changes" })).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting a saved request", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await saveAs(user, "Users");
+    await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(1));
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    await user.click(within(panel).getByRole("button", { name: "Delete Users" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Delete saved request" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(0));
   });
 });

@@ -5,7 +5,7 @@ import { toRequestError } from "../bridge";
 import type { AppState, Environment, HttpRequest, Settings } from "../types";
 import { blankTab } from "./factories";
 import type { Action, DrawerPanel, UiState } from "./reducer";
-import { activeTab, needsCloseConfirmation, reducer, runtimeFor } from "./reducer";
+import { activeTab, reducer, runtimeFor } from "./reducer";
 
 const SAVE_DEBOUNCE_MS = 400;
 
@@ -200,14 +200,12 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     dispatch({ type: "newTab", request, name, savedRequestId });
   }, []);
 
+  /*
+   * Closes without asking. Whether to ask is `needsCloseConfirmation`, and it is
+   * the view's business: a hook that puts a dialog up cannot be driven by
+   * anything that does not have a screen.
+   */
   const closeTab = useCallback((tabId: string) => {
-    const tab = stateRef.current.app.tabs.find((candidate) => candidate.id === tabId);
-    if (!tab) return;
-    if (needsCloseConfirmation(tab)) {
-      const label = tab.name ?? tab.request.url.trim() ?? "this request";
-      // An untouched tab closes silently; one with real content asks.
-      if (!window.confirm(`Discard unsaved changes to ${label || "this request"}?`)) return;
-    }
     dispatch({ type: "closeTab", tabId });
   }, []);
 

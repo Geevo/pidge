@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlatformBridge } from "../bridge";
 import { matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
-import { activeTab, runtimeFor } from "../state/reducer";
+import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
 import { useApiClient } from "../state/useApiClient";
-import type { HttpMethod, HttpRequest, Theme } from "../types";
+import type { HttpMethod, HttpRequest, ScratchTab, Theme } from "../types";
 import { EnvironmentSelector } from "./EnvironmentSelector";
 import { EnvironmentsDialog } from "./EnvironmentsDialog";
 import { HistoryPanel } from "./HistoryPanel";
@@ -13,6 +13,7 @@ import { RequestEditor } from "./RequestEditor";
 import { RequestTabBar } from "./RequestTabBar";
 import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { PromptDialog } from "./PromptDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { SplitPane, clampPercent } from "./SplitPane";
@@ -39,6 +40,7 @@ export function App({ bridge }: Props) {
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [closing, setClosing] = useState<ScratchTab | null>(null);
 
   /*
    * The theme picked in Settings but not yet saved. A palette is not something
@@ -65,6 +67,17 @@ export function App({ bridge }: Props) {
 
   const send = useCallback(() => void client.send(tab.id), [client, tab.id]);
 
+  // An untouched tab closes silently; one with work in it asks first.
+  const askCloseTab = useCallback(
+    (tabId: string) => {
+      const candidate = state.app.tabs.find((each) => each.id === tabId);
+      if (!candidate) return;
+      if (needsCloseConfirmation(candidate)) setClosing(candidate);
+      else client.closeTab(tabId);
+    },
+    [client, state.app.tabs],
+  );
+
   const save = useCallback(() => setSaveOpen(true), []);
 
   // Shortcuts are global: the URL field is the default focus, but Send has to
@@ -87,7 +100,7 @@ export function App({ bridge }: Props) {
           client.newTab();
           break;
         case "closeTab":
-          client.closeTab(tab.id);
+          askCloseTab(tab.id);
           break;
         case "save":
           save();
@@ -97,7 +110,7 @@ export function App({ bridge }: Props) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [client, save, send, sending, tab.id]);
+  }, [askCloseTab, client, save, send, sending, tab.id]);
 
   return (
     <div className="ac-app">
@@ -121,7 +134,7 @@ export function App({ bridge }: Props) {
         tabs={state.app.tabs}
         activeTabId={state.app.activeTabId}
         onSelect={(tabId) => client.dispatch({ type: "selectTab", tabId })}
-        onClose={client.closeTab}
+        onClose={askCloseTab}
         onNew={() => client.newTab()}
         windowControls={bridge.window}
       />
@@ -267,6 +280,17 @@ export function App({ bridge }: Props) {
           />
         </main>
       </div>
+
+      {closing ? (
+        <ConfirmDialog
+          title="Discard changes"
+          message={`Discard unsaved changes to ${closing.name ?? (closing.request.url.trim() || "this request")}?`}
+          confirmLabel="Discard"
+          danger
+          onConfirm={() => client.closeTab(closing.id)}
+          onClose={() => setClosing(null)}
+        />
+      ) : null}
 
       {saveOpen ? (
         <PromptDialog
