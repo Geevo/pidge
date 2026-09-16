@@ -7,7 +7,7 @@ import type { Plugin } from "vite";
 /**
  * Ships the bundled fonts' licences with the bundled fonts.
  *
- * Inter and JetBrains Mono are both SIL Open Font License 1.1, which requires
+ * IBM Plex Sans and IBM Plex Mono are both SIL Open Font License 1.1, which requires
  * the licence to travel with the font. The fonts are emitted by Vite as build
  * assets, so their licences are emitted the same way rather than left behind in
  * the source tree for a packager to remember.
@@ -18,7 +18,7 @@ import type { Plugin } from "vite";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fontDir = join(repoRoot, "packages", "ui", "src", "fonts");
 
-const LICENCE_FILES = ["Inter-LICENSE.txt", "JetBrainsMono-LICENSE.txt"] as const;
+const LICENCE_FILES = ["IBMPlexSans-LICENSE.txt", "IBMPlexMono-LICENSE.txt"] as const;
 const NOTICE_FILE = "THIRD-PARTY-LICENSES.md";
 
 export interface FontLicenseOptions {

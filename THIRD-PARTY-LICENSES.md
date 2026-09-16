@@ -3,23 +3,25 @@
 The application bundles two typefaces so that it renders identically on every
 platform. Both are used unmodified, subset to latin.
 
-## Inter
+## IBM Plex Sans
 
-Copyright 2016 The Inter Project Authors — <https://github.com/rsms/inter>
-
-Licensed under the SIL Open Font License, Version 1.1.
-Full text: [`packages/ui/src/fonts/Inter-LICENSE.txt`](packages/ui/src/fonts/Inter-LICENSE.txt)
-
-Shipped as `packages/ui/src/fonts/inter-latin-variable.woff2`.
-
-## JetBrains Mono
-
-Copyright 2020 The JetBrains Mono Project Authors — <https://github.com/JetBrains/JetBrainsMono>
+Copyright 2019 IBM Corp. — <https://github.com/IBM/plex>
 
 Licensed under the SIL Open Font License, Version 1.1.
-Full text: [`packages/ui/src/fonts/JetBrainsMono-LICENSE.txt`](packages/ui/src/fonts/JetBrainsMono-LICENSE.txt)
+Full text: [`packages/ui/src/fonts/IBMPlexSans-LICENSE.txt`](packages/ui/src/fonts/IBMPlexSans-LICENSE.txt)
 
-Shipped as `packages/ui/src/fonts/jetbrains-mono-latin-variable.woff2`.
+Shipped as `packages/ui/src/fonts/ibm-plex-sans-latin-variable.woff2`.
+
+## IBM Plex Mono
+
+Copyright 2019 IBM Corp. — <https://github.com/IBM/plex>
+
+Licensed under the SIL Open Font License, Version 1.1.
+Full text: [`packages/ui/src/fonts/IBMPlexMono-LICENSE.txt`](packages/ui/src/fonts/IBMPlexMono-LICENSE.txt)
+
+Shipped as `packages/ui/src/fonts/ibm-plex-mono-latin-400.woff2` and
+`ibm-plex-mono-latin-700.woff2`. Plex Mono has no variable build, so the two
+weights the UI uses are bundled as separate static faces.
 
 ---
 

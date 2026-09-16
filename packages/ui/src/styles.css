@@ -10,30 +10,42 @@
  * Bundled fonts.
  *
  * The app ships its own typefaces rather than leaning on the system stack, so
- * a request looks identical on Windows and Linux. Both are variable fonts with
- * a weight axis and a latin subset, 88 KB for the pair.
+ * a request looks identical on Windows and Linux.
  *
  * They are loaded from the bundle, never from a network: the desktop CSP is
  * `default-src 'self'` and the VS Code webview allows no remote origins at all.
  *
- * Inter and JetBrains Mono are both SIL Open Font License 1.1; the licence text
- * ships alongside them in `src/fonts/`.
+ * IBM Plex Sans and IBM Plex Mono are both SIL Open Font License 1.1; the
+ * licence text ships alongside them in `src/fonts/`.
  */
 
 @font-face {
-  font-family: "Inter Variable";
+  font-family: "IBM Plex Sans Variable";
   font-style: normal;
   font-display: swap;
-  font-weight: 100 900;
-  src: url("./fonts/inter-latin-variable.woff2") format("woff2-variations");
+  font-weight: 100 700;
+  src: url("./fonts/ibm-plex-sans-latin-variable.woff2") format("woff2");
+}
+
+/*
+ * Plex Mono has no variable build, so the two weights the UI actually uses are
+ * bundled as static faces. Declaring them separately keeps the browser from
+ * synthesising a fake bold, which smears at 12px.
+ */
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("./fonts/ibm-plex-mono-latin-400.woff2") format("woff2");
 }
 
 @font-face {
-  font-family: "JetBrains Mono Variable";
+  font-family: "IBM Plex Mono";
   font-style: normal;
   font-display: swap;
-  font-weight: 100 800;
-  src: url("./fonts/jetbrains-mono-latin-variable.woff2") format("woff2-variations");
+  font-weight: 700;
+  src: url("./fonts/ibm-plex-mono-latin-700.woff2") format("woff2");
 }
 
 :root {
@@ -91,12 +103,12 @@
 
   /* The bundled faces first; the rest is insurance if a file fails to load. */
   --ac-font:
-    "Inter Variable", Inter, -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    "IBM Plex Sans Variable", "IBM Plex Sans", -apple-system, "Segoe UI", ui-sans-serif, system-ui,
+    sans-serif;
 
   /* URLs, headers, and bodies are monospaced: alignment beats prettiness. */
   --ac-font-mono:
-    "JetBrains Mono Variable", "JetBrains Mono", "Cascadia Mono", "SF Mono", ui-monospace, Menlo,
-    Consolas, monospace;
+    "IBM Plex Mono", "Cascadia Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 
   --ac-font-size: 13px;
   --ac-font-size-small: 12px;
@@ -356,11 +368,17 @@ option[value="OPTIONS"] {
   border-radius: 3px;
   background: var(--ac-method-other, var(--ac-text-faint));
   color: #ffffff;
-  font-family: var(--ac-font-mono);
+  /*
+   * Sans, not mono. A method is a three-to-seven letter word, not a column of
+   * data, and a monospaced face at this size renders muddy. Swagger sets these
+   * in its UI font too.
+   */
+  font-family: var(--ac-font);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.5;
+  font-variant-numeric: normal;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
   text-align: center;
   text-transform: uppercase;
 }
@@ -390,8 +408,9 @@ option[value="OPTIONS"] {
 }
 
 .ac-method-badge--small {
-  min-width: 38px;
-  font-size: 9px;
+  min-width: 42px;
+  padding: 1px 4px;
+  font-size: 10px;
 }
 
 /* ---------- buttons ---------- */
