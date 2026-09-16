@@ -53,15 +53,6 @@ export interface WindowControls {
   startDragging(): Promise<void>;
   /** Undecorated windows get no resize edges for free; these supply them. */
   startResizing(edge: ResizeEdge): Promise<void>;
-  /**
-   * Tells the host which way the palette leans, or `null` to follow the system.
-   *
-   * The menus the webview itself puts up — the right-click menu — are the
-   * platform's and take no notice of CSS. This is the only handle on them. It
-   * is a hint rather than a guarantee: on Linux it sets the GTK dark
-   * preference, which a theme shipping its dark variant separately ignores.
-   */
-  setTheme(theme: "light" | "dark" | null): Promise<void>;
 }
 
 /**
