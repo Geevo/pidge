@@ -149,7 +149,11 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  /*
+   * Only when no theme has been named. Matching "not light" would have leaked
+   * these values into any other named light palette on a dark desktop.
+   */
+  :root:not([data-theme]) {
     --ac-bg: #16181d;
     --ac-bg-subtle: #1c1f26;
     --ac-bg-raised: #21252d;
@@ -181,6 +185,60 @@
 
     color-scheme: dark;
   }
+}
+
+/*
+ * The warm pair: the same two palettes with the grey ramp warmed up, so the
+ * app reads as ink on paper rather than slate. Only the neutrals change — the
+ * accent, the status colours and the method palette carry meaning and stay put.
+ */
+:root[data-theme="warmDark"] {
+  --ac-bg: #1f1e1d;
+  --ac-bg-subtle: #262624;
+  --ac-bg-raised: #30302e;
+  --ac-bg-input: #1a1917;
+  --ac-border: #3a3a37;
+  --ac-border-strong: #52514c;
+  --ac-text: #f5f4ef;
+  --ac-text-muted: #b4b2a7;
+  --ac-text-faint: #85837a;
+  --ac-accent: #4c8dff;
+  --ac-accent-text: #0d1117;
+  --ac-focus: #4c8dff;
+  --ac-danger: #f0776a;
+
+  --ac-status-ok: #46c06a;
+  --ac-status-redirect: #d9a441;
+  --ac-status-client: #f0883e;
+  --ac-status-server: #f0776a;
+  --ac-status-other: #b4b2a7;
+
+  --ac-method-get-text: #61affe;
+  --ac-method-post-text: #49cc90;
+  --ac-method-put-text: #fca130;
+  --ac-method-patch-text: #50e3c2;
+  --ac-method-delete-text: #ff6b6b;
+  --ac-method-head-text: #b07cff;
+  --ac-method-options-text: #5aa9e6;
+
+  color-scheme: dark;
+}
+
+/*
+ * Short because the light palette at :root is the base every theme inherits:
+ * the accent, the status colours and `color-scheme: light` are already right,
+ * so only the greys are restated.
+ */
+:root[data-theme="warmLight"] {
+  --ac-bg: #faf9f5;
+  --ac-bg-subtle: #f0eee6;
+  --ac-bg-raised: #ffffff;
+  --ac-bg-input: #ffffff;
+  --ac-border: #e3e0d6;
+  --ac-border-strong: #cbc7b8;
+  --ac-text: #1f1e1d;
+  --ac-text-muted: #5e5d57;
+  --ac-text-faint: #8c8a80;
 }
 
 * {

@@ -32,10 +32,15 @@ pub enum PaneLayout {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum Theme {
+    /// Follow the operating system's light/dark preference.
     #[default]
     System,
     Light,
     Dark,
+    /// Dark, with warm neutrals in place of the cool greys.
+    WarmDark,
+    /// Light, on paper rather than white.
+    WarmLight,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

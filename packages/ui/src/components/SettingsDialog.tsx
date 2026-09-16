@@ -59,6 +59,8 @@ export function SettingsDialog({ settings, storagePath, onSave, onClose }: Props
               <option value="system">Follow the system</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
+              <option value="warmDark">Warm dark</option>
+              <option value="warmLight">Warm light</option>
             </select>
           </div>
 

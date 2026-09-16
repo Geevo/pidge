@@ -171,6 +171,15 @@ friends) are never written to a log.
 - [Packaging](docs/packaging.md)
 - [Development](docs/development.md)
 
+## Themes
+
+System, light and dark, plus a warm variant of each: the same palette with the
+grey ramp warmed up, so the app reads as ink on paper rather than slate. Pick
+one in Settings.
+
+Method colours stay Swagger's in every theme: those carry meaning rather than
+decoration.
+
 ## Typography
 
 The app bundles IBM Plex Sans and IBM Plex Mono (75 KB together, latin subset)
