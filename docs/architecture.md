@@ -108,6 +108,26 @@ So that the panel still updates live, `Session::send` returns the `HistoryEntry`
 it recorded alongside the response, and the reducer prepends it. `clear_history`
 is the only way a frontend can empty it.
 
+## Themes
+
+Every colour is a token on `:root`, so a theme is one block redefining them.
+`useTheme` writes the choice to `data-theme` on the document element and removes
+it for "system", which is what lets the `prefers-color-scheme` block apply.
+
+That block is keyed on `:root:not([data-theme])` rather than "not light". With
+the looser selector, a named light palette on a dark desktop would have had the
+system's dark values layered over it.
+
+The base tokens on `:root` are the light palette, so a theme only restates what
+differs from it. That is why the warm light block is a third the size of the
+warm dark one rather than a copy.
+
+`color-scheme` is set per theme as well as the colours, so the browser's own
+furniture — select popups, scrollbars, the caret — follows.
+
+Method colours are deliberately not themed. They are Swagger's palette because
+they carry meaning, and a POST should be the same green wherever it is read.
+
 ## The window
 
 The desktop window is undecorated. GTK on Wayland always draws its own header —

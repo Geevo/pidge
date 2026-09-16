@@ -5,7 +5,7 @@ import { matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, runtimeFor } from "../state/reducer";
 import { useApiClient } from "../state/useApiClient";
-import type { HttpMethod, HttpRequest } from "../types";
+import type { HttpMethod, HttpRequest, Theme } from "../types";
 import { EnvironmentSelector } from "./EnvironmentSelector";
 import { EnvironmentsDialog } from "./EnvironmentsDialog";
 import { HistoryPanel } from "./HistoryPanel";
@@ -289,7 +289,7 @@ export function App({ bridge }: Props) {
  * The desktop app sets the theme explicitly; the VS Code build leaves it on
  * "system" so it follows the editor's own colours.
  */
-function useTheme(theme: "system" | "light" | "dark") {
+function useTheme(theme: Theme) {
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "system") root.removeAttribute("data-theme");

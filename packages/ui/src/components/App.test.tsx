@@ -733,3 +733,65 @@ describe("split position per tab", () => {
     });
   });
 });
+
+describe("themes", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("offers the warm palettes alongside the built-in ones", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const options = within(dialog)
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+
+    expect(options).toEqual(
+      expect.arrayContaining(["system", "light", "dark", "warmDark", "warmLight"]),
+    );
+  });
+
+  it("applies the chosen palette to the document", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
+    });
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.theme).toBe("warmDark");
+    });
+  });
+
+  it("leaves the attribute off for the system theme, so the media query applies", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+
+    await user.selectOptions(within(dialog).getByLabelText("Theme"), "dark");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const again = await screen.findByRole("dialog", { name: "Settings" });
+    await user.selectOptions(within(again).getByLabelText("Theme"), "system");
+    await user.click(within(again).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(document.documentElement).not.toHaveAttribute("data-theme");
+    });
+  });
+});
