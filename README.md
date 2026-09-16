@@ -149,6 +149,16 @@ friends) are never written to a log.
 - [Packaging](docs/packaging.md)
 - [Development](docs/development.md)
 
+## Typography
+
+The app bundles Inter and JetBrains Mono (88 KB together, latin subset, variable
+weight) rather than using whatever each platform provides, so a request looks the
+same on Windows and Linux. Nothing is fetched at runtime; both CSPs forbid it.
+
+Both fonts are SIL Open Font License 1.1. See
+[THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Bundled fonts are covered by
+[THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

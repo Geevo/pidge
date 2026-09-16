@@ -36,8 +36,12 @@
    * the same green here as in the desktop app and in the API docs.
    */
 
-  --ac-font: var(--vscode-font-family);
-  --ac-font-mono: var(--vscode-editor-font-family, ui-monospace, monospace);
+  /*
+   * Colours follow the editor, fonts do not. VS Code's defaults differ per
+   * platform (Consolas on Windows, whatever fontconfig picks on Linux), and a
+   * request should look the same wherever it is opened, so the bundled faces
+   * from styles.css are left in place.
+   */
   --ac-font-size: var(--vscode-font-size, 13px);
 }
 

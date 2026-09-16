@@ -6,6 +6,36 @@
  * UI follows the editor without a second stylesheet.
  */
 
+/*
+ * Bundled fonts.
+ *
+ * The app ships its own typefaces rather than leaning on the system stack, so
+ * a request looks identical on Windows and Linux. Both are variable fonts with
+ * a weight axis and a latin subset, 88 KB for the pair.
+ *
+ * They are loaded from the bundle, never from a network: the desktop CSP is
+ * `default-src 'self'` and the VS Code webview allows no remote origins at all.
+ *
+ * Inter and JetBrains Mono are both SIL Open Font License 1.1; the licence text
+ * ships alongside them in `src/fonts/`.
+ */
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("./fonts/inter-latin-variable.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("./fonts/jetbrains-mono-latin-variable.woff2") format("woff2-variations");
+}
+
 :root {
   --ac-bg: #ffffff;
   --ac-bg-subtle: #f6f7f9;
@@ -58,8 +88,16 @@
   color-scheme: light;
 
   --ac-radius: 4px;
-  --ac-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ac-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* The bundled faces first; the rest is insurance if a file fails to load. */
+  --ac-font:
+    "Inter Variable", Inter, -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  /* URLs, headers, and bodies are monospaced: alignment beats prettiness. */
+  --ac-font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", "Cascadia Mono", "SF Mono", ui-monospace, Menlo,
+    Consolas, monospace;
+
   --ac-font-size: 13px;
   --ac-font-size-small: 12px;
   --ac-row-height: 28px;
@@ -150,6 +188,9 @@ body {
   font-family: var(--ac-font);
   font-size: var(--ac-font-size);
   line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
 }
 
 button,
@@ -262,6 +303,8 @@ option {
   border-radius: var(--ac-radius);
   background: var(--ac-bg-input);
   font-family: var(--ac-font-mono);
+  /* Ligature fonts turn `//` and `->` into glyphs; a URL must read literally. */
+  font-variant-ligatures: none;
 }
 
 .ac-method {
@@ -683,6 +726,7 @@ option[value="OPTIONS"] {
   border-right: 1px solid var(--ac-border);
   background: var(--ac-bg-subtle);
   color: var(--ac-text-faint);
+  font-variant-numeric: tabular-nums;
 }
 
 .ac-editor .cm-activeLine,
@@ -720,6 +764,8 @@ option[value="OPTIONS"] {
   border-bottom: 1px solid var(--ac-border);
   font-family: var(--ac-font-mono);
   font-size: var(--ac-font-size-small);
+  /* Timings and sizes change on every send; tabular figures keep them still. */
+  font-variant-numeric: tabular-nums;
 }
 
 .ac-status__code {
@@ -887,9 +933,11 @@ option[value="OPTIONS"] {
 
 .ac-list__meta {
   display: flex;
+  align-items: center;
   gap: 6px;
   color: var(--ac-text-faint);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .ac-sidebar-rail {

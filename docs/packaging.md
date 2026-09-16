@@ -58,6 +58,17 @@ pnpm --filter @api-client/vscode package   # vsce package --no-dependencies
 If none exist it says so, naming the platform it looked for, rather than failing
 at the first request.
 
+## Fonts
+
+Inter and JetBrains Mono are bundled from `packages/ui/src/fonts/` and emitted
+into the build output as hashed `.woff2` files. They are never fetched at
+runtime.
+
+Both are SIL Open Font License 1.1, which requires the licence to travel with
+the font. `Inter-LICENSE.txt` and `JetBrainsMono-LICENSE.txt` sit next to the
+`.woff2` files in the source tree; include them, or `THIRD-PARTY-LICENSES.md`,
+in anything you distribute.
+
 ## Webview bundle
 
 The webview is built by Vite to `apps/vscode/media/webview.js` and
