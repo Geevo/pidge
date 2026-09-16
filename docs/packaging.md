@@ -10,6 +10,30 @@ Tauri builds the frontend first (`beforeBuildCommand`) and produces installers
 for the host platform under `target/release/bundle/`. Windows, macOS, and Linux
 are all supported; each has to be built on its own platform, as usual for Tauri.
 
+### The AppImage needs `NO_STRIP=1`
+
+```bash
+NO_STRIP=1 pnpm --filter @api-client/desktop build:app
+```
+
+Without it the AppImage bundle fails with `failed to run linuxdeploy`, and the
+cause is two layers down: linuxdeploy strips every library it bundles using a
+`strip` from its own AppImage, which is old enough not to know `SHT_RELR`
+(`.relr.dyn`). Any library built by a current toolchain — `libyuv` here — is
+rejected as an unrecognised format, linuxdeploy treats that as fatal, and Tauri
+reports only that linuxdeploy failed. `NO_STRIP` skips the stripping, which
+costs nothing: the libraries come from the system and are already stripped.
+
+The deb and the rpm are unaffected, since neither bundles a library.
+
+### Sizes
+
+An AppImage carries the whole browser engine, because it cannot assume the host
+has one: 104 MB, of which the app is 12 MB. `libwebkit2gtk` is 89 MB of it,
+`libjavascriptcoregtk` 32 MB and `libicudata` 30 MB, before squashfs compresses
+the lot. The deb and the rpm are 5.3 MB each and link against the system's
+WebKitGTK.
+
 The app declares only `core:default` in
 `apps/desktop/src-tauri/capabilities/default.json`. It needs no filesystem,
 shell, or network permissions from Tauri: HTTP goes through the Rust engine, and
