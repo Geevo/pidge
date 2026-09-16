@@ -93,13 +93,13 @@
   --ac-method-options-text: #0d5aa7;
 
   /*
-   * Native controls (the <select> popup, scrollbars, the text caret) are drawn
-   * by the browser, not by us, and they follow this rather than our colours.
-   * Without it a dark theme gets a white dropdown with white text in it.
+   * What the browser draws rather than we do — scrollbars, the text caret, the
+   * menu on a right click — follows this rather than our colours. Set it per
+   * theme or a dark palette gets a bright scrollbar down the side of it.
    */
   color-scheme: light;
 
-  /* The chevron on a select, drawn here because the native one goes with it. */
+  /* The chevron on a dropdown; see `.ac-select`, which draws the rest. */
   --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6472' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 
   --ac-radius: 4px;

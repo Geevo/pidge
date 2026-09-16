@@ -18,10 +18,6 @@ impl CancellationHandle {
         self.token.cancel();
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        self.token.is_cancelled()
-    }
-
     pub(crate) async fn cancelled(&self) {
         self.token.cancelled().await;
     }
@@ -60,12 +56,6 @@ impl CancellationRegistry {
 
     pub fn finish(&self, id: &str) {
         self.lock().remove(id);
-    }
-
-    pub fn cancel_all(&self) {
-        for (_, handle) in self.lock().drain() {
-            handle.cancel();
-        }
     }
 
     pub fn in_flight(&self) -> usize {

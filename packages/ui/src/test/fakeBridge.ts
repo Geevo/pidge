@@ -1,17 +1,20 @@
 import type {
+  LoadedState,
+  PlatformBridge,
+  SaveRequestInput,
+  SendOutcome,
+  WindowControls,
+} from "../bridge";
+import type {
   AppState,
   HistoryEntry,
   HttpRequest,
   HttpResponse,
-  LoadedState,
-  PlatformBridge,
   RequestError,
-  SaveRequestInput,
-  SendOutcome,
   SavedRequest,
-  WindowControls,
-} from "../index";
-import { blankTab, newId } from "../index";
+} from "../types";
+import { blankTab } from "../state/factories";
+import { newId } from "../lib/ids";
 
 /**
  * A stand-in for the Rust host.
