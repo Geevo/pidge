@@ -48,7 +48,7 @@ export function BodyEditor({ request, onChange, onSubmit }: Props) {
   const body = request.body;
 
   return (
-    <div>
+    <div className="ac-body-editor">
       <div className="ac-field">
         <label htmlFor="ac-body-kind">Body</label>
         <select

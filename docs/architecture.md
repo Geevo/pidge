@@ -133,6 +133,22 @@ Folding is enabled only for JSON that actually parses. Invalid JSON is shown
 verbatim with no language attached, so a broken payload does not render as a
 wall of red.
 
+### Giving the editor a height
+
+CodeMirror only virtualizes when it has a bounded height. Dropped into an
+ordinary `overflow: auto` panel it grows to the full document instead — a
+172 KB response measured 327,699 px tall — and lays out every line, which made
+scrolling crawl.
+
+So a panel whose child is an editor gets `.ac-scroll--flush`: it becomes a flex
+column with hidden overflow and hands scrolling to `.cm-scroller`. Both the
+request body and the response body do this. After the fix the response editor
+scrolls fractionally cheaper than a plain `<div>` of comparable length.
+
+The scrolling regions also set `contain: paint`. A dialog floats above a
+translucent full-screen backdrop, and without containment a scroll inside it can
+repaint everything underneath rather than just the scrolled region.
+
 Above 2 MB the body falls back to a plain `<pre>` with a note. Highlighting and
 folding a document that size costs more than it is worth, and the fallback still
 shows everything.

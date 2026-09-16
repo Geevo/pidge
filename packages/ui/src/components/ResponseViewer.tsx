@@ -25,6 +25,21 @@ interface Props {
 }
 
 export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props) {
+  const rendered = useMemo(
+    () => (status.state === "done" ? renderBody(status.response) : null),
+    [status],
+  );
+
+  /*
+   * CodeMirror only virtualizes when it has a bounded height. Inside a normal
+   * `overflow: auto` container it grows to the full document — hundreds of
+   * thousands of pixels for a large response — and lays out every line, which
+   * is what made scrolling crawl. When it is on screen the panel becomes a flex
+   * container with hidden overflow, and CodeMirror does the scrolling itself.
+   */
+  const editorOwnsScrolling =
+    pane === "body" && rendered?.kind === "text" && rendered.text.length <= RICH_VIEW_LIMIT;
+
   return (
     <section className="ac-pane ac-pane--response" aria-label="Response">
       {status.state === "done" ? <StatusSummary response={status.response} /> : null}
@@ -61,7 +76,7 @@ export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props)
         </div>
       ) : null}
 
-      <div className="ac-scroll" role="tabpanel">
+      <div className={`ac-scroll${editorOwnsScrolling ? " ac-scroll--flush" : ""}`} role="tabpanel">
         {status.state === "idle" ? (
           <p className="ac-empty">
             <span>Type a URL and press Send.</span>
@@ -73,8 +88,8 @@ export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props)
 
         {status.state === "failed" ? <ErrorView error={status.error} /> : null}
 
-        {status.state === "done" && pane === "body" ? (
-          <ResponseBody response={status.response} wrapLines={wrapLines} />
+        {status.state === "done" && pane === "body" && rendered ? (
+          <ResponseBody response={status.response} rendered={rendered} wrapLines={wrapLines} />
         ) : null}
 
         {status.state === "done" && pane === "headers" ? (
@@ -104,8 +119,15 @@ function ErrorView({ error }: { error: RequestError }) {
   );
 }
 
-function ResponseBody({ response, wrapLines }: { response: HttpResponse; wrapLines: boolean }) {
-  const rendered = useMemo(() => renderBody(response), [response]);
+function ResponseBody({
+  response,
+  rendered,
+  wrapLines,
+}: {
+  response: HttpResponse;
+  rendered: RenderedBody;
+  wrapLines: boolean;
+}) {
   const view = useRef<EditorView | null>(null);
   const onReady = useCallback((editor: EditorView) => {
     view.current = editor;
