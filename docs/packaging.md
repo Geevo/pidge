@@ -45,8 +45,8 @@ the binaries are collected before packaging.
 Then:
 
 ```bash
-pnpm --filter @api-client/vscode build     # extension host + webview
-pnpm --filter @api-client/vscode package   # vsce package --no-dependencies
+pnpm --filter api-client build     # extension host + webview
+pnpm --filter api-client package   # vsce package --no-dependencies
 ```
 
 `Sidecar.resolveBinary` looks, in order, at:
@@ -58,16 +58,40 @@ pnpm --filter @api-client/vscode package   # vsce package --no-dependencies
 If none exist it says so, naming the platform it looked for, rather than failing
 at the first request.
 
-## Fonts
+## Fonts and their licences
 
 Inter and JetBrains Mono are bundled from `packages/ui/src/fonts/` and emitted
 into the build output as hashed `.woff2` files. They are never fetched at
 runtime.
 
 Both are SIL Open Font License 1.1, which requires the licence to travel with
-the font. `Inter-LICENSE.txt` and `JetBrainsMono-LICENSE.txt` sit next to the
-`.woff2` files in the source tree; include them, or `THIRD-PARTY-LICENSES.md`,
-in anything you distribute.
+the font, so `scripts/viteFontLicenses.ts` emits it as a build asset in the same
+pass that emits the font. There is nothing to remember at packaging time:
+
+| Artifact  | Fonts                                               | Licences                                                                    |
+| --------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| Desktop   | `dist/assets/*.woff2` (embedded via `frontendDist`) | `dist/licenses/` and, via `bundle.resources`, `src-tauri/licenses/` on disk |
+| Extension | `media/assets/*.woff2`                              | `media/licenses/`                                                           |
+
+`src-tauri/licenses/` is written by the same plugin during the frontend build,
+which `tauri build` runs first through `beforeBuildCommand`, so the files exist
+by the time the bundler reads `bundle.resources`.
+
+Verify what a VSIX would contain with:
+
+```bash
+pnpm --filter api-client exec vsce ls --no-dependencies
+```
+
+`--no-dependencies` is required: `vsce` otherwise shells out to `npm ls`, which
+cannot read a pnpm workspace.
+
+## A note on the extension's package name
+
+`apps/vscode/package.json` is named `api-client`, not `@api-client/vscode` like
+the other workspace packages. The name doubles as the VS Code extension id and
+`vsce` rejects a scoped one. `@types/vscode` is pinned to the same minor as
+`engines.vscode` for the same reason — `vsce` refuses to package a mismatch.
 
 ## Webview bundle
 

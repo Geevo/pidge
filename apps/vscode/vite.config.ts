@@ -1,13 +1,16 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { fontLicenses } from "../../scripts/viteFontLicenses";
+
 /**
  * The webview bundle. Names are fixed rather than hashed because the panel's
  * HTML references them directly, and nothing is loaded from a CDN: the webview
  * runs under a strict CSP that only allows this bundle.
  */
 export default defineConfig({
-  plugins: [react()],
+  // vsce packages everything under media/, so emitting there is enough.
+  plugins: [react(), fontLicenses()],
   build: {
     target: "es2022",
     outDir: "media",
