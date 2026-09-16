@@ -108,6 +108,35 @@ So that the panel still updates live, `Session::send` returns the `HistoryEntry`
 it recorded alongside the response, and the reducer prepends it. `clear_history`
 is the only way a frontend can empty it.
 
+## Panes
+
+`SplitPane` arranges the request and response either as rows or as columns, with
+a divider that drags, takes arrow keys, and resets to even on a double click.
+The layout and the split are persisted in `Settings`, so they survive a restart.
+
+Two details worth knowing:
+
+- The size is held in a ref as well as in state. A `pointermove` can arrive
+  before React has re-rendered the `pointerdown`, and reading the state would
+  drop that movement — a fast drag could do nothing at all.
+- The new size is handed up only on release. Committing on every frame would be
+  a hundred state updates and a hundred debounced writes to disk for one drag.
+
+## Response bodies
+
+A JSON body is rendered in the same CodeMirror the request body uses, in
+read-only mode, which brings syntax highlighting and fold arrows for free rather
+than needing a bespoke tree view. `Collapse all` and `Expand all` run
+CodeMirror's own commands against the view.
+
+Folding is enabled only for JSON that actually parses. Invalid JSON is shown
+verbatim with no language attached, so a broken payload does not render as a
+wall of red.
+
+Above 2 MB the body falls back to a plain `<pre>` with a note. Highlighting and
+folding a document that size costs more than it is worth, and the fallback still
+shows everything.
+
 ## Errors
 
 `RequestError` has a `kind` the UI can switch on, a `message` written for a

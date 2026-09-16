@@ -14,8 +14,9 @@ import { RequestTabBar } from "./RequestTabBar";
 import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
 import { SettingsDialog } from "./SettingsDialog";
+import { SplitPane, clampPercent } from "./SplitPane";
 import { UrlBar } from "./UrlBar";
-import { BookmarkIcon, CloseIcon, HistoryIcon, SettingsIcon } from "./icons";
+import { BookmarkIcon, CloseIcon, ColumnsIcon, HistoryIcon, RowsIcon, SettingsIcon } from "./icons";
 
 interface Props {
   bridge: PlatformBridge;
@@ -140,6 +141,28 @@ export function App({ bridge }: Props) {
         />
         <button
           type="button"
+          className="ac-icon-button"
+          title={
+            state.app.settings.paneLayout === "rows"
+              ? "Put the response beside the request"
+              : "Put the response below the request"
+          }
+          aria-label="Toggle pane layout"
+          onClick={() =>
+            client.setSettings({
+              ...state.app.settings,
+              paneLayout: state.app.settings.paneLayout === "rows" ? "columns" : "rows",
+            })
+          }
+        >
+          {state.app.settings.paneLayout === "rows" ? (
+            <ColumnsIcon size={15} />
+          ) : (
+            <RowsIcon size={15} />
+          )}
+        </button>
+        <button
+          type="button"
           className="ac-button ac-button--quiet"
           title={`Save request (${shortcutHint("save")})`}
           onClick={save}
@@ -201,25 +224,39 @@ export function App({ bridge }: Props) {
         ) : null}
 
         <main className="ac-main">
-          <div className="ac-split">
-            <RequestEditor
-              request={tab.request}
-              pane={runtime.requestPane}
-              onPaneChange={(pane) =>
-                client.dispatch({ type: "setRequestPane", tabId: tab.id, pane })
-              }
-              onChange={setRequest}
-              onSubmit={send}
-            />
-            <ResponseViewer
-              status={runtime.status}
-              pane={runtime.responsePane}
-              wrapLines={state.app.settings.wrapResponseLines}
-              onPaneChange={(pane) =>
-                client.dispatch({ type: "setResponsePane", tabId: tab.id, pane })
-              }
-            />
-          </div>
+          <SplitPane
+            layout={state.app.settings.paneLayout}
+            percent={state.app.settings.splitPercent}
+            firstLabel="request"
+            secondLabel="response"
+            onCommit={(splitPercent) =>
+              client.setSettings({
+                ...state.app.settings,
+                splitPercent: clampPercent(splitPercent),
+              })
+            }
+            first={
+              <RequestEditor
+                request={tab.request}
+                pane={runtime.requestPane}
+                onPaneChange={(pane) =>
+                  client.dispatch({ type: "setRequestPane", tabId: tab.id, pane })
+                }
+                onChange={setRequest}
+                onSubmit={send}
+              />
+            }
+            second={
+              <ResponseViewer
+                status={runtime.status}
+                pane={runtime.responsePane}
+                wrapLines={state.app.settings.wrapResponseLines}
+                onPaneChange={(pane) =>
+                  client.dispatch({ type: "setResponsePane", tabId: tab.id, pane })
+                }
+              />
+            }
+          />
         </main>
       </div>
 

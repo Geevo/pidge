@@ -4,6 +4,9 @@ import { json } from "@codemirror/lang-json";
 import {
   HighlightStyle,
   bracketMatching,
+  codeFolding,
+  foldGutter,
+  foldKeymap,
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
@@ -42,9 +45,15 @@ interface Props {
   language: "json" | "text";
   readOnly?: boolean;
   ariaLabel: string;
+  /** Gutter arrows that collapse and expand `{...}` and `[...]`. */
+  folding?: boolean;
+  /** Off by default: a response body is easier to scan unwrapped. */
+  wrap?: boolean;
   /** Ctrl/Cmd+Enter inside the editor should still send. */
   onSubmit?: () => void;
   onChange?: (value: string) => void;
+  /** Handed the view once, so a toolbar can run commands against it. */
+  onReady?: (view: EditorView) => void;
 }
 
 export function CodeEditor({
@@ -52,17 +61,21 @@ export function CodeEditor({
   language,
   readOnly = false,
   ariaLabel,
+  folding = false,
+  wrap = true,
   onSubmit,
   onChange,
+  onReady,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
+  const wrapCompartment = useRef(new Compartment());
   // Held in a ref so changing the handler does not rebuild the editor.
-  const handlers = useRef({ onChange, onSubmit });
+  const handlers = useRef({ onChange, onSubmit, onReady });
   useEffect(() => {
-    handlers.current = { onChange, onSubmit };
-  }, [onChange, onSubmit]);
+    handlers.current = { onChange, onSubmit, onReady };
+  }, [onChange, onSubmit, onReady]);
 
   useEffect(() => {
     if (!host.current) return;
@@ -86,10 +99,12 @@ export function CodeEditor({
           highlightActiveLineGutter(),
           syntaxHighlighting(highlightStyle),
           languageCompartment.current.of(language === "json" ? json() : []),
+          folding ? [codeFolding(), foldGutter()] : [],
           EditorState.readOnly.of(readOnly),
           EditorView.editable.of(!readOnly),
-          EditorView.lineWrapping,
+          wrapCompartment.current.of(wrap ? EditorView.lineWrapping : []),
           keymap.of([
+            ...(folding ? foldKeymap : []),
             {
               key: "Mod-Enter",
               preventDefault: true,
@@ -112,6 +127,7 @@ export function CodeEditor({
     });
 
     view.current = editor;
+    handlers.current.onReady?.(editor);
     return () => {
       editor.destroy();
       view.current = null;
@@ -126,6 +142,12 @@ export function CodeEditor({
       effects: languageCompartment.current.reconfigure(language === "json" ? json() : []),
     });
   }, [language]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: wrapCompartment.current.reconfigure(wrap ? EditorView.lineWrapping : []),
+    });
+  }, [wrap]);
 
   // Only write back when the value genuinely differs, so typing is not
   // interrupted by the round trip through React state.

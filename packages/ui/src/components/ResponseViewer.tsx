@@ -1,11 +1,21 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
+import { foldAll, unfoldAll } from "@codemirror/language";
+import type { EditorView } from "@codemirror/view";
 
 import type { HttpResponse, RequestError, ResponsePane, TabStatus } from "../types";
 import { decodeBase64, decodeText, looksBinary } from "../lib/base64";
 import { formatBytes } from "../lib/format";
 import { isJsonMime, isTextMime, prettyJson } from "../lib/mime";
+import { CodeEditor } from "./CodeEditor";
 import { ResponseHeaders } from "./ResponseHeaders";
 import { StatusSummary } from "./StatusSummary";
+
+/**
+ * Past this, the body is shown as plain text. Highlighting and folding a
+ * multi-megabyte document costs more than it is worth, and the fallback still
+ * shows everything.
+ */
+const RICH_VIEW_LIMIT = 2 * 1024 * 1024;
 
 interface Props {
   status: TabStatus;
@@ -96,6 +106,10 @@ function ErrorView({ error }: { error: RequestError }) {
 
 function ResponseBody({ response, wrapLines }: { response: HttpResponse; wrapLines: boolean }) {
   const rendered = useMemo(() => renderBody(response), [response]);
+  const view = useRef<EditorView | null>(null);
+  const onReady = useCallback((editor: EditorView) => {
+    view.current = editor;
+  }, []);
 
   if (rendered.kind === "binary") {
     return (
@@ -110,14 +124,56 @@ function ResponseBody({ response, wrapLines }: { response: HttpResponse; wrapLin
     return <p className="ac-empty">No response body.</p>;
   }
 
+  // Big bodies skip the editor entirely rather than freezing on mount.
+  if (rendered.text.length > RICH_VIEW_LIMIT) {
+    return (
+      <>
+        <p className="ac-hint">
+          {formatBytes(response.sizeBytes)} is too large to highlight; showing plain text.
+        </p>
+        <pre className={`ac-response-body${wrapLines ? " ac-response-body--wrap" : ""}`}>
+          {rendered.text}
+        </pre>
+      </>
+    );
+  }
+
   return (
-    <pre className={`ac-response-body${wrapLines ? " ac-response-body--wrap" : ""}`}>
-      {rendered.text}
-    </pre>
+    <div className="ac-response-body__rich">
+      {rendered.isJson ? (
+        <div className="ac-response-tools">
+          <button
+            type="button"
+            className="ac-button ac-button--quiet"
+            onClick={() => view.current && foldAll(view.current)}
+          >
+            Collapse all
+          </button>
+          <button
+            type="button"
+            className="ac-button ac-button--quiet"
+            onClick={() => view.current && unfoldAll(view.current)}
+          >
+            Expand all
+          </button>
+        </div>
+      ) : null}
+
+      <CodeEditor
+        value={rendered.text}
+        language={rendered.isJson ? "json" : "text"}
+        readOnly
+        folding={rendered.isJson}
+        wrap={wrapLines}
+        ariaLabel="Response body"
+        onReady={onReady}
+      />
+    </div>
   );
 }
 
-type RenderedBody = { kind: "text"; text: string } | { kind: "binary" } | { kind: "empty" };
+type RenderedBody =
+  { kind: "text"; text: string; isJson: boolean } | { kind: "binary" } | { kind: "empty" };
 
 /**
  * Pretty-print valid JSON, show text as-is, and refuse to render bytes that
@@ -134,9 +190,11 @@ export function renderBody(response: HttpResponse): RenderedBody {
   const text = decodeText(bytes);
   if (isJsonMime(response.mimeType)) {
     const formatted = prettyJson(text);
-    return { kind: "text", text: formatted ?? text };
+    // Invalid JSON is shown verbatim, and without the JSON language, so a
+    // parse error does not turn into a wall of red.
+    return { kind: "text", text: formatted ?? text, isJson: formatted !== null };
   }
-  return { kind: "text", text };
+  return { kind: "text", text, isJson: false };
 }
 
 function titleFor(error: RequestError): string {

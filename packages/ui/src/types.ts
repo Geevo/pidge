@@ -14,6 +14,7 @@ export type { HttpRequest } from "./generated/HttpRequest";
 export type { HttpResponse } from "./generated/HttpResponse";
 export type { KeyValueEntry } from "./generated/KeyValueEntry";
 export type { MultipartEntry } from "./generated/MultipartEntry";
+export type { PaneLayout } from "./generated/PaneLayout";
 export type { MultipartValue } from "./generated/MultipartValue";
 export type { RequestBody } from "./generated/RequestBody";
 export type { RequestError } from "./generated/RequestError";

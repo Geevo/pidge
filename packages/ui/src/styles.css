@@ -327,14 +327,10 @@ input[type="checkbox"]:hover {
   min-height: 0;
 }
 
-.ac-pane--request {
-  flex: 0 0 auto;
-  max-height: 45%;
-  border-bottom: 1px solid var(--ac-border);
-}
-
+.ac-pane--request,
 .ac-pane--response {
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -1209,4 +1205,124 @@ option[value="OPTIONS"] {
   font-family: var(--ac-font-mono);
   font-size: var(--ac-font-size-small);
   word-break: break-all;
+}
+
+/* ---------- split panes ---------- */
+
+.ac-split {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ac-split--rows {
+  flex-direction: column;
+}
+
+.ac-split--columns {
+  flex-direction: row;
+}
+
+.ac-split__pane {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The second pane takes what is left, so the two always fill the container. */
+.ac-split__pane--rest {
+  flex: 1 1 0;
+}
+
+.ac-split__divider {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--ac-border);
+  transition: background-color 120ms ease;
+  touch-action: none;
+}
+
+.ac-split--rows > .ac-split__divider {
+  height: 1px;
+  /* A 1px line is impossible to grab, so the hit area is padded outwards. */
+  margin: 3px 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  background-clip: padding-box;
+  cursor: row-resize;
+}
+
+.ac-split--columns > .ac-split__divider {
+  width: 1px;
+  margin: 0 3px;
+  border-right: 3px solid transparent;
+  border-left: 3px solid transparent;
+  background-clip: padding-box;
+  cursor: col-resize;
+}
+
+.ac-split__divider:hover,
+.ac-split__divider:focus-visible,
+.ac-split--dragging > .ac-split__divider {
+  background: var(--ac-accent);
+  background-clip: padding-box;
+}
+
+/* Keeps the cursor from flickering over the panes mid-drag. */
+.ac-split--dragging {
+  user-select: none;
+}
+
+.ac-split--dragging.ac-split--rows * {
+  cursor: row-resize !important;
+}
+
+.ac-split--dragging.ac-split--columns * {
+  cursor: col-resize !important;
+}
+
+/* ---------- rich response body ---------- */
+
+.ac-response-body__rich {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ac-response-tools {
+  display: flex;
+  gap: 4px;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-response-body__rich .ac-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.ac-editor .cm-foldGutter span {
+  padding: 0 2px;
+  color: var(--ac-text-faint);
+  cursor: pointer;
+}
+
+.ac-editor .cm-foldGutter span:hover {
+  color: var(--ac-accent);
+}
+
+.ac-editor .cm-foldPlaceholder {
+  padding: 0 6px;
+  border: 1px solid var(--ac-border-strong);
+  border-radius: 3px;
+  background: var(--ac-bg-subtle);
+  color: var(--ac-text-muted);
 }

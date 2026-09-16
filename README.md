@@ -18,7 +18,9 @@ request, and a request never has to be named or saved before you send it.
 - Bearer and Basic auth helpers — and an explicit `Authorization` header always wins
 - Cancellation, timeouts, redirects, and cookies
 - Status, duration, and size on one line: `200 OK · 143 ms · 2.4 KB`
-- Response body and headers, with JSON pretty-printed and binary shown as a size
+- Response body and headers, with JSON highlighted and foldable, and binary
+  shown as a size
+- Request and response side by side or stacked, with a draggable divider
 - Multiple scratch tabs, keyboard-driven
 - Local history and a flat list of saved requests
 - `{{variable}}` substitution from flat environments
