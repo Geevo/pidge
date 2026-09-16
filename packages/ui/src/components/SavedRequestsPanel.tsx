@@ -1,6 +1,7 @@
 import type { SavedRequest } from "../types";
 import { requestLabel } from "../lib/format";
 import { MethodBadge } from "./MethodBadge";
+import { TrashIcon } from "./icons";
 
 interface Props {
   savedRequests: readonly SavedRequest[];
@@ -37,7 +38,7 @@ export function SavedRequestsPanel({ savedRequests, onOpen, onDelete }: Props) {
                   if (window.confirm(`Delete "${saved.name}"?`)) onDelete(saved.id);
                 }}
               >
-                ×
+                <TrashIcon size={13} />
               </button>
             </li>
           ))}

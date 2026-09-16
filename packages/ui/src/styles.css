@@ -396,9 +396,8 @@ option[value="OPTIONS"] {
 }
 
 .ac-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  place-items: center;
   width: 20px;
   height: 20px;
   padding: 0;
@@ -420,42 +419,144 @@ option[value="OPTIONS"] {
 .ac-tabbar {
   display: flex;
   align-items: stretch;
-  gap: 1px;
-  overflow-x: auto;
+  min-height: 34px;
   border-bottom: 1px solid var(--ac-border);
   background: var(--ac-bg-subtle);
 }
 
-.ac-tab {
+.ac-tabbar__list {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 220px;
-  padding: 5px 8px;
-  border: 0;
-  border-right: 1px solid var(--ac-border);
-  background: transparent;
-  color: var(--ac-text-muted);
-  cursor: pointer;
-  white-space: nowrap;
+  flex: 1;
+  align-items: stretch;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
-.ac-tab[aria-selected="true"] {
+/*
+ * The row owns the highlight, so the close button sits inside its own tab
+ * rather than next to it.
+ */
+.ac-tab {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 240px;
+  padding-right: 5px;
+  border-right: 1px solid var(--ac-border);
+  color: var(--ac-text-muted);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-tab:hover {
+  background: var(--ac-bg-raised);
+  color: var(--ac-text);
+}
+
+.ac-tab--active {
   background: var(--ac-bg);
   color: var(--ac-text);
-  box-shadow: inset 0 -2px 0 var(--ac-accent);
+}
+
+/* A bottom rule rather than an inset shadow, so it sits flush on the border. */
+.ac-tab--active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--ac-accent);
+}
+
+.ac-tab__button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 33px;
+  padding: 0 4px 0 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .ac-tab__label {
   overflow: hidden;
+  font-size: var(--ac-font-size-small);
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ac-tab__dot {
+  flex: none;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ac-text-faint);
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/*
+ * The close control stays out of the way until you are on the tab, the way an
+ * editor does it, but never hides from the keyboard.
+ */
+.ac-tab__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  opacity: 0;
+  background: transparent;
+  color: var(--ac-text-faint);
+  cursor: pointer;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
+}
+
+.ac-tab:hover .ac-tab__close,
+.ac-tab--active .ac-tab__close,
+.ac-tab__close:focus-visible {
+  opacity: 1;
+}
+
+.ac-tab__close:hover {
+  background: var(--ac-border-strong);
+  color: var(--ac-text);
+}
+
+/* Sits directly after the last tab, full tab height, so it reads as a control. */
+.ac-tabbar__new {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--ac-text-faint);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-tabbar__new:hover {
+  background: var(--ac-bg-raised);
+  color: var(--ac-accent);
 }
 
 .ac-subtabs {
@@ -801,6 +902,8 @@ option[value="OPTIONS"] {
 }
 
 .ac-rail-button {
+  display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
   border: 0;
@@ -808,7 +911,9 @@ option[value="OPTIONS"] {
   background: transparent;
   color: var(--ac-text-muted);
   cursor: pointer;
-  font-size: 14px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .ac-rail-button[aria-pressed="true"] {

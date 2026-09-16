@@ -2,6 +2,7 @@ import type { HttpRequest, MultipartEntry, RequestBody } from "../types";
 import { emptyMultipartRow } from "../state/factories";
 import { prettyJson } from "../lib/mime";
 import { CodeEditor } from "./CodeEditor";
+import { CloseIcon } from "./icons";
 import { KeyValueTable } from "./KeyValueTable";
 
 interface Props {
@@ -233,7 +234,7 @@ function MultipartEditor({ entries, onChange }: MultipartProps) {
                   aria-label={`Remove part ${index + 1}`}
                   onClick={() => onChange(displayed.filter((_, position) => position !== index))}
                 >
-                  ×
+                  <CloseIcon size={12} />
                 </button>
               )}
             </td>
