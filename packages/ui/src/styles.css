@@ -397,6 +397,20 @@ input[type="checkbox"]:hover {
   font-variant-ligatures: none;
 }
 
+/* A select in the top bar: the environment picker and anything like it. */
+.ac-select {
+  height: var(--ac-row-height);
+  max-width: 180px;
+  padding: 0 4px;
+  border: 1px solid var(--ac-border-strong);
+  border-radius: var(--ac-radius);
+  background: var(--ac-bg-input);
+}
+
+/*
+ * The method picker is monospaced and bold because it holds one short token
+ * that should line up with the URL beside it. Nothing else wants that.
+ */
 .ac-method {
   height: var(--ac-row-height);
   padding: 0 4px;
