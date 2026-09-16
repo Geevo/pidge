@@ -10,6 +10,32 @@ Tauri builds the frontend first (`beforeBuildCommand`) and produces installers
 for the host platform under `target/release/bundle/`. Windows, macOS, and Linux
 are all supported; each has to be built on its own platform, as usual for Tauri.
 
+### Windows from Linux
+
+The MSVC target cross-compiles with `cargo-xwin`, which fetches the Windows SDK
+and CRT itself:
+
+```bash
+rustup target add x86_64-pc-windows-msvc
+cargo install cargo-xwin
+cd apps/desktop
+pnpm exec tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle
+```
+
+Four host tools have to be on `PATH`: `clang-cl` compiles the C, `lld-link`
+links, `llvm-lib` is the librarian `aws-lc-sys` looks for, and `llvm-rc`
+compiles the resource script that carries the icon and the manifest. On Fedora
+that is `clang`, `lld` and `llvm`; `lld-link` can also come from the Rust
+toolchain's own `rust-lld`, which is the same linker under another name.
+
+The result is `target/x86_64-pc-windows-msvc/release/api-client-desktop.exe`,
+about 10 MB, with the icon, the manifest and the version resource compiled in.
+It needs the WebView2 runtime on the machine that runs it — present on Windows
+11 and most of Windows 10, and the NSIS installer can fetch it when it is not.
+
+`--no-bundle` because the MSI is the one thing that cannot be built here: WiX is
+a Windows tool. NSIS cross-builds fine.
+
 ### The AppImage needs `NO_STRIP=1`
 
 ```bash
