@@ -23,8 +23,9 @@ Shipped as `packages/ui/src/fonts/jetbrains-mono-latin-variable.woff2`.
 
 ---
 
-The OFL requires the licence to travel with the font, so both `*-LICENSE.txt`
-files must be included in any distributed build. See
-[docs/packaging.md](docs/packaging.md).
+The OFL requires the licence to travel with the font. `scripts/viteFontLicenses.ts`
+emits both files, and this one, into every build alongside the fonts themselves,
+so a distributed desktop bundle or VSIX carries them without anyone having to
+remember. See [docs/packaging.md](docs/packaging.md).
 
 Everything else in this repository is MIT; see [LICENSE](LICENSE).

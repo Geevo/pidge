@@ -5,4 +5,5 @@ packages:
 
 # esbuild needs its postinstall to link the platform binary.
 allowBuilds:
+  "@vscode/vsce-sign": true
   esbuild: true

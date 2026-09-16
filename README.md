@@ -36,7 +36,7 @@ For the VS Code extension:
 
 ```bash
 pnpm build:sidecar
-pnpm --filter @api-client/vscode build
+pnpm --filter api-client build
 ```
 
 Then open the repo in VS Code and press <kbd>F5</kbd>, or run **API Client: Open**

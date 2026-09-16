@@ -26,7 +26,7 @@ For the VS Code extension:
 
 ```bash
 pnpm build:sidecar --debug          # cargo build + stage the binary
-pnpm --filter @api-client/vscode build
+pnpm --filter api-client build
 ```
 
 Then <kbd>F5</kbd> in VS Code, and **API Client: Open** in the Extension
@@ -35,7 +35,7 @@ extension falls back to `target/debug/api-client-sidecar`, so a plain
 `cargo build -p api-client-sidecar` is enough.
 
 `pnpm dev:vscode` watches the extension host. The webview is a separate bundle;
-rebuild it with `pnpm --filter @api-client/vscode build:webview` and reload the
+rebuild it with `pnpm --filter api-client build:webview` and reload the
 window.
 
 ## Checks

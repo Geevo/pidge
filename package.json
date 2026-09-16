@@ -1,5 +1,5 @@
 {
-  "name": "api-client",
+  "name": "api-client-monorepo",
   "private": true,
   "type": "module",
   "version": "0.1.0",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev:desktop": "pnpm --filter @api-client/desktop dev",
-    "dev:vscode": "pnpm --filter @api-client/vscode dev",
+    "dev:vscode": "pnpm --filter api-client dev",
     "build": "pnpm -r build",
     "build:sidecar": "node scripts/build-sidecar.mjs",
     "gen:types": "cargo test --workspace export_bindings",
