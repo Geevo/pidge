@@ -87,20 +87,14 @@ export function RequestTabBar({
         </button>
 
         {/*
-          The leftover strip doubles as the title bar. `data-tauri-drag-region`
-          is handled by the host, so this stays inert everywhere else.
+          The leftover strip is the title bar. The host's own drag-region
+          handler covers both dragging and double-click to maximise, so there
+          is deliberately no handler here: adding one toggled the window twice.
         */}
-        {windowControls ? (
-          <div
-            className="ac-tabbar__drag"
-            data-tauri-drag-region
-            onDoubleClick={() => {
-              windowControls.toggleMaximize().catch(() => undefined);
-            }}
-          />
-        ) : (
-          <div className="ac-tabbar__drag" />
-        )}
+        <div
+          className="ac-tabbar__drag"
+          {...(windowControls ? { "data-tauri-drag-region": true } : {})}
+        />
       </div>
 
       {windowControls ? <WindowButtons controls={windowControls} /> : null}
