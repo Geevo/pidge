@@ -1,5 +1,8 @@
+import { useState } from "react";
+
 import type { SavedRequest } from "../types";
 import { requestLabel } from "../lib/format";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { MethodBadge } from "./MethodBadge";
 import { TrashIcon } from "./icons";
 
@@ -11,11 +14,24 @@ interface Props {
 
 /** A flat list. No folders, no collections, no projects. */
 export function SavedRequestsPanel({ savedRequests, onOpen, onDelete }: Props) {
+  const [deleting, setDeleting] = useState<SavedRequest | null>(null);
+
   return (
     <>
       <div className="ac-drawer__header">
         <span>Saved</span>
       </div>
+
+      {deleting ? (
+        <ConfirmDialog
+          title="Delete saved request"
+          message={`Delete "${deleting.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => onDelete(deleting.id)}
+          onClose={() => setDeleting(null)}
+        />
+      ) : null}
 
       {savedRequests.length === 0 ? (
         <p className="ac-hint">Nothing saved. Ctrl/Cmd+S keeps the current request.</p>
@@ -34,9 +50,7 @@ export function SavedRequestsPanel({ savedRequests, onOpen, onDelete }: Props) {
                 type="button"
                 className="ac-icon-button"
                 aria-label={`Delete ${saved.name}`}
-                onClick={() => {
-                  if (window.confirm(`Delete "${saved.name}"?`)) onDelete(saved.id);
-                }}
+                onClick={() => setDeleting(saved)}
               >
                 <TrashIcon size={13} />
               </button>

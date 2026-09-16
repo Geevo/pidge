@@ -1,5 +1,8 @@
+import { useState } from "react";
+
 import type { HistoryEntry } from "../types";
 import { formatDuration, formatTime, requestLabel, statusClass } from "../lib/format";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { MethodBadge } from "./MethodBadge";
 
 interface Props {
@@ -13,6 +16,8 @@ interface Props {
  * edited, so history stays an accurate log of what was sent.
  */
 export function HistoryPanel({ history, onOpen, onClear }: Props) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <>
       <div className="ac-drawer__header">
@@ -21,13 +26,22 @@ export function HistoryPanel({ history, onOpen, onClear }: Props) {
           type="button"
           className="ac-button ac-button--quiet ac-button--danger"
           disabled={history.length === 0}
-          onClick={() => {
-            if (window.confirm(`Clear all ${history.length} history entries?`)) onClear();
-          }}
+          onClick={() => setConfirming(true)}
         >
           Clear
         </button>
       </div>
+
+      {confirming ? (
+        <ConfirmDialog
+          title="Clear history"
+          message={`Clear all ${history.length} history entries? This cannot be undone.`}
+          confirmLabel="Clear"
+          danger
+          onConfirm={onClear}
+          onClose={() => setConfirming(false)}
+        />
+      ) : null}
 
       {history.length === 0 ? (
         <p className="ac-hint">Nothing sent yet.</p>
