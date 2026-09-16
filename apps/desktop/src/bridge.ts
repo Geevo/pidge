@@ -36,7 +36,6 @@ const windowControls: WindowControls = {
   toggleMaximize: () => attempt(() => getCurrentWindow().toggleMaximize()),
   close: () => attempt(() => getCurrentWindow().close()),
   isMaximized: () => attempt(() => getCurrentWindow().isMaximized()),
-  startDragging: () => attempt(() => getCurrentWindow().startDragging()),
   startResizing: (edge: ResizeEdge) => attempt(() => getCurrentWindow().startResizeDragging(edge)),
 };
 

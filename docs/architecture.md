@@ -90,6 +90,7 @@ interface PlatformBridge {
   deleteSavedRequest(savedRequestId: string): Promise<AppState>;
   clearHistory(): Promise<AppState>;
   subscribe?(listener: (command: HostCommand) => void): () => void;
+  readonly window?: WindowControls;
   readonly platform: string;
 }
 ```
@@ -125,7 +126,7 @@ differs from it. That is why the warm light block is a third the size of the
 warm dark one rather than a copy.
 
 `color-scheme` is set per theme as well as the colours, so the browser's own
-furniture — select popups, scrollbars, the caret — follows.
+furniture — scrollbars, the caret, the right-click menu — follows.
 
 ### The controls the platform draws
 

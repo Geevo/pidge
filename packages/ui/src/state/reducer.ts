@@ -37,7 +37,7 @@ export interface UiState {
   readonly loaded: boolean;
 }
 
-export const defaultRuntime: TabRuntime = {
+const defaultRuntime: TabRuntime = {
   status: { state: "idle" },
   requestPane: "params",
   responsePane: "body",

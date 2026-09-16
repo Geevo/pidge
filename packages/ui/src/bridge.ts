@@ -50,7 +50,6 @@ export interface WindowControls {
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
   isMaximized(): Promise<boolean>;
-  startDragging(): Promise<void>;
   /** Undecorated windows get no resize edges for free; these supply them. */
   startResizing(edge: ResizeEdge): Promise<void>;
 }

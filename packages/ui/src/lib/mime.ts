@@ -36,8 +36,3 @@ export function prettyJson(text: string): string | null {
     return null;
   }
 }
-
-/** The CodeMirror language to use for a request body editor. */
-export function isJsonBodyLanguage(contentType: string | null): boolean {
-  return isJsonMime(contentType);
-}

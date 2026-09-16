@@ -682,7 +682,6 @@ describe("window chrome", () => {
         return Promise.resolve();
       },
       isMaximized: () => Promise.resolve(false),
-      startDragging: () => Promise.resolve(),
       startResizing: (edge: string) => {
         calls.push(`resize:${edge}`);
         return Promise.resolve();
@@ -710,7 +709,6 @@ describe("window chrome", () => {
       close: () => Promise.reject(new Error("no window")),
       // Rejecting here used to unmount the whole app from inside an effect.
       isMaximized: () => Promise.reject(new Error("no window")),
-      startDragging: () => Promise.reject(new Error("no window")),
       startResizing: () => Promise.reject(new Error("no window")),
     };
     bridge.window = controls;
