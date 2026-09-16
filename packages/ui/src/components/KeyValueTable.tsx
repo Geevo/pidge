@@ -1,5 +1,6 @@
 import type { KeyValueEntry } from "../types";
 import { emptyRow } from "../state/factories";
+import { CloseIcon } from "./icons";
 
 interface Props {
   rows: readonly KeyValueEntry[];
@@ -94,7 +95,7 @@ export function KeyValueTable({
                   aria-label={`Remove ${row.name || `row ${index + 1}`}`}
                   onClick={() => remove(index)}
                 >
-                  ×
+                  <CloseIcon size={12} />
                 </button>
               )}
             </td>

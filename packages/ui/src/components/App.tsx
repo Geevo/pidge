@@ -14,6 +14,7 @@ import { RequestTabBar } from "./RequestTabBar";
 import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
 import { UrlBar } from "./UrlBar";
+import { BookmarkIcon, CloseIcon, HistoryIcon } from "./icons";
 
 interface Props {
   bridge: PlatformBridge;
@@ -102,7 +103,7 @@ export function App({ bridge }: Props) {
             aria-label="Dismiss"
             onClick={() => client.dispatch({ type: "dismissNotice" })}
           >
-            ×
+            <CloseIcon size={12} />
           </button>
         </div>
       ) : null}
@@ -155,7 +156,7 @@ export function App({ bridge }: Props) {
             aria-pressed={state.drawer === "history"}
             onClick={() => client.setDrawer(state.drawer === "history" ? null : "history")}
           >
-            ↻
+            <HistoryIcon size={16} />
           </button>
           <button
             type="button"
@@ -165,7 +166,7 @@ export function App({ bridge }: Props) {
             aria-pressed={state.drawer === "saved"}
             onClick={() => client.setDrawer(state.drawer === "saved" ? null : "saved")}
           >
-            ★
+            <BookmarkIcon size={16} />
           </button>
         </nav>
 
