@@ -146,6 +146,12 @@ close. The list is rendered into `document.body` and positioned against the
 trigger, because the dialog and the tab strip both clip. It closes on scroll and
 on resize rather than following the trigger around.
 
+`window.prompt` went the same way, and for the same reason: saving a request
+asks for a name in `PromptDialog` rather than in the platform's prompt, whose
+entry is sized by the platform and was too narrow in a WebKit webview to show
+the URL it was suggesting. The suggestion is selected backwards so a long one is
+shown from its start rather than its query string.
+
 That leaves the menu the webview puts up on a right click, which is still the
 platform's and stays in the desktop's colours. Passing the palette down to the
 window was tried and removed: on Linux it sets
