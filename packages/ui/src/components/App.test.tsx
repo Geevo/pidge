@@ -17,6 +17,16 @@ async function ready() {
   await screen.findByRole("textbox", { name: "URL" });
 }
 
+/**
+ * The response body renders in CodeMirror, which splits the text across
+ * highlight spans, so it is read as a whole rather than matched span by span.
+ */
+function responseBodyText(): string {
+  const editor = document.querySelector('[aria-label="Response body"]');
+  if (editor) return editor.textContent ?? "";
+  return document.querySelector(".ac-response-body")?.textContent ?? "";
+}
+
 beforeEach(() => {
   vi.spyOn(window, "confirm").mockReturnValue(true);
   vi.spyOn(window, "prompt").mockReturnValue("Saved name");
@@ -72,7 +82,7 @@ describe("sending", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     await screen.findByText("200 OK");
-    expect(screen.getByText(/"ok": true/)).toBeInTheDocument();
+    await waitFor(() => expect(responseBodyText()).toContain('"ok": true'));
   });
 
   it("shows invalid JSON verbatim rather than an error", async () => {
@@ -84,7 +94,7 @@ describe("sending", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     await screen.findByText("200 OK");
-    expect(screen.getByText("{ not json")).toBeInTheDocument();
+    await waitFor(() => expect(responseBodyText()).toContain("{ not json"));
   });
 
   it("falls back to a size for a binary body", async () => {
@@ -465,5 +475,107 @@ describe("settings", () => {
     expect(within(dialog).queryByLabelText("Password")).not.toBeInTheDocument();
     await user.type(within(dialog).getByLabelText("File"), "/home/me/client.p12");
     expect(within(dialog).getByLabelText("Password")).toBeInTheDocument();
+  });
+});
+
+describe("pane layout", () => {
+  it("flips between stacked and side-by-side and remembers the choice", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const split = document.querySelector(".ac-split");
+    expect(split).toHaveClass("ac-split--rows");
+
+    await user.click(screen.getByRole("button", { name: "Toggle pane layout" }));
+
+    expect(document.querySelector(".ac-split")).toHaveClass("ac-split--columns");
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.paneLayout).toBe("columns");
+    });
+  });
+
+  it("gives the divider the right orientation for the layout", async () => {
+    const { user } = setup();
+    await ready();
+
+    const divider = screen.getByRole("separator");
+    expect(divider).toHaveAttribute("aria-orientation", "horizontal");
+
+    await user.click(screen.getByRole("button", { name: "Toggle pane layout" }));
+    expect(screen.getByRole("separator")).toHaveAttribute("aria-orientation", "vertical");
+  });
+
+  it("resizes with the keyboard and persists the result", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const divider = screen.getByRole("separator");
+    expect(divider).toHaveAttribute("aria-valuenow", "42");
+
+    divider.focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+
+    expect(screen.getByRole("separator")).toHaveAttribute("aria-valuenow", "46");
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.splitPercent).toBe(46);
+    });
+  });
+
+  it("will not let a pane be dragged shut", async () => {
+    const { user } = setup();
+    await ready();
+
+    const divider = screen.getByRole("separator");
+    divider.focus();
+    await user.keyboard("{Home}");
+    expect(screen.getByRole("separator")).toHaveAttribute("aria-valuenow", "15");
+
+    await user.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}");
+    expect(screen.getByRole("separator")).toHaveAttribute("aria-valuenow", "15");
+
+    await user.keyboard("{End}");
+    expect(screen.getByRole("separator")).toHaveAttribute("aria-valuenow", "85");
+  });
+});
+
+describe("json responses", () => {
+  it("offers collapse and expand for valid JSON", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa('{"a":{"b":[1,2,3]}}') }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+  });
+
+  it("does not offer folding for a body that is not valid JSON", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa("{ not json") }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
+    await waitFor(() => expect(responseBodyText()).toContain("{ not json"));
+  });
+
+  it("falls back to plain text for a body too large to highlight", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    const big = `{"pad":"${"x".repeat(2 * 1024 * 1024)}"}`;
+    bridge.queue(ok({ body: btoa(big), sizeBytes: big.length }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(await screen.findByText(/too large to highlight/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
   });
 });

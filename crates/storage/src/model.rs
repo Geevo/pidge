@@ -13,6 +13,21 @@ pub fn now_ms() -> i64 {
         .unwrap_or_default()
 }
 
+/// How the request and response panes are arranged.
+///
+/// Named for the layout rather than for the divider, because "horizontal
+/// split" means opposite things depending on who you ask.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PaneLayout {
+    /// Request above, response below.
+    #[default]
+    Rows,
+    /// Request beside response.
+    Columns,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -38,6 +53,10 @@ pub struct Settings {
     /// Reopen the scratch tabs that were open last time.
     pub restore_tabs: bool,
     pub wrap_response_lines: bool,
+    pub pane_layout: PaneLayout,
+    /// The request pane's share of the split, as a percentage. Clamped when
+    /// applied, so a hand-edited state file cannot collapse a pane entirely.
+    pub split_percent: u8,
     /// Trust and client-certificate settings. Changing any of these rebuilds
     /// the HTTP client, so they take effect on the next send.
     pub tls: TlsSettings,
@@ -53,6 +72,8 @@ impl Default for Settings {
             max_response_bytes: 50 * 1024 * 1024,
             restore_tabs: true,
             wrap_response_lines: false,
+            pane_layout: PaneLayout::default(),
+            split_percent: 42,
             tls: TlsSettings::default(),
         }
     }

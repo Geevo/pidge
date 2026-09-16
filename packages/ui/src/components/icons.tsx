@@ -64,6 +64,26 @@ export function BookmarkIcon(props: IconProps) {
   );
 }
 
+/** Two stacked panes: request above, response below. */
+export function RowsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2.2" y="2.2" width="11.6" height="11.6" rx="1.4" />
+      <path d="M2.2 8h11.6" />
+    </Svg>
+  );
+}
+
+/** Two side-by-side panes: request beside response. */
+export function ColumnsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2.2" y="2.2" width="11.6" height="11.6" rx="1.4" />
+      <path d="M8 2.2v11.6" />
+    </Svg>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <Svg {...props}>
