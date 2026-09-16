@@ -15,6 +15,30 @@ The app declares only `core:default` in
 shell, or network permissions from Tauri: HTTP goes through the Rust engine, and
 storage goes through `crates/storage`.
 
+## The icon
+
+`apps/desktop/src-tauri/app-icon.svg` is the source. Everything in `icons/` is
+generated from it:
+
+```bash
+pnpm --filter @api-client/desktop exec tauri icon src-tauri/app-icon.svg
+```
+
+That writes Android, iOS and Windows Store sizes too, which this project has no
+targets for; only the five files `bundle.icon` lists are kept.
+
+Where the icon comes from depends on how the app was started. An installed
+package puts the PNGs in `hicolor` and writes a desktop entry with
+`Icon=api-client-desktop` and `StartupWMClass=api-client-desktop`, and GTK
+derives the same app id from the binary name, so a Wayland taskbar matches the
+window to that entry. Run straight from `target/`, there is no desktop entry to
+match: X11 falls back to the window icon compiled into the binary, and Wayland
+shows a generic one. That is a property of the launch, not of the build.
+
+`app.enableGtkAppId` would set the app id to the bundle identifier instead,
+which is exactly what the desktop entry does not say — leaving it off is what
+makes the two agree.
+
 ## VS Code
 
 The extension ships the sidecar binaries it was packaged with. It never
