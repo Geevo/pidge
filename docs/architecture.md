@@ -134,7 +134,13 @@ be able to do that.
 
 `SplitPane` arranges the request and response either as rows or as columns, with
 a divider that drags, takes arrow keys, and resets to even on a double click.
-The layout and the split are persisted in `Settings`, so they survive a restart.
+
+The layout is a preference and lives in `Settings`. The split position is
+per-tab: `ScratchTab::split_percent` holds it, so comparing a long response in
+one tab does not squash the request editor in another. `None` falls back to
+`Settings::split_percent`, which each drag also updates — that way existing tabs
+stay where they were put, and a new tab opens where you were last working rather
+than always at the original default. Both persist with the tab.
 
 Two details worth knowing:
 

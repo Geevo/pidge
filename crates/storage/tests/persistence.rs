@@ -233,3 +233,51 @@ fn ensure_one_tab_repairs_a_dangling_active_id() {
     assert_eq!(state.tabs.len(), 1);
     assert_eq!(state.active_tab_id, Some(state.tabs[0].id.clone()));
 }
+
+#[test]
+fn each_tab_keeps_its_own_split_position() {
+    let (_dir, store) = temp_store();
+
+    let mut state = AppState::default();
+    state.tabs[0].split_percent = Some(70);
+    let mut second = ScratchTab::blank();
+    second.split_percent = Some(25);
+    state.tabs.push(second);
+    // A third is left unset, meaning "use the default".
+    state.tabs.push(ScratchTab::blank());
+
+    store.save(&state).unwrap();
+    let loaded = store.load().state;
+
+    assert_eq!(loaded.tabs[0].split_percent, Some(70));
+    assert_eq!(loaded.tabs[1].split_percent, Some(25));
+    assert_eq!(loaded.tabs[2].split_percent, None);
+}
+
+#[test]
+fn a_tab_saved_before_split_positions_existed_still_loads() {
+    let value = serde_json::json!({
+        "version": SCHEMA_VERSION,
+        "tabs": [{
+            "id": "tab-1",
+            "name": null,
+            "request": {
+                "id": "req-1",
+                "method": "GET",
+                "url": "https://example.com",
+                "queryParams": [],
+                "headers": [],
+                "auth": { "type": "none" },
+                "body": { "type": "none" },
+                "timeoutMs": null
+            },
+            "savedRequestId": null,
+            "dirty": false
+        }],
+        "activeTabId": "tab-1"
+    });
+
+    let state = migrate(value).expect("a tab without a split position should still load");
+    assert_eq!(state.tabs[0].split_percent, None);
+    assert_eq!(state.tabs[0].request.url, "https://example.com");
+}

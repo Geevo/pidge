@@ -167,6 +167,13 @@ pub struct ScratchTab {
     pub saved_request_id: Option<String>,
     /// True when the tab differs from the saved request it is linked to.
     pub dirty: bool,
+    /// This tab's own split position, as the request pane's percentage share.
+    /// `None` uses `Settings::split_percent`, which is also what a new tab
+    /// starts from. Defaulted so a state file written before this existed
+    /// still loads.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub split_percent: Option<u8>,
 }
 
 impl ScratchTab {
@@ -177,6 +184,7 @@ impl ScratchTab {
             request: HttpRequest::blank(),
             saved_request_id: None,
             dirty: false,
+            split_percent: None,
         }
     }
 }
