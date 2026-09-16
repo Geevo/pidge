@@ -1,6 +1,6 @@
 import type { HistoryEntry } from "../types";
-import { formatDuration, formatTime, requestLabel } from "../lib/format";
-import { statusClass } from "../lib/format";
+import { formatDuration, formatTime, requestLabel, statusClass } from "../lib/format";
+import { MethodBadge } from "./MethodBadge";
 
 interface Props {
   history: readonly HistoryEntry[];
@@ -37,7 +37,8 @@ export function HistoryPanel({ history, onOpen, onClear }: Props) {
             <li key={entry.id} className="ac-list__item">
               <button type="button" className="ac-list__button" onClick={() => onOpen(entry)}>
                 <span className="ac-list__title">
-                  {entry.request.method} {requestLabel(entry.request.url, entry.request.method)}
+                  <MethodBadge method={entry.request.method} small />{" "}
+                  {requestLabel(entry.request.url, entry.request.method)}
                 </span>
                 <span className="ac-list__meta">
                   {entry.status !== null ? (

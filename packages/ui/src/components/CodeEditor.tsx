@@ -8,7 +8,15 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { Compartment, EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import {
+  EditorView,
+  drawSelection,
+  dropCursor,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 
 /**
@@ -68,6 +76,14 @@ export function CodeEditor({
           history(),
           indentOnInput(),
           bracketMatching(),
+          // Without drawSelection the caret is the browser's own, which the
+          // webview draws in a colour we do not control and which disappears
+          // against a dark background. These four also make the active line
+          // visible, so you can see where you are in a long body.
+          drawSelection(),
+          dropCursor(),
+          highlightActiveLine(),
+          highlightActiveLineGutter(),
           syntaxHighlighting(highlightStyle),
           languageCompartment.current.of(language === "json" ? json() : []),
           EditorState.readOnly.of(readOnly),

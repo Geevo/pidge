@@ -11,6 +11,8 @@ export function MethodSelector({ value, onChange }: Props) {
     <select
       className="ac-method"
       aria-label="Method"
+      // Drives the Swagger colour; see `.ac-method[data-method]` in styles.css.
+      data-method={value}
       value={value}
       onChange={(event) => onChange(event.target.value as HttpMethod)}
     >
