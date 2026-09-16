@@ -391,6 +391,12 @@ input[type="checkbox"]:hover {
   overflow: auto;
   min-height: 0;
   flex: 1;
+  /*
+   * Room for the last row's focus ring. Scrolled to the end, a row sits flush
+   * against the bottom and the ring is clipped by the scroll box, which reads
+   * as the field being tucked under whatever is below.
+   */
+  padding-bottom: 8px;
 }
 
 /*
@@ -402,6 +408,8 @@ input[type="checkbox"]:hover {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* The editor scrolls itself, so it wants the whole panel. */
+  padding-bottom: 0;
 }
 
 /* The body editor fills the panel so CodeMirror has a height to work with. */
@@ -445,7 +453,6 @@ input[type="checkbox"]:hover {
   border: 1px solid var(--ac-border-strong);
   border-radius: var(--ac-radius);
   background: var(--ac-bg-input);
-  font-family: var(--ac-font-mono);
   /* Ligature fonts turn `//` and `->` into glyphs; a URL must read literally. */
   font-variant-ligatures: none;
 }
@@ -558,6 +565,12 @@ input[type="checkbox"]:hover {
 
 .ac-method-badge {
   display: inline-block;
+  /*
+   * A pill in the tab strip is a flex item beside a label that will happily
+   * take the whole tab. Without this, OPTIONS — the one method too long for
+   * the minimum — gets squeezed narrower than its own text.
+   */
+  flex: none;
   min-width: 46px;
   padding: 1px 5px;
   border-radius: 3px;
@@ -576,6 +589,7 @@ input[type="checkbox"]:hover {
   line-height: 1.6;
   text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .ac-method-badge[data-method="GET"] {
@@ -1283,6 +1297,11 @@ input[type="checkbox"]:hover {
   flex: 1;
   overflow: auto;
   /*
+   * Room for the last row's focus ring. Flush against the bottom, the ring is
+   * clipped by the scroll box and the control looks tucked under the buttons.
+   */
+  padding-bottom: 8px;
+  /*
    * The dialog floats over a translucent full-screen backdrop. Without paint
    * containment, scrolling here can make the compositor repaint everything
    * underneath rather than just the scrolled region.
@@ -1292,6 +1311,7 @@ input[type="checkbox"]:hover {
 
 .ac-dialog__footer {
   display: flex;
+  flex: none;
   justify-content: flex-end;
   gap: 8px;
   padding: 8px;
