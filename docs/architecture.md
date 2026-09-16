@@ -108,6 +108,28 @@ So that the panel still updates live, `Session::send` returns the `HistoryEntry`
 it recorded alongside the response, and the reducer prepends it. `clear_history`
 is the only way a frontend can empty it.
 
+## The window
+
+The desktop window is undecorated. GTK on Wayland always draws its own header —
+it does not implement the protocol KDE and other compositors use for server-side
+decorations — and that header is far taller than the platform's own. Under
+XWayland the same app got a normal, thin titlebar, but XWayland costs a copy and
+composite per frame and made scrolling visibly laggy.
+
+So the app draws its own: the tab strip doubles as the title bar, with the
+leftover space as a drag region and minimise/maximise/close at its end. That is
+one row of chrome rather than two.
+
+`tao` only calls `set_decorated(false)` on Linux and adds nothing back, so an
+undecorated window has no resize edges at all. `ResizeEdges` supplies eight
+invisible strips that call `startResizeDragging`.
+
+All of this hangs off `PlatformBridge.window`, which is optional and absent in
+VS Code, where the editor owns the frame. Every call through it is caught:
+`getCurrentWindow()` throws outright when the Tauri internals are missing, and
+an effect that throws unmounts the entire application — window chrome must not
+be able to do that.
+
 ## Panes
 
 `SplitPane` arranges the request and response either as rows or as columns, with

@@ -608,3 +608,73 @@ describe("dragging the divider", () => {
     expect(document.body).not.toHaveClass("ac-dragging");
   });
 });
+
+describe("window chrome", () => {
+  it("draws none when the host has its own window frame", async () => {
+    setup();
+    await ready();
+
+    // The fake bridge exposes no window controls, as VS Code does not.
+    expect(screen.queryByRole("button", { name: "Close window" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".ac-resize-edge")).toHaveLength(0);
+  });
+
+  it("draws a title bar and resize edges when the host asks it to", async () => {
+    const bridge = new FakeBridge();
+    const calls: string[] = [];
+    const controls = {
+      minimize: () => {
+        calls.push("minimize");
+        return Promise.resolve();
+      },
+      toggleMaximize: () => {
+        calls.push("toggleMaximize");
+        return Promise.resolve();
+      },
+      close: () => {
+        calls.push("close");
+        return Promise.resolve();
+      },
+      isMaximized: () => Promise.resolve(false),
+      startDragging: () => Promise.resolve(),
+      startResizing: (edge: string) => {
+        calls.push(`resize:${edge}`);
+        return Promise.resolve();
+      },
+    };
+    bridge.window = controls;
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    expect(screen.getByRole("button", { name: "Minimise" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Maximise" })).toBeInTheDocument();
+    // All eight edges and corners, or the undecorated window cannot be resized.
+    expect(document.querySelectorAll(".ac-resize-edge")).toHaveLength(8);
+
+    await user.click(screen.getByRole("button", { name: "Minimise" }));
+    expect(calls).toContain("minimize");
+  });
+
+  it("survives a host whose window controls fail", async () => {
+    const bridge = new FakeBridge();
+    const controls = {
+      minimize: () => Promise.reject(new Error("no window")),
+      toggleMaximize: () => Promise.reject(new Error("no window")),
+      close: () => Promise.reject(new Error("no window")),
+      // Rejecting here used to unmount the whole app from inside an effect.
+      isMaximized: () => Promise.reject(new Error("no window")),
+      startDragging: () => Promise.reject(new Error("no window")),
+      startResizing: () => Promise.reject(new Error("no window")),
+    };
+    bridge.window = controls;
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Minimise" }));
+
+    // The app is still there; chrome failing is not the app failing.
+    expect(screen.getByRole("textbox", { name: "URL" })).toBeInTheDocument();
+  });
+});

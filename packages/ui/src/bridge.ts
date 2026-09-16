@@ -25,12 +25,35 @@ export interface PlatformBridge {
    * Returns an unsubscribe function. Hosts with no such commands omit it.
    */
   subscribe?(listener: (command: HostCommand) => void): () => void;
+  /** Present only when this host has no native window frame of its own. */
+  readonly window?: WindowControls;
   /** Name shown in diagnostics, e.g. "desktop" or "vscode". */
   readonly platform: string;
 }
 
 /** Commands a host can push into the UI. */
 export type HostCommand = "newRequest";
+
+/** Which edge or corner a resize drag started from. */
+export type ResizeEdge =
+  "North" | "NorthEast" | "East" | "SouthEast" | "South" | "SouthWest" | "West" | "NorthWest";
+
+/**
+ * Present only when the host expects the app to draw its own title bar.
+ *
+ * The desktop window is undecorated because GTK's own header is far taller than
+ * the platform's; VS Code supplies none of this, so the whole object is absent
+ * there and no window chrome is rendered.
+ */
+export interface WindowControls {
+  minimize(): Promise<void>;
+  toggleMaximize(): Promise<void>;
+  close(): Promise<void>;
+  isMaximized(): Promise<boolean>;
+  startDragging(): Promise<void>;
+  /** Undecorated windows get no resize edges for free; these supply them. */
+  startResizing(edge: ResizeEdge): Promise<void>;
+}
 
 /**
  * The result of one send, mirroring `api_client_session::SendOutcome`.
