@@ -4,6 +4,7 @@ import type { Environment } from "../types";
 import { newId } from "../lib/ids";
 import { KeyValueTable } from "./KeyValueTable";
 import { PlusIcon, TrashIcon } from "./icons";
+import { Select } from "./Select";
 
 interface Props {
   environments: readonly Environment[];
@@ -72,18 +73,19 @@ export function EnvironmentsDialog({ environments, activeEnvironmentId, onSave, 
           ) : (
             <>
               <div className="ac-field">
-                <label htmlFor="ac-env-pick">Editing</label>
-                <select
+                <label id="ac-env-pick-label" htmlFor="ac-env-pick">
+                  Editing
+                </label>
+                <Select
                   id="ac-env-pick"
+                  labelledBy="ac-env-pick-label"
                   value={selectedId ?? ""}
-                  onChange={(event) => setSelectedId(event.target.value)}
-                >
-                  {draft.map((environment) => (
-                    <option key={environment.id} value={environment.id}>
-                      {environment.name}
-                    </option>
-                  ))}
-                </select>
+                  options={draft.map((environment) => ({
+                    value: environment.id,
+                    label: environment.name,
+                  }))}
+                  onChange={setSelectedId}
+                />
                 {selected ? (
                   <button
                     type="button"

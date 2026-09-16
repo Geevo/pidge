@@ -12,6 +12,19 @@ function setup() {
   return { bridge, user };
 }
 
+/**
+ * The dropdowns are drawn in the app rather than by the platform, so a choice
+ * is two clicks and the option is matched by its label, not its value.
+ */
+async function choose(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  option: string,
+) {
+  await user.click(combobox);
+  await user.click(await screen.findByRole("option", { name: option }));
+}
+
 /** The app hydrates asynchronously; wait for that before asserting. */
 async function ready() {
   await screen.findByRole("textbox", { name: "URL" });
@@ -42,7 +55,7 @@ describe("opening the app", () => {
     await ready();
 
     expect(screen.getByRole("textbox", { name: "URL" })).toHaveValue("");
-    expect(screen.getByRole("combobox", { name: "Method" })).toHaveValue("GET");
+    expect(screen.getByRole("combobox", { name: "Method" })).toHaveTextContent("GET");
     expect(screen.getByText("Type a URL and press Send.")).toBeInTheDocument();
     // No welcome screen, no login, no workspace picker.
     expect(screen.queryByText(/sign in|workspace|collection/i)).not.toBeInTheDocument();
@@ -286,13 +299,13 @@ describe("request configuration", () => {
     bridge.queue(ok());
 
     await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Method" }), "POST");
+    await choose(user, screen.getByRole("combobox", { name: "Method" }), "POST");
 
     await user.click(screen.getByRole("tab", { name: /Body/ }));
-    await user.selectOptions(screen.getByLabelText("Body"), "json");
+    await choose(user, screen.getByLabelText("Body"), "JSON");
 
     await user.click(screen.getByRole("tab", { name: /Auth/ }));
-    await user.selectOptions(screen.getByLabelText("Auth"), "bearer");
+    await choose(user, screen.getByLabelText("Auth"), "Bearer token");
     await user.type(screen.getByLabelText("Token"), "secret");
 
     await user.click(screen.getByRole("button", { name: "Send" }));
@@ -309,7 +322,7 @@ describe("request configuration", () => {
     await ready();
 
     await user.click(screen.getByRole("tab", { name: /Auth/ }));
-    await user.selectOptions(screen.getByLabelText("Auth"), "bearer");
+    await choose(user, screen.getByLabelText("Auth"), "Bearer token");
 
     await user.click(screen.getByRole("tab", { name: /Headers/ }));
     await user.type(screen.getByRole("textbox", { name: "Name 1" }), "Authorization");
@@ -750,13 +763,12 @@ describe("themes", () => {
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    const options = within(dialog)
-      .getAllByRole("option")
-      .map((option) => (option as HTMLOptionElement).value);
 
-    expect(options).toEqual(
-      expect.arrayContaining(["system", "light", "dark", "warmDark", "warmLight"]),
-    );
+    // The list is drawn into the body, so it is read from the screen.
+    await user.click(within(dialog).getByLabelText("Theme"));
+    const options = screen.getAllByRole("option").map((option) => option.textContent);
+
+    expect(options).toEqual(["Follow the system", "Light", "Dark", "Warm dark", "Warm light"]);
   });
 
   it("previews the palette as it is picked, before anything is saved", async () => {
@@ -765,7 +777,7 @@ describe("themes", () => {
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
 
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
@@ -779,7 +791,7 @@ describe("themes", () => {
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
     });
@@ -794,7 +806,7 @@ describe("themes", () => {
     // The draft goes with it: reopening starts from the saved theme again.
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const again = await screen.findByRole("dialog", { name: "Settings" });
-    expect(within(again).getByLabelText("Theme")).toHaveValue("system");
+    expect(within(again).getByLabelText("Theme")).toHaveTextContent("Follow the system");
   });
 
   it("tells the host which way the palette leans, so native popups match", async () => {
@@ -820,14 +832,14 @@ describe("themes", () => {
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
 
     // A warm palette is still a light or a dark one as far as GTK is concerned.
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmLight");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Warm light");
     await waitFor(() => expect(themes.at(-1)).toBe("light"));
 
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
     await waitFor(() => expect(themes.at(-1)).toBe("dark"));
 
     // "Follow the system" hands the choice back rather than pinning it.
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "system");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Follow the system");
     await waitFor(() => expect(themes.at(-1)).toBeNull());
   });
 
@@ -838,7 +850,7 @@ describe("themes", () => {
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
 
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "warmDark");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -856,7 +868,7 @@ describe("themes", () => {
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const dialog = await screen.findByRole("dialog", { name: "Settings" });
 
-    await user.selectOptions(within(dialog).getByLabelText("Theme"), "dark");
+    await choose(user, within(dialog).getByLabelText("Theme"), "Dark");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
@@ -864,7 +876,7 @@ describe("themes", () => {
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const again = await screen.findByRole("dialog", { name: "Settings" });
-    await user.selectOptions(within(again).getByLabelText("Theme"), "system");
+    await choose(user, within(again).getByLabelText("Theme"), "Follow the system");
     await user.click(within(again).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {

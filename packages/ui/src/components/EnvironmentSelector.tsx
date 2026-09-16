@@ -1,4 +1,5 @@
 import type { Environment } from "../types";
+import { Select } from "./Select";
 
 interface Props {
   environments: readonly Environment[];
@@ -14,26 +15,25 @@ export function EnvironmentSelector({
   onChange,
   onManage,
 }: Props) {
+  const options = [
+    { value: "", label: "No environment" },
+    ...environments.map((environment) => ({ value: environment.id, label: environment.name })),
+    { value: "__manage__", label: "Manage…" },
+  ];
+
   return (
-    <select
-      className="ac-select"
-      aria-label="Environment"
+    <Select
+      className="ac-select--environment"
+      label="Environment"
       value={activeEnvironmentId ?? ""}
-      onChange={(event) => {
-        if (event.target.value === "__manage__") {
+      options={options}
+      onChange={(value) => {
+        if (value === "__manage__") {
           onManage();
           return;
         }
-        onChange(event.target.value === "" ? null : event.target.value);
+        onChange(value === "" ? null : value);
       }}
-    >
-      <option value="">No environment</option>
-      {environments.map((environment) => (
-        <option key={environment.id} value={environment.id}>
-          {environment.name}
-        </option>
-      ))}
-      <option value="__manage__">Manage…</option>
-    </select>
+    />
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { ClientIdentitySettings, Settings, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
+import { Select } from "./Select";
 
 interface Props {
   settings: Settings;
@@ -24,6 +25,14 @@ interface Props {
  * trusts whatever the operating system trusts, and this is for the two cases
  * the OS store cannot cover — an internal CA, and a client certificate.
  */
+const THEMES = [
+  { value: "system", label: "Follow the system" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "warmDark", label: "Warm dark" },
+  { value: "warmLight", label: "Warm light" },
+];
+
 export function SettingsDialog({ settings, storagePath, onPreviewTheme, onSave, onClose }: Props) {
   const [draft, setDraft] = useState<Settings>(() => ({
     ...settings,
@@ -57,22 +66,20 @@ export function SettingsDialog({ settings, storagePath, onPreviewTheme, onSave, 
 
         <div className="ac-dialog__body">
           <div className="ac-field">
-            <label htmlFor="ac-theme">Theme</label>
-            <select
+            <label id="ac-theme-label" htmlFor="ac-theme">
+              Theme
+            </label>
+            <Select
               id="ac-theme"
+              labelledBy="ac-theme-label"
               value={draft.theme}
-              onChange={(event) => {
-                const theme = event.target.value as Theme;
+              options={THEMES}
+              onChange={(value) => {
+                const theme = value as Theme;
                 patch({ theme });
                 onPreviewTheme(theme);
               }}
-            >
-              <option value="system">Follow the system</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="warmDark">Warm dark</option>
-              <option value="warmLight">Warm light</option>
-            </select>
+            />
           </div>
 
           <div className="ac-field">

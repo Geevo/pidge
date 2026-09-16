@@ -299,10 +299,9 @@ export function App({ bridge }: Props) {
 /**
  * Which way each palette leans, for the host's benefit.
  *
- * A `<select>` popup is drawn by the platform rather than by the page, so no
- * amount of CSS reaches it: on Linux it is a GTK menu following the desktop's
- * light/dark preference, which left a light palette with a black list on a dark
- * desktop. Telling the window makes the two agree.
+ * The dropdowns are drawn in the app, but the menu the webview puts up on a
+ * right click is still the platform's, and it takes no notice of CSS. Telling
+ * the window is the only way to get the two nearer to agreeing.
  */
 const NATIVE_THEME: Record<Theme, "light" | "dark" | null> = {
   system: null,

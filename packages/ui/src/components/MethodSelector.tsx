@@ -1,26 +1,22 @@
 import type { HttpMethod } from "../types";
 import { HTTP_METHODS } from "../types";
+import { Select } from "./Select";
 
 interface Props {
   value: HttpMethod;
   onChange: (method: HttpMethod) => void;
 }
 
+const OPTIONS = HTTP_METHODS.map((method) => ({ value: method, label: method }));
+
 export function MethodSelector({ value, onChange }: Props) {
   return (
-    <select
+    <Select
       className="ac-method"
-      aria-label="Method"
-      // Drives the Swagger colour; see `.ac-method[data-method]` in styles.css.
-      data-method={value}
+      label="Method"
       value={value}
-      onChange={(event) => onChange(event.target.value as HttpMethod)}
-    >
-      {HTTP_METHODS.map((method) => (
-        <option key={method} value={method}>
-          {method}
-        </option>
-      ))}
-    </select>
+      options={OPTIONS}
+      onChange={(method) => onChange(method as HttpMethod)}
+    />
   );
 }

@@ -127,17 +127,26 @@ furniture — select popups, scrollbars, the caret — follows.
 
 ### The controls the platform draws
 
-A `<select>` is drawn by the platform unless you take it over, and a WebKit
-webview on Linux draws it with the GTK theme: on a dark desktop a light palette
-came back with a black control whatever `background-color` said. So the closed
-box is drawn here — `appearance: none`, our border, and a chevron from
-`--ac-select-arrow` — the same treatment the checkbox gets.
+A native `<select>` can be styled shut but not open. The list that drops down is
+the platform's: in a WebKit webview on Linux it is a GTK menu in the desktop's
+own theme, which ignores `option { background-color }` entirely and left a light
+palette with a black list on a dark desktop.
 
-The list that drops down is the platform's own and no CSS reaches it. That one
-is handled from the other end: `WindowControls.setTheme` passes "light", "dark"
-or null to the host, which on Linux is `gtk-application-prefer-dark-theme`. It
-is best effort, since a GTK theme with no dark variant will ignore it, and the
-call is caught like the rest of the window chrome.
+`gtk-application-prefer-dark-theme` does not rescue it either. Breeze — KDE's
+theme — ships its dark variant as a separate theme rather than as a variant, so
+the preference changes nothing. That was measured with a WebKitGTK window rather
+than assumed.
+
+So `Select` draws both halves: a `<button role="combobox">` and a
+`<ul role="listbox">`, with arrow keys, Home/End, Escape, and a click outside to
+close. The list is rendered into `document.body` and positioned against the
+trigger, because the dialog and the tab strip both clip. It closes on scroll and
+on resize rather than following the trigger around.
+
+That leaves the menu the webview puts up on a right click, which is still the
+platform's. `WindowControls.setTheme` passes "light", "dark" or null to the
+host — `gtk-application-prefer-dark-theme` on Linux — as a hint, caught like the
+rest of the window chrome.
 
 A palette cannot be judged from its name, so Settings applies one as soon as it
 is picked and `App` holds that choice separately from the saved settings.
