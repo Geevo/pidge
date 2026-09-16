@@ -41,6 +41,7 @@ reqwest = { version = "0.13", default-features = false, features = [
 ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std", "io-util", "fs", "net", "time", "sync"] }
 tokio-util = "0.7"
@@ -49,6 +50,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ts-rs = { version = "12", features = ["serde-compat", "no-serde-warnings"] }
 url = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
+x509-parser = "0.18"
 
 [profile.release]
 codegen-units = 1

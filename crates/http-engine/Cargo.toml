@@ -14,10 +14,12 @@ base64.workspace = true
 p12-keystore = "0.3"
 reqwest.workspace = true
 serde.workspace = true
+sha2.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 url.workspace = true
+x509-parser.workspace = true
 
 [dev-dependencies]
 api-client-testserver.workspace = true

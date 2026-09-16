@@ -7,6 +7,7 @@
 mod build;
 mod cancel;
 mod error;
+mod peer_cert;
 mod tls;
 mod url_input;
 
@@ -73,7 +74,9 @@ impl HttpEngine {
         let builder = reqwest::Client::builder()
             .user_agent(config.user_agent.clone())
             .redirect(redirect)
-            .cookie_store(config.store_cookies);
+            .cookie_store(config.store_cookies)
+            // Puts the peer certificate on the response, for the padlock.
+            .tls_info(true);
 
         let client = tls::apply(builder, &config.tls)?.build().map_err(|err| {
             // reqwest defers parsing a DER certificate until the client is
@@ -157,6 +160,11 @@ impl HttpEngine {
 
         let status = response.status();
         let final_url = response.url().to_string();
+        // Read before the body: consuming the response takes the extensions.
+        let tls = response
+            .extensions()
+            .get::<reqwest::tls::TlsInfo>()
+            .map(|info| Box::new(peer_cert::describe(info)));
         let headers = collect_headers(response.headers());
         let mime_type = response
             .headers()
@@ -178,6 +186,7 @@ impl HttpEngine {
             truncated,
             final_url,
             warnings: Vec::new(),
+            tls,
         })
     }
 

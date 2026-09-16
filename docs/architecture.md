@@ -311,6 +311,26 @@ certificate surfaces at `build()` rather than where it was loaded. When any TLS
 setting is non-default, a build failure is reported as a TLS error naming the
 certificate settings, because that is what it will be.
 
+### The padlock
+
+`ClientBuilder::tls_info(true)` puts reqwest's `TlsInfo` on the response, which
+carries the negotiated version and the peer's leaf certificate as DER.
+`crates/http-engine/src/peer_cert.rs` parses that with `x509-parser` into
+`TlsDetails`, and the response carries it: `None` for plain HTTP, so the padlock
+appears exactly when the connection was encrypted.
+
+It is the leaf only. reqwest hands back the peer certificate and not the chain
+above it, so the dialog shows one certificate honestly rather than implying a
+chain that was never captured.
+
+A certificate that will not parse gives `certificate: None` rather than failing
+the response. The TLS layer has already accepted the connection by then; a gap
+in what we can display is not a reason to throw the response away.
+
+`TlsDetails` is boxed on `HttpResponse`. It is a few hundred bytes that most
+responses do not carry, and `HttpResponse` travels inside the sidecar's message
+enum, which is as large as its largest variant.
+
 ### Rebuilding the engine
 
 TLS settings shape the reqwest client, which is built once. `Session` therefore

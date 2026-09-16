@@ -74,6 +74,7 @@ fn response_bodies_travel_as_base64() {
         truncated: false,
         final_url: "https://example.com".into(),
         warnings: vec![],
+        tls: None,
     };
 
     let envelope = ServerEnvelope::new(
@@ -111,6 +112,7 @@ fn binary_bodies_survive_the_round_trip() {
         truncated: false,
         final_url: "https://example.com".into(),
         warnings: vec![],
+        tls: None,
     };
 
     let line = encode_line(&response).unwrap();

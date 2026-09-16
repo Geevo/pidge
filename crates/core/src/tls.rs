@@ -54,3 +54,42 @@ pub struct ClientIdentitySettings {
     /// legitimate PKCS#12 password and is not the same as `None`.
     pub password: Option<String>,
 }
+
+/// What the connection turned out to be, reported back with the response.
+///
+/// Absent for plain HTTP. The certificate is the one the server presented —
+/// the leaf, not the chain above it, which is all the TLS layer hands back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TlsDetails {
+    /// e.g. "TLS 1.3". `None` when the backend will not say.
+    pub protocol: Option<String>,
+    /// `None` when the certificate could not be parsed, which is not a reason
+    /// to fail a response the TLS layer already accepted.
+    pub certificate: Option<PeerCertificate>,
+}
+
+/// The server's certificate, in the terms a person checking it would use.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PeerCertificate {
+    pub subject: String,
+    pub issuer: String,
+    /// The names this certificate is actually valid for, which is what matters
+    /// rather than the common name.
+    pub subject_alt_names: Vec<String>,
+    /// RFC 3339, so the UI can format them in the local timezone.
+    pub not_before: String,
+    pub not_after: String,
+    pub serial: String,
+    pub signature_algorithm: String,
+    /// Uppercase hex, colon separated, as every other tool prints it.
+    pub sha256_fingerprint: String,
+    /// Against the clock when the response arrived. Only reachable with
+    /// verification turned off, but then it is the thing worth knowing.
+    pub expired: bool,
+    /// Subject equals issuer: nothing above it vouched for it.
+    pub self_signed: bool,
+}
