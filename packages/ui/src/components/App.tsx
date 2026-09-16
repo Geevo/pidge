@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { PlatformBridge, WindowControls } from "../bridge";
+import type { PlatformBridge } from "../bridge";
 import { matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, runtimeFor } from "../state/reducer";
@@ -45,7 +45,7 @@ export function App({ bridge }: Props) {
    */
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
 
-  useTheme(previewTheme ?? state.app.settings.theme, bridge.window);
+  useTheme(previewTheme ?? state.app.settings.theme);
 
   // The host can ask for things too, e.g. the VS Code Command Palette.
   useEffect(
@@ -297,32 +297,28 @@ export function App({ bridge }: Props) {
 }
 
 /**
- * Which way each palette leans, for the host's benefit.
+ * Applies a palette to the document.
  *
- * The dropdowns are drawn in the app, but the menu the webview puts up on a
- * right click is still the platform's, and it takes no notice of CSS. Telling
- * the window is the only way to get the two nearer to agreeing.
+ * "System" is resolved here rather than by a `prefers-color-scheme` block alone,
+ * so that what the app believes and what it draws cannot disagree: the media
+ * query is evaluated by the engine, and a webview that answers it differently
+ * would leave the app light on a dark desktop with nothing to point at. The
+ * query is still what paints the first frame, before this runs.
  */
-const NATIVE_THEME: Record<Theme, "light" | "dark" | null> = {
-  system: null,
-  light: "light",
-  warmLight: "light",
-  dark: "dark",
-  warmDark: "dark",
-};
-
-/**
- * The desktop app sets the theme explicitly; the VS Code build leaves it on
- * "system" so it follows the editor's own colours.
- */
-function useTheme(theme: Theme, controls?: WindowControls) {
+function useTheme(theme: Theme) {
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "system") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", theme);
 
-    // Chrome failing is not the app failing; the palette is already applied.
-    // Chrome failing is not the app failing; the palette is already applied.
-    controls?.setTheme(NATIVE_THEME[theme]).catch(() => undefined);
-  }, [controls, theme]);
+    if (theme !== "system") {
+      root.setAttribute("data-theme", theme);
+      return;
+    }
+
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => root.setAttribute("data-theme", query.matches ? "dark" : "light");
+
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, [theme]);
 }

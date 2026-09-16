@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,39 @@ async function choose(
 ) {
   await user.click(combobox);
   await user.click(await screen.findByRole("option", { name: option }));
+}
+
+/**
+ * jsdom answers every media query with `matches: false`, which would make the
+ * system theme look light whatever it is asked. This says what the desktop
+ * prefers, and can change its mind.
+ */
+function systemPrefersDark(dark: boolean) {
+  const listeners = new Set<() => void>();
+  let matches = dark;
+
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        media: query,
+        get matches() {
+          return matches;
+        },
+        addEventListener: (_event: string, listener: () => void) => listeners.add(listener),
+        removeEventListener: (_event: string, listener: () => void) => listeners.delete(listener),
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        onchange: null,
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  );
+
+  return {
+    change(next: boolean) {
+      matches = next;
+      for (const listener of listeners) listener();
+    },
+  };
 }
 
 /** The app hydrates asynchronously; wait for that before asserting. */
@@ -654,10 +687,6 @@ describe("window chrome", () => {
         calls.push(`resize:${edge}`);
         return Promise.resolve();
       },
-      setTheme: (theme: string | null) => {
-        calls.push(`theme:${theme}`);
-        return Promise.resolve();
-      },
     };
     bridge.window = controls;
     const user = userEvent.setup();
@@ -683,7 +712,6 @@ describe("window chrome", () => {
       isMaximized: () => Promise.reject(new Error("no window")),
       startDragging: () => Promise.reject(new Error("no window")),
       startResizing: () => Promise.reject(new Error("no window")),
-      setTheme: () => Promise.reject(new Error("no window")),
     };
     bridge.window = controls;
     const user = userEvent.setup();
@@ -799,7 +827,7 @@ describe("themes", () => {
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
     await waitFor(() => {
-      expect(document.documentElement).not.toHaveAttribute("data-theme");
+      expect(document.documentElement).toHaveAttribute("data-theme", "light");
     });
     expect(bridge.saved.at(-1)?.settings.theme ?? "system").toBe("system");
 
@@ -807,40 +835,6 @@ describe("themes", () => {
     await user.click(screen.getByRole("button", { name: "Settings" }));
     const again = await screen.findByRole("dialog", { name: "Settings" });
     expect(within(again).getByLabelText("Theme")).toHaveTextContent("Follow the system");
-  });
-
-  it("tells the host which way the palette leans, so native popups match", async () => {
-    const bridge = new FakeBridge();
-    const themes: (string | null)[] = [];
-    bridge.window = {
-      minimize: () => Promise.resolve(),
-      toggleMaximize: () => Promise.resolve(),
-      close: () => Promise.resolve(),
-      isMaximized: () => Promise.resolve(false),
-      startDragging: () => Promise.resolve(),
-      startResizing: () => Promise.resolve(),
-      setTheme: (theme) => {
-        themes.push(theme);
-        return Promise.resolve();
-      },
-    };
-    const user = userEvent.setup();
-    render(<App bridge={bridge} />);
-    await ready();
-
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
-
-    // A warm palette is still a light or a dark one as far as GTK is concerned.
-    await choose(user, within(dialog).getByLabelText("Theme"), "Warm light");
-    await waitFor(() => expect(themes.at(-1)).toBe("light"));
-
-    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
-    await waitFor(() => expect(themes.at(-1)).toBe("dark"));
-
-    // "Follow the system" hands the choice back rather than pinning it.
-    await choose(user, within(dialog).getByLabelText("Theme"), "Follow the system");
-    await waitFor(() => expect(themes.at(-1)).toBeNull());
   });
 
   it("applies the chosen palette to the document", async () => {
@@ -861,17 +855,22 @@ describe("themes", () => {
     });
   });
 
-  it("leaves the attribute off for the system theme, so the media query applies", async () => {
+  it("resolves the system theme to what the desktop actually prefers", async () => {
+    systemPrefersDark(true);
     const { user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
-
-    await choose(user, within(dialog).getByLabelText("Theme"), "Dark");
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    // The saved theme is "system", and this desktop is dark.
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    await choose(user, within(dialog).getByLabelText("Theme"), "Light");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "light");
     });
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
@@ -880,7 +879,23 @@ describe("themes", () => {
     await user.click(within(again).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(document.documentElement).not.toHaveAttribute("data-theme");
+      expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    });
+  });
+
+  it("follows the desktop changing its mind while the app is open", async () => {
+    const system = systemPrefersDark(false);
+    setup();
+    await ready();
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    });
+
+    act(() => system.change(true));
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     });
   });
 });

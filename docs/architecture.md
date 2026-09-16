@@ -111,12 +111,14 @@ is the only way a frontend can empty it.
 ## Themes
 
 Every colour is a token on `:root`, so a theme is one block redefining them.
-`useTheme` writes the choice to `data-theme` on the document element and removes
-it for "system", which is what lets the `prefers-color-scheme` block apply.
+`useTheme` writes the resolved palette to `data-theme` on the document element.
 
-That block is keyed on `:root:not([data-theme])` rather than "not light". With
-the looser selector, a named light palette on a dark desktop would have had the
-system's dark values layered over it.
+"System" is resolved in `useTheme` with `matchMedia`, not left to the
+`prefers-color-scheme` block alone, and it listens so that a desktop changing
+its mind reaches a window that is already open. The media query still matters:
+it paints the first frame, before React has mounted. It is keyed on
+`:root:not([data-theme])` rather than "not light", or a named light palette
+would have had the system's dark values layered over it in that first frame.
 
 The base tokens on `:root` are the light palette, so a theme only restates what
 differs from it. That is why the warm light block is a third the size of the
@@ -144,9 +146,11 @@ trigger, because the dialog and the tab strip both clip. It closes on scroll and
 on resize rather than following the trigger around.
 
 That leaves the menu the webview puts up on a right click, which is still the
-platform's. `WindowControls.setTheme` passes "light", "dark" or null to the
-host — `gtk-application-prefer-dark-theme` on Linux — as a hint, caught like the
-rest of the window chrome.
+platform's and stays in the desktop's colours. Passing the palette down to the
+window was tried and removed: on Linux it sets
+`gtk-application-prefer-dark-theme`, which changes neither that menu under
+Breeze nor what `prefers-color-scheme` reports, so it was machinery that did
+nothing.
 
 A palette cannot be judged from its name, so Settings applies one as soon as it
 is picked and `App` holds that choice separately from the saved settings.
