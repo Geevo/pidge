@@ -18,7 +18,12 @@ export default defineConfig({
       output: {
         entryFileNames: "webview.js",
         chunkFileNames: "webview-[name].js",
-        assetFileNames: "webview.[ext]",
+        // The panel HTML references webview.css by name; everything else
+        // (fonts, images) gets a hashed filename so nothing collides.
+        assetFileNames: (asset: { names?: string[]; name?: string }) => {
+          const name = asset.names?.[0] ?? asset.name ?? "";
+          return name.endsWith(".css") ? "webview.css" : "assets/[name]-[hash][extname]";
+        },
       },
     },
   },

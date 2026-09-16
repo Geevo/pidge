@@ -12,6 +12,7 @@ apps/vscode/media/webview.js
 apps/vscode/media/webview.js.map
 apps/vscode/media/webview.css
 apps/vscode/media/webview.css.map
+apps/vscode/media/assets/
 apps/vscode/bin/
 apps/vscode/*.vsix
 apps/desktop/src-tauri/gen/
