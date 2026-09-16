@@ -6,6 +6,13 @@ import { CloseIcon, PlusIcon } from "./icons";
 interface Props {
   settings: Settings;
   storagePath: string;
+  /**
+   * Called as the theme is picked, so the palette changes under the dialog
+   * before it is saved. The preview is owned by the caller rather than written
+   * to the document here: it is the caller that applies the theme, and having
+   * two writers of `data-theme` would make "which one wins" a matter of order.
+   */
+  onPreviewTheme: (theme: Theme) => void;
   onSave: (settings: Settings) => void;
   onClose: () => void;
 }
@@ -17,7 +24,7 @@ interface Props {
  * trusts whatever the operating system trusts, and this is for the two cases
  * the OS store cannot cover — an internal CA, and a client certificate.
  */
-export function SettingsDialog({ settings, storagePath, onSave, onClose }: Props) {
+export function SettingsDialog({ settings, storagePath, onPreviewTheme, onSave, onClose }: Props) {
   const [draft, setDraft] = useState<Settings>(() => ({
     ...settings,
     tls: { ...settings.tls, extraCaFiles: [...settings.tls.extraCaFiles] },
@@ -54,7 +61,11 @@ export function SettingsDialog({ settings, storagePath, onSave, onClose }: Props
             <select
               id="ac-theme"
               value={draft.theme}
-              onChange={(event) => patch({ theme: event.target.value as Theme })}
+              onChange={(event) => {
+                const theme = event.target.value as Theme;
+                patch({ theme });
+                onPreviewTheme(theme);
+              }}
             >
               <option value="system">Follow the system</option>
               <option value="light">Light</option>

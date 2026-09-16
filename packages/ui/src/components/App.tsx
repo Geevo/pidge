@@ -38,7 +38,14 @@ export function App({ bridge }: Props) {
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  useTheme(state.app.settings.theme);
+  /*
+   * The theme picked in Settings but not yet saved. A palette is not something
+   * you can judge from its name, so it applies as soon as it is chosen; closing
+   * the dialog without saving drops this and the saved theme comes back.
+   */
+  const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
+
+  useTheme(previewTheme ?? state.app.settings.theme);
 
   // The host can ask for things too, e.g. the VS Code Command Palette.
   useEffect(
@@ -268,8 +275,12 @@ export function App({ bridge }: Props) {
         <SettingsDialog
           settings={state.app.settings}
           storagePath={state.storagePath}
+          onPreviewTheme={setPreviewTheme}
           onSave={client.setSettings}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setPreviewTheme(null);
+            setSettingsOpen(false);
+          }}
         />
       ) : null}
 
