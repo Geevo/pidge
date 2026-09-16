@@ -1,0 +1,90 @@
+{
+  "name": "@api-client/vscode",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.mjs --watch",
+    "build": "node esbuild.mjs && vite build",
+    "build:webview": "vite build",
+    "package": "vsce package --no-dependencies",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/vscode": "^1.137.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "esbuild": "^0.28.2",
+    "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "@api-client/ui": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "displayName": "API Client",
+  "description": "Type a URL, press Send. A local-first HTTP client inside VS Code.",
+  "publisher": "apiclient",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "apiClient.open",
+        "title": "Open",
+        "category": "API Client"
+      },
+      {
+        "command": "apiClient.newRequest",
+        "title": "New Request",
+        "category": "API Client"
+      },
+      {
+        "command": "apiClient.restartSidecar",
+        "title": "Restart Request Engine",
+        "category": "API Client"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "apiClient",
+          "title": "API Client",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "apiClient": [
+        {
+          "id": "apiClient.launcher",
+          "name": "API Client",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "API Client",
+      "properties": {
+        "apiClient.sidecarPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a request engine binary. Leave empty to use the one bundled with the extension."
+        },
+        "apiClient.trace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log protocol traffic to the API Client output channel. Secret header values are never logged."
+        }
+      }
+    }
+  }
+}

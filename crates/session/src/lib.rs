@@ -1,0 +1,230 @@
+//! The shared application service.
+//!
+//! Everything a frontend can do lives here: send, cancel, persist, save, and
+//! clear. The Tauri commands and the sidecar message handlers are both thin
+//! wrappers around this type, which is what keeps the two platforms honest.
+
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex, MutexGuard};
+
+use api_client_core::{HttpRequest, HttpResponse, RequestError, RequestErrorKind};
+use api_client_http_engine::{CancellationRegistry, EngineConfig, HttpEngine};
+use api_client_storage::{
+    AppState, HistoryEntry, LoadOutcome, Recovery, SavedRequest, Settings, StorageError, Store,
+};
+use serde::Serialize;
+use ts_rs::TS;
+
+/// What a send produced: a response or an error, plus the history row it
+/// created. Returning the row lets a frontend keep its history list live
+/// without re-fetching the whole state.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SendOutcome {
+    pub response: Option<HttpResponse>,
+    pub error: Option<RequestError>,
+    /// `None` for a cancelled request, which is never recorded.
+    pub history_entry: Option<HistoryEntry>,
+}
+
+/// A running application: one engine, one state file, one in-memory state.
+#[derive(Clone)]
+pub struct Session {
+    inner: Arc<Inner>,
+}
+
+struct Inner {
+    engine: HttpEngine,
+    cancellations: CancellationRegistry,
+    store: Store,
+    state: Mutex<AppState>,
+    recovery: Option<Recovery>,
+}
+
+impl Session {
+    /// Loads state from `store` and builds an engine configured from it.
+    /// Never fails on a bad state file; see [`Session::recovery`].
+    pub fn start(store: Store) -> Result<Self, RequestError> {
+        let LoadOutcome {
+            mut state,
+            recovery,
+        } = store.load();
+        state.ensure_one_tab();
+
+        let engine = HttpEngine::new(engine_config(&state.settings))?;
+
+        Ok(Self {
+            inner: Arc::new(Inner {
+                engine,
+                cancellations: CancellationRegistry::new(),
+                store,
+                state: Mutex::new(state),
+                recovery,
+            }),
+        })
+    }
+
+    /// Set when the state file was missing, unreadable, or from a newer build.
+    pub fn recovery(&self) -> Option<&Recovery> {
+        self.inner.recovery.as_ref()
+    }
+
+    pub fn storage_path(&self) -> String {
+        self.inner.store.path().display().to_string()
+    }
+
+    /// A copy of the current state, for handing to the UI.
+    pub fn snapshot(&self) -> AppState {
+        self.state().clone()
+    }
+
+    /// Sends a request, resolving variables from the active environment and
+    /// recording the outcome in history.
+    pub async fn send(&self, request: HttpRequest) -> Result<HttpResponse, RequestError> {
+        let outcome = self.send_with_overrides(request, BTreeMap::new()).await;
+        match (outcome.response, outcome.error) {
+            (Some(response), _) => Ok(response),
+            (None, Some(error)) => Err(error),
+            (None, None) => Err(RequestError::other("the request produced no result")),
+        }
+    }
+
+    /// As [`Session::send`], with extra variables layered over the active
+    /// environment. The sidecar uses this so the webview can be explicit about
+    /// what it thinks the variables are.
+    pub async fn send_with_overrides(
+        &self,
+        request: HttpRequest,
+        overrides: BTreeMap<String, String>,
+    ) -> SendOutcome {
+        let mut variables = self.state().active_variables();
+        for (name, value) in overrides {
+            variables.insert(name, value);
+        }
+        let handle = self.inner.cancellations.register(&request.id);
+
+        let result = self
+            .inner
+            .engine
+            .execute_with_variables(request.clone(), &variables, handle)
+            .await;
+        self.inner.cancellations.finish(&request.id);
+
+        // A cancelled request was never really sent, so it does not earn a
+        // history entry.
+        let skip_history = matches!(
+            &result,
+            Err(error) if error.kind == RequestErrorKind::Cancelled
+        );
+
+        let history_entry = if skip_history {
+            None
+        } else {
+            let entry = match &result {
+                Ok(response) => HistoryEntry::success(request, response),
+                Err(error) => HistoryEntry::failure(request, error),
+            };
+            self.mutate(|state| state.push_history(entry.clone()));
+
+            // History is written straight away, so a crash or a force-quit
+            // does not lose what you just sent. A storage failure is worth a
+            // log, but it must never turn a good response into an error.
+            if let Err(err) = self.persist() {
+                tracing::warn!(error = %err, "could not write history");
+            }
+            Some(entry)
+        };
+
+        match result {
+            Ok(response) => SendOutcome {
+                response: Some(response),
+                error: None,
+                history_entry,
+            },
+            Err(error) => SendOutcome {
+                response: None,
+                error: Some(error),
+                history_entry,
+            },
+        }
+    }
+
+    /// Cancels an in-flight request. Returns false if it had already finished.
+    pub fn cancel(&self, request_id: &str) -> bool {
+        self.inner.cancellations.cancel(request_id)
+    }
+
+    pub fn in_flight(&self) -> usize {
+        self.inner.cancellations.in_flight()
+    }
+
+    /// Replaces the whole state, as the UI does when tabs or settings change.
+    ///
+    /// History is deliberately not taken from `next`: it is owned here and only
+    /// changes through [`Session::send`] and [`Session::clear_history`]. A UI
+    /// saving a snapshot it took before its last send must not erase the row
+    /// that send created.
+    pub fn replace_state(&self, mut next: AppState) -> Result<(), StorageError> {
+        next.ensure_one_tab();
+        {
+            let mut current = self.state();
+            next.history = std::mem::take(&mut current.history);
+            *current = next;
+        }
+        self.persist()
+    }
+
+    /// Creates or updates a saved request. Passing `id` updates in place.
+    pub fn save_request(
+        &self,
+        id: Option<String>,
+        name: String,
+        request: HttpRequest,
+    ) -> Result<SavedRequest, StorageError> {
+        let mut saved = SavedRequest::new(name, request);
+        if let Some(id) = id {
+            saved.id = id;
+        }
+        self.mutate(|state| state.upsert_saved_request(saved.clone()));
+        self.persist()?;
+        Ok(saved)
+    }
+
+    pub fn delete_saved_request(&self, id: &str) -> Result<bool, StorageError> {
+        let removed = self.mutate(|state| state.delete_saved_request(id));
+        self.persist()?;
+        Ok(removed)
+    }
+
+    pub fn clear_history(&self) -> Result<(), StorageError> {
+        self.mutate(|state| state.history.clear());
+        self.persist()
+    }
+
+    /// Writes the current state to disk.
+    pub fn persist(&self) -> Result<(), StorageError> {
+        let state = self.snapshot();
+        self.inner.store.save(&state)
+    }
+
+    fn mutate<T>(&self, apply: impl FnOnce(&mut AppState) -> T) -> T {
+        apply(&mut self.state())
+    }
+
+    fn state(&self) -> MutexGuard<'_, AppState> {
+        self.inner
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+}
+
+fn engine_config(settings: &Settings) -> EngineConfig {
+    EngineConfig {
+        default_timeout_ms: settings.timeout_ms,
+        max_response_bytes: settings.max_response_bytes,
+        follow_redirects: settings.follow_redirects,
+        ..EngineConfig::default()
+    }
+}

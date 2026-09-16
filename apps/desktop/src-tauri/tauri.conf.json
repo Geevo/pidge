@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "API Client",
+  "version": "0.1.0",
+  "identifier": "dev.apiclient.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm --filter @api-client/desktop dev:web",
+    "beforeBuildCommand": "pnpm --filter @api-client/desktop build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "API Client",
+        "width": 1100,
+        "height": 740,
+        "minWidth": 640,
+        "minHeight": 420,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.png"],
+    "category": "DeveloperTool",
+    "shortDescription": "A local-first HTTP client.",
+    "longDescription": "Type a URL, press Send. No accounts, no cloud, no workspace."
+  }
+}

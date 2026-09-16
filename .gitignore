@@ -1,0 +1,22 @@
+# Rust
+/target/
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Build output
+apps/desktop/dist/
+apps/vscode/dist/
+apps/vscode/media/webview.js
+apps/vscode/media/webview.js.map
+apps/vscode/media/webview.css
+apps/vscode/media/webview.css.map
+apps/vscode/bin/
+apps/vscode/*.vsix
+apps/desktop/src-tauri/gen/
+
+# Editors and OS
+.DS_Store
+.idea/
+*.swp

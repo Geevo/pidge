@@ -1,0 +1,127 @@
+import { describe, expect, it } from "vitest";
+
+import { decodeBase64, decodeText, looksBinary } from "./base64";
+import { formatBytes, formatDuration, requestLabel, statusClass } from "./format";
+import { baseMimeType, isJsonMime, isTextMime, prettyJson } from "./mime";
+import { paramsChanged, parseQueryParams, urlChanged } from "./url";
+
+describe("formatting", () => {
+  it("formats sizes the way the status line shows them", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(512)).toBe("512 B");
+    expect(formatBytes(1331)).toBe("1.3 KB");
+    expect(formatBytes(2.4 * 1024 * 1024)).toBe("2.4 MB");
+    expect(formatBytes(43_315)).toBe("42.3 KB");
+    expect(formatBytes(2048)).toBe("2 KB");
+    expect(formatBytes(-1)).toBe("—");
+  });
+
+  it("formats durations", () => {
+    expect(formatDuration(42)).toBe("42 ms");
+    expect(formatDuration(1200)).toBe("1.20 s");
+  });
+
+  it("bands status codes", () => {
+    expect(statusClass(204)).toBe("ok");
+    expect(statusClass(302)).toBe("redirect");
+    expect(statusClass(404)).toBe("client");
+    expect(statusClass(503)).toBe("server");
+    expect(statusClass(0)).toBe("other");
+  });
+
+  it("labels requests by host and path", () => {
+    expect(requestLabel("https://api.example.com/users", "GET")).toBe("api.example.com/users");
+    expect(requestLabel("localhost:3000/x", "GET")).toBe("localhost:3000/x");
+    expect(requestLabel("", "POST")).toBe("New request");
+  });
+});
+
+describe("response bodies", () => {
+  it("decodes base64 to text", () => {
+    expect(decodeText(decodeBase64(btoa("hello")))).toBe("hello");
+  });
+
+  it("treats a NUL byte as binary", () => {
+    expect(looksBinary(new Uint8Array([104, 0, 105]))).toBe(true);
+    expect(looksBinary(new Uint8Array([104, 105]))).toBe(false);
+    expect(looksBinary(new Uint8Array())).toBe(false);
+  });
+});
+
+describe("mime handling", () => {
+  it("strips content type parameters", () => {
+    expect(baseMimeType("application/json; charset=utf-8")).toBe("application/json");
+    expect(baseMimeType(null)).toBe("");
+  });
+
+  it("recognises json, including suffixed types", () => {
+    expect(isJsonMime("application/json")).toBe(true);
+    expect(isJsonMime("application/vnd.api+json")).toBe(true);
+    expect(isJsonMime("text/html")).toBe(false);
+  });
+
+  it("treats html and xml as text", () => {
+    expect(isTextMime("text/html")).toBe(true);
+    expect(isTextMime("application/xml")).toBe(true);
+    expect(isTextMime("image/png")).toBe(false);
+  });
+
+  it("pretty-prints valid json and leaves invalid json alone", () => {
+    expect(prettyJson('{"a":1}')).toBe('{\n  "a": 1\n}');
+    expect(prettyJson("{ not json")).toBeNull();
+    expect(prettyJson("")).toBeNull();
+  });
+});
+
+describe("url and params stay in sync", () => {
+  it("reads params out of a url", () => {
+    const params = parseQueryParams("https://example.com/x?a=1&b=hello+world&c");
+    expect(params.map((entry) => [entry.name, entry.value])).toEqual([
+      ["a", "1"],
+      ["b", "hello world"],
+      ["c", ""],
+    ]);
+  });
+
+  it("returns nothing for a url with no query", () => {
+    expect(parseQueryParams("https://example.com/x")).toEqual([]);
+  });
+
+  it("keeps disabled rows when the url changes", () => {
+    const existing = [
+      { id: "1", enabled: true, name: "a", value: "1" },
+      { id: "2", enabled: false, name: "old", value: "x" },
+    ];
+    const result = urlChanged("https://example.com?a=2", existing);
+
+    expect(result.queryParams.map((entry) => [entry.name, entry.value, entry.enabled])).toEqual([
+      ["a", "2", true],
+      ["old", "x", false],
+    ]);
+  });
+
+  it("reuses row ids so typing does not steal focus", () => {
+    const existing = [{ id: "keep-me", enabled: true, name: "a", value: "1" }];
+    const result = urlChanged("https://example.com?a=12", existing);
+    expect(result.queryParams[0]!.id).toBe("keep-me");
+  });
+
+  it("rewrites only the query string when params change", () => {
+    const result = paramsChanged("https://example.com/path?old=1#section", [
+      { id: "1", enabled: true, name: "a", value: "hello world" },
+      { id: "2", enabled: false, name: "skipped", value: "x" },
+      { id: "3", enabled: true, name: "  ", value: "no name" },
+    ]);
+
+    expect(result.url).toBe("https://example.com/path?a=hello%20world#section");
+  });
+
+  it("removes the question mark when the last param goes", () => {
+    expect(paramsChanged("https://example.com/path?a=1", []).url).toBe("https://example.com/path");
+  });
+
+  it("leaves a half-typed url alone", () => {
+    expect(paramsChanged("local", []).url).toBe("local");
+    expect(urlChanged("localhost:30", []).url).toBe("localhost:30");
+  });
+});
