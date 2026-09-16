@@ -58,6 +58,15 @@ function systemPrefersDark(dark: boolean) {
   };
 }
 
+/** Saving asks for a name in a dialog of the app's own. */
+async function saveAs(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const dialog = await screen.findByRole("dialog", { name: "Save request" });
+  const field = within(dialog).getByLabelText("Name");
+  await user.clear(field);
+  await user.type(field, name);
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+}
+
 /** The app hydrates asynchronously; wait for that before asserting. */
 async function ready() {
   await screen.findByRole("textbox", { name: "URL" });
@@ -75,7 +84,6 @@ function responseBodyText(): string {
 
 beforeEach(() => {
   vi.spyOn(window, "confirm").mockReturnValue(true);
-  vi.spyOn(window, "prompt").mockReturnValue("Saved name");
 });
 
 afterEach(() => {
@@ -279,6 +287,7 @@ describe("keyboard shortcuts", () => {
 
     await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/save-me");
     await user.keyboard("{Control>}s{/Control}");
+    await saveAs(user, "Saved name");
 
     await waitFor(() => {
       expect(bridge.state.savedRequests).toHaveLength(1);
@@ -423,6 +432,7 @@ describe("history and saved requests", () => {
 
     await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
     await user.click(screen.getByRole("button", { name: "Save" }));
+    await saveAs(user, "Saved name");
 
     await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(1));
 
@@ -895,5 +905,71 @@ describe("themes", () => {
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     });
+  });
+});
+
+describe("saving a request", () => {
+  it("suggests the URL as the name, in a field wide enough to read it", async () => {
+    const { user } = setup();
+    await ready();
+
+    const url = "localhost:3000/v1/organisations/42/members?include=roles";
+    await user.type(screen.getByRole("textbox", { name: "URL" }), url);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Save request" });
+    expect(within(dialog).getByLabelText("Name")).toHaveValue(url);
+  });
+
+  it("saves nothing when the dialog is cancelled", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const dialog = await screen.findByRole("dialog", { name: "Save request" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog", { name: "Save request" })).not.toBeInTheDocument();
+    expect(bridge.state.savedRequests).toHaveLength(0);
+  });
+
+  it("closes on Escape", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByRole("dialog", { name: "Save request" });
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Save request" })).not.toBeInTheDocument();
+    });
+    expect(bridge.state.savedRequests).toHaveLength(0);
+  });
+
+  it("will not save an empty name", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const dialog = await screen.findByRole("dialog", { name: "Save request" });
+    await user.clear(within(dialog).getByLabelText("Name"));
+
+    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("saves on Enter, without reaching for the button", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
+    await user.keyboard("{Control>}s{/Control}");
+    const dialog = await screen.findByRole("dialog", { name: "Save request" });
+    await user.type(within(dialog).getByLabelText("Name"), "{Enter}");
+
+    await waitFor(() => expect(bridge.state.savedRequests).toHaveLength(1));
+    expect(bridge.state.savedRequests[0]!.name).toBe("localhost:3000/users");
   });
 });

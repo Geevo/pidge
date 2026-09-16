@@ -1278,6 +1278,14 @@ input[type="checkbox"]:hover {
  * the action beside it gets a real button rather than a quiet one, because it
  * is the only way to create the thing the dialog is about.
  */
+/*
+ * Narrower than the settings dialog, but wide enough that the suggested name —
+ * usually a URL — is readable without scrolling through it.
+ */
+.ac-dialog--prompt {
+  width: min(480px, 100%);
+}
+
 .ac-dialog__header {
   display: flex;
   align-items: center;

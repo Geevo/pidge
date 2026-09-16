@@ -13,6 +13,7 @@ import { RequestEditor } from "./RequestEditor";
 import { RequestTabBar } from "./RequestTabBar";
 import { ResponseViewer } from "./ResponseViewer";
 import { SavedRequestsPanel } from "./SavedRequestsPanel";
+import { PromptDialog } from "./PromptDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { SplitPane, clampPercent } from "./SplitPane";
 import { ResizeEdges } from "./WindowChrome";
@@ -37,6 +38,7 @@ export function App({ bridge }: Props) {
   const urlRef = useRef<HTMLInputElement>(null);
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   /*
    * The theme picked in Settings but not yet saved. A palette is not something
@@ -63,12 +65,7 @@ export function App({ bridge }: Props) {
 
   const send = useCallback(() => void client.send(tab.id), [client, tab.id]);
 
-  const save = useCallback(() => {
-    const suggested = tab.name ?? tab.request.url.trim();
-    const name = window.prompt("Save request as", suggested || "Untitled request");
-    if (name === null || name.trim() === "") return;
-    void client.saveActiveRequest(name.trim());
-  }, [client, tab.name, tab.request.url]);
+  const save = useCallback(() => setSaveOpen(true), []);
 
   // Shortcuts are global: the URL field is the default focus, but Send has to
   // work from the body editor and the headers table too.
@@ -270,6 +267,16 @@ export function App({ bridge }: Props) {
           />
         </main>
       </div>
+
+      {saveOpen ? (
+        <PromptDialog
+          title="Save request"
+          label="Name"
+          initialValue={tab.name ?? (tab.request.url.trim() || "Untitled request")}
+          onSubmit={(name) => void client.saveActiveRequest(name)}
+          onClose={() => setSaveOpen(false)}
+        />
+      ) : null}
 
       {settingsOpen ? (
         <SettingsDialog
