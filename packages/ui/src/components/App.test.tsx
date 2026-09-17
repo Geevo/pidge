@@ -1474,3 +1474,43 @@ describe("OAuth 1 auth", () => {
     expect(screen.getByText(/Only over HTTPS/)).toBeInTheDocument();
   });
 });
+
+describe("NTLM auth", () => {
+  it("sends the account and the machine names to the host", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "NTLM");
+
+    await user.type(screen.getByLabelText("Username"), "ada");
+    await user.type(screen.getByLabelText("Password"), "lovelace");
+    await user.type(screen.getByLabelText("Domain"), "LOVELACE-LTD");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toEqual({
+      type: "ntlm",
+      username: "ada",
+      password: "lovelace",
+      domain: "LOVELACE-LTD",
+      workstation: "",
+    });
+  });
+
+  it("says a domain is optional, because a local account has none", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "NTLM");
+
+    expect(screen.getByLabelText("Domain")).toHaveAttribute(
+      "placeholder",
+      expect.stringContaining("Optional"),
+    );
+    expect(screen.getByText(/same connection/)).toBeInTheDocument();
+  });
+});

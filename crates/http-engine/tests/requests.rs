@@ -1071,3 +1071,99 @@ async fn plaintext_signing_sends_the_key_itself() {
         "unexpected signature in {header}"
     );
 }
+
+#[tokio::test]
+async fn completes_an_ntlm_handshake() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/ntlm"));
+    request.auth = AuthConfig::Ntlm {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+        domain: "LOVELACE-LTD".to_string(),
+        workstation: "analytical-engine".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    // The server recomputes the NTLMv2 proof, so 200 means the arithmetic was
+    // right — and it only had a challenge to check against because all three
+    // messages arrived on one connection.
+    assert_eq!(
+        response.status,
+        200,
+        "handshake failed: {}",
+        String::from_utf8_lossy(&response.body)
+    );
+    let body = body_json(&response.body);
+    assert_eq!(body["authenticated"], true);
+    assert_eq!(body["user"], "ada");
+
+    // Two requests on this connection: the negotiate and the authenticate. The
+    // 401 that started it all came from the shared client on another one, which
+    // is what it is for. Had these two been split across sockets, the server
+    // would have had no challenge to check the second against.
+    assert_eq!(body["requestsOnThisConnection"], 2);
+}
+
+#[tokio::test]
+async fn a_wrong_ntlm_password_is_refused() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/ntlm"));
+    request.auth = AuthConfig::Ntlm {
+        username: "ada".to_string(),
+        password: "not-the-password".to_string(),
+        domain: "LOVELACE-LTD".to_string(),
+        workstation: String::new(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 401);
+    assert_eq!(body_json(&response.body)["error"], "bad proof");
+}
+
+#[tokio::test]
+async fn ntlm_leaves_a_server_that_wants_something_else_alone() {
+    let server = TestServer::start().await.unwrap();
+    // /digest challenges with Digest, not NTLM.
+    let mut request = HttpRequest::get(server.url("/digest"));
+    request.auth = AuthConfig::Ntlm {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+        domain: String::new(),
+        workstation: String::new(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 401);
+    assert!(response.warnings.is_empty(), "{:?}", response.warnings);
+}
+
+#[tokio::test]
+async fn ntlm_sends_nothing_until_it_is_asked() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/auth"));
+    request.auth = AuthConfig::Ntlm {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+        domain: String::new(),
+        workstation: String::new(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(body_json(&response.body)["authorization"], "");
+}

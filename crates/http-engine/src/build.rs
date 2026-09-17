@@ -137,6 +137,7 @@ fn apply_auth(
         AuthConfig::Bearer { .. }
         | AuthConfig::Basic { .. }
         | AuthConfig::Digest { .. }
+        | AuthConfig::Ntlm { .. }
         | AuthConfig::OAuth1(_)
         | AuthConfig::OAuth2(_)
             if occupied("authorization") =>
@@ -146,9 +147,10 @@ fn apply_auth(
             );
             builder
         }
-        // Neither of these can be applied here: digest waits for a challenge,
-        // and OAuth 2 has to fetch a token first. The engine adds both.
-        AuthConfig::Digest { .. } | AuthConfig::OAuth2(_) => builder,
+        // None of these can be applied here: digest and NTLM wait for a
+        // challenge, and OAuth 2 has to fetch a token first. The engine does
+        // all three.
+        AuthConfig::Digest { .. } | AuthConfig::Ntlm { .. } | AuthConfig::OAuth2(_) => builder,
         AuthConfig::Bearer { token } => builder.bearer_auth(token),
         AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
 

@@ -447,18 +447,29 @@ client builder in `HttpEngine::new` is the one place either would go.
 
 ### NTLM
 
-Asked for and not built, because it cannot be built honestly on this engine.
+NTLM authenticates a _connection_ rather than a request: a 401 offering the
+scheme, a negotiate message, the server's challenge, and an authenticate message
+computed from it — the last two on the same socket, or the server has no
+challenge to check the response against.
 
-NTLM authenticates a _connection_, not a request: 401, then a negotiate message,
-then the server's challenge, then the authenticate message — all three on the
-same TCP connection. reqwest pools connections by authority and offers no way to
-pin one to a sequence of requests, so an implementation here would work whenever
-the pool happened to hand back the same socket and fail when it did not. An auth
-scheme that works most of the time is worse than one that is absent.
+Nothing in reqwest pins a connection to a sequence of requests. What makes this
+work is narrower: `HttpEngine::ntlm_client` builds a client whose pool holds one
+connection and which nothing else uses, then sends the two messages back to
+back. The idle connection the first leg returns is the only one the second can
+take. Redirects are off for that client, since following one mid-handshake would
+open a new connection and lose the challenge.
 
-Doing it properly means a second HTTP path for NTLM hosts that owns its socket,
-or SSPI on Windows to authenticate as the logged-in user. Either is a
-substantial piece of work rather than another variant of `AuthConfig`.
+That is a property of the pool rather than a guarantee from an API, so the test
+server enforces it: `/ntlm` keeps its challenge in per-connection state and
+refuses an authenticate message that arrives anywhere else. The test asserts
+both messages landed on one connection, and the server recomputes the NTLMv2
+proof rather than pattern-matching it.
 
-Until then, `cntlm` or a similar local proxy holds the NTLM connection and
-speaks plain HTTP to this client, which works today and needs nothing here.
+`crates/http-engine/src/ntlm.rs` builds the messages: NTLMv2 only, no signing or
+sealing, no session key. The key derivation is pinned to the worked example in
+MS-NLMP §4.2.4.1.1, because a server that dislikes the response says only 401,
+which tells you nothing about which step was wrong.
+
+The first request of every NTLM exchange is unauthenticated, on the shared
+client, because the scheme is not known until the server names it. That is the
+protocol's cost, not an implementation choice.

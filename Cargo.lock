@@ -120,7 +120,10 @@ dependencies = [
  "api-client-variables",
  "base64 0.23.1",
  "digest_auth",
+ "getrandom 0.2.17",
  "hmac 0.12.1",
+ "md-5",
+ "md4",
  "p12-keystore",
  "percent-encoding",
  "reqwest",
@@ -199,7 +202,9 @@ name = "api-client-testserver"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
+ "hmac 0.12.1",
  "md-5",
+ "md4",
  "p12-keystore",
  "rcgen",
  "rustls",
@@ -2496,6 +2501,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
 dependencies = [
  "cfg-if",
+ "digest 0.10.7",
+]
+
+[[package]]
+name = "md4"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7da5ac363534dce5fabf69949225e174fbf111a498bf0ff794c8ea1fba9f3dda"
+dependencies = [
  "digest 0.10.7",
 ]
 

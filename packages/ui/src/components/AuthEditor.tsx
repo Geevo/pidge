@@ -21,6 +21,7 @@ const AUTH_KINDS = [
   { value: "basic", label: "Basic" },
   { value: "digest", label: "Digest" },
   { value: "apiKey", label: "API key" },
+  { value: "ntlm", label: "NTLM" },
   { value: "oauth1", label: "OAuth 1" },
   { value: "oauth2", label: "OAuth 2" },
 ];
@@ -58,6 +59,8 @@ function blank(kind: AuthKind): AuthConfig {
       return { type: "digest", username: "", password: "" };
     case "apiKey":
       return { type: "apiKey", key: "", value: "", placement: "header" };
+    case "ntlm":
+      return { type: "ntlm", username: "", password: "", domain: "", workstation: "" };
     case "oauth1":
       return {
         type: "oauth1",
@@ -194,6 +197,57 @@ export function AuthEditor({ request, onChange }: Props) {
               safer where the API accepts one.
             </p>
           ) : null}
+        </>
+      ) : null}
+
+      {auth.type === "ntlm" ? (
+        <>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-ntlm-user">Username</label>
+            <input
+              id="ac-auth-ntlm-user"
+              type="text"
+              spellCheck={false}
+              value={auth.username}
+              onChange={(event) => setAuth({ ...auth, username: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-ntlm-pass">Password</label>
+            <input
+              id="ac-auth-ntlm-pass"
+              type="password"
+              value={auth.password}
+              onChange={(event) => setAuth({ ...auth, password: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-ntlm-domain">Domain</label>
+            <input
+              id="ac-auth-ntlm-domain"
+              type="text"
+              spellCheck={false}
+              placeholder="Optional, for a local account"
+              value={auth.domain}
+              onChange={(event) => setAuth({ ...auth, domain: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-ntlm-workstation">Workstation</label>
+            <input
+              id="ac-auth-ntlm-workstation"
+              type="text"
+              spellCheck={false}
+              placeholder="Optional"
+              value={auth.workstation}
+              onChange={(event) => setAuth({ ...auth, workstation: event.target.value })}
+            />
+          </div>
+          <p className="ac-hint">
+            NTLMv2, over a connection kept for the handshake. Three messages: the first request
+            comes back 401, the client says what it can do, and the server&apos;s challenge is
+            answered on the same connection.
+          </p>
         </>
       ) : null}
 

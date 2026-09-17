@@ -32,6 +32,9 @@ base64 = "0.23"
 digest_auth = "0.3"
 # Pinned to the digest 0.10 line, which is what sha2 here is.
 hmac = "0.12"
+md-5 = "0.10"
+getrandom = "0.2"
+md4 = "0.10"
 percent-encoding = "2"
 reqwest = { version = "0.13", default-features = false, features = [
     "charset",

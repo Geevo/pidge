@@ -6,4 +6,12 @@ import type { OAuth2Settings } from "./OAuth2Settings";
 /**
  * Auth helper configuration. Anything more exotic can be typed as a header.
  */
-export type AuthConfig = { "type": "none" } | { "type": "bearer", token: string, } | { "type": "basic", username: string, password: string, } | { "type": "digest", username: string, password: string, } | { "type": "oauth1" } & OAuth1Settings | { "type": "oauth2" } & OAuth2Settings | { "type": "apiKey", key: string, value: string, placement: ApiKeyPlacement, };
+export type AuthConfig = { "type": "none" } | { "type": "bearer", token: string, } | { "type": "basic", username: string, password: string, } | { "type": "digest", username: string, password: string, } | { "type": "ntlm", username: string, password: string, 
+/**
+ * Empty is legitimate: a local account has no domain.
+ */
+domain: string, 
+/**
+ * Sent as the client's own name. Empty is legitimate.
+ */
+workstation: string, } | { "type": "oauth1" } & OAuth1Settings | { "type": "oauth2" } & OAuth2Settings | { "type": "apiKey", key: string, value: string, placement: ApiKeyPlacement, };

@@ -180,14 +180,14 @@ self-signed certificate says so.
 
 ## Auth
 
-None, bearer, basic, digest, an API key in a header or the query string,
+None, bearer, basic, digest, NTLM, an API key in a header or the query string,
 OAuth 1 request signing, and the OAuth 2 grants that are a request to a token
 endpoint — client credentials, password and refresh token.
 
-Digest costs a round trip, because the response can only be computed once the
-server has sent a challenge. OAuth 2 fetches a token first and keeps it until it
-expires. Neither the OAuth 2 browser flows nor NTLM are here; `docs/architecture.md`
-says why.
+Digest and NTLM cost round trips, because the response can only be computed once
+the server has sent a challenge — and NTLM's handshake is held on one connection,
+as the protocol requires. OAuth 2 fetches a token first and keeps it until it
+expires. The OAuth 2 browser flows are not here; `docs/architecture.md` says why.
 
 Anything else is a header you type yourself, and a header you typed always wins
 over the Auth tab.

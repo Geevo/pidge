@@ -2,29 +2,65 @@ use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
+use md4::Digest as _;
 use serde_json::json;
 use tokio::io::AsyncWriteExt;
 
-use crate::http::{Request, Response, Stream, write_response};
+use crate::http::{ConnectionState, Request, Response, Stream, write_response_keeping_alive};
 
-pub async fn dispatch<S: Stream>(request: Request, mut stream: S) -> io::Result<()> {
+/// Answers one request. `true` means the connection stays open for another.
+pub async fn dispatch<S: Stream>(
+    request: Request,
+    stream: &mut S,
+    state: &mut ConnectionState,
+) -> io::Result<bool> {
     let segments = request.segments();
 
     match segments.as_slice() {
         // Streaming routes write their own bytes, so they are handled first.
         ["slow-body", chunks, delay_ms] => {
-            return slow_body(&mut stream, parse(chunks, 5), parse(delay_ms, 100)).await;
+            slow_body(stream, parse(chunks, 5), parse(delay_ms, 100)).await?;
+            return Ok(false);
         }
         ["never"] => {
             // Hold the connection open with no response at all.
             tokio::time::sleep(Duration::from_secs(3600)).await;
-            return Ok(());
+            return Ok(false);
         }
         _ => {}
     }
 
-    let response = route(&request, &segments).await;
-    write_response(&mut stream, response).await
+    // Keep-alive only where it is asked for and useful: the NTLM handshake
+    // needs it, and everything else still gets the old close-per-response.
+    let wants_keep_alive = request
+        .header("connection")
+        .map(|value| value.to_ascii_lowercase().contains("keep-alive"))
+        .unwrap_or(false)
+        || !request
+            .header("connection")
+            .map(|value| value.to_ascii_lowercase().contains("close"))
+            .unwrap_or(false);
+
+    let response = route_with_state(&request, &segments, state).await;
+    let keep_alive = wants_keep_alive;
+
+    write_response_keeping_alive(stream, response, keep_alive).await?;
+    if !keep_alive {
+        stream.shutdown().await?;
+    }
+    Ok(keep_alive)
+}
+
+/// The routes that need to remember something about the connection.
+async fn route_with_state(
+    request: &Request,
+    segments: &[&str],
+    state: &mut ConnectionState,
+) -> Response {
+    match segments {
+        ["ntlm"] => ntlm_route(request, state),
+        _ => route(request, segments).await,
+    }
 }
 
 async fn route(request: &Request, segments: &[&str]) -> Response {
@@ -127,6 +163,170 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
 
         _ => Response::new(404, "Not Found").json(&json!({ "error": "not found" })),
     }
+}
+
+/// The account this server knows.
+const NTLM_USER: (&str, &str, &str) = ("ada", "lovelace", "LOVELACE-LTD");
+
+/// An NTLM server, including the part that matters: the challenge lives on the
+/// connection. A client that sends its authenticate message on a different
+/// socket finds no challenge waiting and is refused, which is how a real server
+/// behaves and the only way to test that the handshake held one connection.
+fn ntlm_route(request: &Request, state: &mut ConnectionState) -> Response {
+    let Some(header) = request.header("authorization") else {
+        return ntlm_challenge_response(None);
+    };
+    let Some(encoded) = header.trim().strip_prefix("NTLM ") else {
+        return ntlm_challenge_response(None);
+    };
+
+    let Ok(message) = base64_decode(encoded.trim()) else {
+        return Response::new(400, "Bad Request").json(&json!({ "error": "not base64" }));
+    };
+    if message.len() < 12 || &message[0..8] != b"NTLMSSP\0" {
+        return Response::new(400, "Bad Request").json(&json!({ "error": "not ntlmssp" }));
+    }
+
+    match u32::from_le_bytes([message[8], message[9], message[10], message[11]]) {
+        // Negotiate: answer with a challenge and remember it for this socket.
+        1 => {
+            let challenge = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
+            state.ntlm_challenge = Some(challenge);
+            ntlm_challenge_response(Some(challenge))
+        }
+        // Authenticate: only answerable against this connection's challenge.
+        3 => match state.ntlm_challenge {
+            None => Response::new(401, "Unauthorized").json(&json!({
+                "error": "no challenge on this connection",
+            })),
+            Some(challenge) => verify_ntlm_authenticate(&message, &challenge, state),
+        },
+        other => Response::new(400, "Bad Request").json(&json!({ "messageType": other })),
+    }
+}
+
+fn ntlm_challenge_response(challenge: Option<[u8; 8]>) -> Response {
+    let value = match challenge {
+        None => "NTLM".to_string(),
+        Some(challenge) => {
+            let mut message = Vec::new();
+            message.extend_from_slice(b"NTLMSSP\0");
+            message.extend_from_slice(&2u32.to_le_bytes());
+            // Target name: empty, pointing past the fixed header.
+            message.extend_from_slice(&[0, 0, 0, 0]);
+            message.extend_from_slice(&48u32.to_le_bytes());
+            message.extend_from_slice(&0x0008_0201u32.to_le_bytes()); // unicode, ntlm, ess
+            message.extend_from_slice(&challenge);
+            message.extend_from_slice(&[0u8; 8]); // reserved
+            // Target info: one NetBIOS domain pair and a terminator.
+            let mut info = Vec::new();
+            info.extend_from_slice(&2u16.to_le_bytes());
+            let name: Vec<u8> = "TESTSERVER"
+                .encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect();
+            info.extend_from_slice(&(name.len() as u16).to_le_bytes());
+            info.extend_from_slice(&name);
+            info.extend_from_slice(&[0, 0, 0, 0]);
+
+            message.extend_from_slice(&(info.len() as u16).to_le_bytes());
+            message.extend_from_slice(&(info.len() as u16).to_le_bytes());
+            message.extend_from_slice(&48u32.to_le_bytes());
+            message.extend_from_slice(&info);
+
+            format!("NTLM {}", base64_encode(&message))
+        }
+    };
+
+    Response::new(401, "Unauthorized")
+        .header("WWW-Authenticate", value)
+        .json(&json!({ "error": "unauthorized" }))
+}
+
+/// Recomputes the NTLMv2 proof from the blob the client sent.
+fn verify_ntlm_authenticate(
+    message: &[u8],
+    challenge: &[u8; 8],
+    state: &mut ConnectionState,
+) -> Response {
+    let field = |at: usize| -> Option<&[u8]> {
+        let len = u16::from_le_bytes([*message.get(at)?, *message.get(at + 1)?]) as usize;
+        let offset = u32::from_le_bytes([
+            *message.get(at + 4)?,
+            *message.get(at + 5)?,
+            *message.get(at + 6)?,
+            *message.get(at + 7)?,
+        ]) as usize;
+        message.get(offset..offset + len)
+    };
+
+    // NT response at 20, domain at 28, user at 36.
+    let (Some(nt_response), Some(domain), Some(user)) = (field(20), field(28), field(36)) else {
+        return Response::new(400, "Bad Request").json(&json!({ "error": "truncated message" }));
+    };
+    if nt_response.len() < 16 {
+        return Response::new(400, "Bad Request").json(&json!({ "error": "no proof" }));
+    }
+
+    let (proof, blob) = nt_response.split_at(16);
+    let user = from_utf16le(user);
+    let domain = from_utf16le(domain);
+
+    if user != NTLM_USER.0 || domain != NTLM_USER.2 {
+        return Response::new(401, "Unauthorized").json(&json!({ "error": "unknown account" }));
+    }
+
+    // NTOWFv2, then the proof over the server challenge and the blob.
+    let nt_hash = md4::Md4::digest(utf16le(NTLM_USER.1));
+    let identity = utf16le(&format!("{}{}", user.to_uppercase(), domain));
+    let key = hmac_md5(&nt_hash, &identity);
+
+    let mut signed = Vec::with_capacity(8 + blob.len());
+    signed.extend_from_slice(challenge);
+    signed.extend_from_slice(blob);
+
+    if hmac_md5(&key, &signed) != proof {
+        return Response::new(401, "Unauthorized").json(&json!({ "error": "bad proof" }));
+    }
+
+    // Authenticated for the life of this connection, as NTLM has it.
+    state.ntlm_challenge = None;
+    Response::ok().json(&json!({
+        "authenticated": true,
+        "user": user,
+        "domain": domain,
+        "requestsOnThisConnection": state.requests,
+    }))
+}
+
+fn hmac_md5(key: &[u8], data: &[u8]) -> Vec<u8> {
+    use hmac::Mac;
+
+    let mut mac = hmac::Hmac::<md5::Md5>::new_from_slice(key).expect("any key length");
+    mac.update(data);
+    mac.finalize().into_bytes().to_vec()
+}
+
+fn utf16le(value: &str) -> Vec<u8> {
+    value.encode_utf16().flat_map(u16::to_le_bytes).collect()
+}
+
+fn from_utf16le(bytes: &[u8]) -> String {
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .collect();
+    String::from_utf16_lossy(&units)
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.encode(bytes)
+}
+
+fn base64_decode(value: &str) -> Result<Vec<u8>, base64::DecodeError> {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.decode(value)
 }
 
 /// Counts tokens issued, so a test can tell a fresh token from a cached one.

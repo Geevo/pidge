@@ -10,7 +10,9 @@ publish = false
 
 [dependencies]
 base64.workspace = true
-md-5 = "0.10"
+hmac.workspace = true
+md-5.workspace = true
+md4.workspace = true
 p12-keystore = "0.3"
 rcgen = "0.14"
 rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std"] }
