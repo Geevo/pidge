@@ -109,14 +109,33 @@ impl Response {
     }
 }
 
+/// What one connection remembers between requests.
+///
+/// NTLM authenticates the connection rather than the request, so a server has
+/// to hold its challenge here. Everything else is stateless.
+#[derive(Debug, Default)]
+pub struct ConnectionState {
+    pub ntlm_challenge: Option<[u8; 8]>,
+    pub requests: usize,
+}
+
 pub async fn serve_connection<S: Stream>(stream: S) -> io::Result<()> {
     let mut reader = BufReader::new(stream);
-    let Some(request) = read_request(&mut reader).await? else {
-        return Ok(());
-    };
+    let mut state = ConnectionState::default();
 
-    let stream = reader.into_inner();
-    routes::dispatch(request, stream).await
+    // Keep-alive, so a client can hold a connection across several requests —
+    // which is the only way an NTLM handshake can be tested at all.
+    loop {
+        let Some(request) = read_request(&mut reader).await? else {
+            return Ok(());
+        };
+        state.requests += 1;
+
+        let keep_alive = routes::dispatch(request, reader.get_mut(), &mut state).await?;
+        if !keep_alive {
+            return Ok(());
+        }
+    }
 }
 
 async fn read_request<S: Stream>(reader: &mut BufReader<S>) -> io::Result<Option<Request>> {
@@ -239,16 +258,25 @@ async fn read_line<S: Stream>(reader: &mut BufReader<S>) -> io::Result<String> {
     Ok(String::from_utf8_lossy(&line).into_owned())
 }
 
-pub async fn write_response<S: Stream>(stream: &mut S, response: Response) -> io::Result<()> {
+/// Writes a response, saying whether the connection stays open. A client that
+/// asked for keep-alive gets it; nothing else changes.
+pub async fn write_response_keeping_alive<S: Stream>(
+    stream: &mut S,
+    response: Response,
+    keep_alive: bool,
+) -> io::Result<()> {
     let mut head = format!("HTTP/1.1 {} {}\r\n", response.status, response.reason);
     for (name, value) in &response.headers {
         head.push_str(&format!("{name}: {value}\r\n"));
     }
     head.push_str(&format!("content-length: {}\r\n", response.body.len()));
-    head.push_str("connection: close\r\n\r\n");
+    head.push_str(if keep_alive {
+        "connection: keep-alive\r\n\r\n"
+    } else {
+        "connection: close\r\n\r\n"
+    });
 
     stream.write_all(head.as_bytes()).await?;
     stream.write_all(&response.body).await?;
-    stream.flush().await?;
-    stream.shutdown().await
+    stream.flush().await
 }

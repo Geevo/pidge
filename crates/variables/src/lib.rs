@@ -151,6 +151,17 @@ pub fn resolve_request(
             username: resolve(username),
             password: resolve(password),
         },
+        AuthConfig::Ntlm {
+            username,
+            password,
+            domain,
+            workstation,
+        } => AuthConfig::Ntlm {
+            username: resolve(username),
+            password: resolve(password),
+            domain: resolve(domain),
+            workstation: resolve(workstation),
+        },
         AuthConfig::OAuth1(settings) => AuthConfig::OAuth1(OAuth1Settings {
             consumer_key: resolve(&settings.consumer_key),
             consumer_secret: resolve(&settings.consumer_secret),

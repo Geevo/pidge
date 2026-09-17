@@ -8,6 +8,7 @@ mod build;
 mod cancel;
 mod digest;
 mod error;
+mod ntlm;
 mod oauth1;
 mod oauth2;
 mod peer_cert;
@@ -164,31 +165,189 @@ impl HttpEngine {
         let mut response = self.run(builder, started, timeout_ms, cancellation).await?;
         response.warnings = warnings.clone();
 
-        let AuthConfig::Digest { username, password } = &request.auth else {
-            return Ok(response);
-        };
-
         // 401 is the only status that carries a challenge, and a header the
         // user typed has already won.
         if response.status != 401 || request.find_header("authorization").is_some() {
             return Ok(response);
         }
 
-        match digest::answer(request, &response, username, password) {
-            Ok(header) => {
-                let retry = build::prepare(&self.client, request)?;
-                let builder = retry.builder.header(reqwest::header::AUTHORIZATION, header);
-                let mut answered = self.run(builder, started, timeout_ms, cancellation).await?;
-                answered.warnings = warnings;
-                Ok(answered)
+        match &request.auth {
+            AuthConfig::Digest { username, password } => {
+                match digest::answer(request, &response, username, password) {
+                    Ok(header) => {
+                        let answered = self
+                            .send_with_authorization(
+                                request,
+                                header,
+                                started,
+                                timeout_ms,
+                                cancellation,
+                                &self.client,
+                            )
+                            .await?;
+                        Ok(HttpResponse {
+                            warnings,
+                            ..answered
+                        })
+                    }
+                    // The 401 is the honest answer; the note says why there was
+                    // no second attempt.
+                    Err(why) => {
+                        response.warnings.push(why);
+                        Ok(response)
+                    }
+                }
             }
-            // The 401 is the honest answer; the note says why there was no
-            // second attempt.
-            Err(why) => {
-                response.warnings.push(why);
-                Ok(response)
+
+            AuthConfig::Ntlm {
+                username,
+                password,
+                domain,
+                workstation,
+            } => {
+                match self
+                    .ntlm_handshake(
+                        request,
+                        &response,
+                        username,
+                        password,
+                        domain,
+                        workstation,
+                        started,
+                        timeout_ms,
+                        cancellation,
+                    )
+                    .await
+                {
+                    Ok(Some(answered)) => Ok(HttpResponse {
+                        warnings,
+                        ..answered
+                    }),
+                    Ok(None) => Ok(response),
+                    Err(why) => {
+                        response.warnings.push(why);
+                        Ok(response)
+                    }
+                }
             }
+
+            _ => Ok(response),
         }
+    }
+
+    /// The three legs of NTLM, on a connection kept to this exchange.
+    ///
+    /// NTLM authenticates a connection rather than a request, so all three
+    /// messages have to travel the same socket. Nothing in reqwest pins one, so
+    /// this builds a client whose pool holds a single connection and is used by
+    /// nothing else: the negotiate and authenticate messages go out back to
+    /// back, and the idle connection the first leg returns is the only one the
+    /// second can take.
+    ///
+    /// `Ok(None)` means the server offered something other than NTLM, in which
+    /// case its 401 stands as the answer.
+    #[allow(clippy::too_many_arguments)]
+    async fn ntlm_handshake(
+        &self,
+        request: &HttpRequest,
+        challenged: &HttpResponse,
+        username: &str,
+        password: &str,
+        domain: &str,
+        workstation: &str,
+        started: Instant,
+        timeout_ms: u64,
+        cancellation: &CancellationHandle,
+    ) -> Result<Option<HttpResponse>, String> {
+        let offered = challenged.header("www-authenticate").unwrap_or_default();
+        if !offered
+            .split(',')
+            .any(|scheme| scheme.trim().to_ascii_lowercase().starts_with("ntlm"))
+        {
+            return Ok(None);
+        }
+
+        let client = self
+            .ntlm_client()
+            .map_err(|err| format!("An NTLM connection could not be opened: {}.", err.message))?;
+
+        // Leg one: what the client can do. The server answers 401 again, this
+        // time with its challenge.
+        let negotiated = self
+            .send_with_authorization(
+                request,
+                ntlm::negotiate_header(domain, workstation),
+                started,
+                timeout_ms,
+                cancellation,
+                &client,
+            )
+            .await
+            .map_err(|err| format!("The NTLM negotiation failed: {}.", err.message))?;
+
+        let challenge_header = negotiated
+            .header("www-authenticate")
+            .ok_or_else(|| "The server did not answer the NTLM negotiation.".to_string())?;
+        let challenge = ntlm::parse_challenge(challenge_header)?;
+
+        // Leg two: the response computed from that challenge.
+        let answered = self
+            .send_with_authorization(
+                request,
+                ntlm::authenticate_header(
+                    &challenge,
+                    username,
+                    password,
+                    domain,
+                    workstation,
+                    ntlm::client_challenge(),
+                    ntlm::timestamp(),
+                ),
+                started,
+                timeout_ms,
+                cancellation,
+                &client,
+            )
+            .await
+            .map_err(|err| format!("The NTLM authentication failed: {}.", err.message))?;
+
+        Ok(Some(answered))
+    }
+
+    /// A client for one NTLM exchange: one connection, shared with nothing.
+    fn ntlm_client(&self) -> Result<reqwest::Client, RequestError> {
+        let builder = reqwest::Client::builder()
+            .user_agent(self.config.user_agent.clone())
+            // Redirects would start a new connection mid-handshake.
+            .redirect(reqwest::redirect::Policy::none())
+            .cookie_store(self.config.store_cookies)
+            .pool_max_idle_per_host(1)
+            .tls_info(true);
+
+        tls::apply(builder, &self.config.tls)?
+            .build()
+            .map_err(|err| {
+                RequestError::new(RequestErrorKind::Other, "Could not start the NTLM client.")
+                    .with_detail(error::chain(&err))
+            })
+    }
+
+    /// Sends the request again with an `Authorization` header the engine has
+    /// computed, optionally on a client of its own.
+    async fn send_with_authorization(
+        &self,
+        request: &HttpRequest,
+        header: String,
+        started: Instant,
+        timeout_ms: u64,
+        cancellation: &CancellationHandle,
+        client: &reqwest::Client,
+    ) -> Result<HttpResponse, RequestError> {
+        let prepared = build::prepare(client, request)?;
+        let builder = prepared
+            .builder
+            .header(reqwest::header::AUTHORIZATION, header);
+        self.run(builder, started, timeout_ms, cancellation).await
     }
 
     /// Convenience wrapper: resolve `{{variables}}` and then send.

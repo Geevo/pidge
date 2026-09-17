@@ -95,6 +95,16 @@ pub enum AuthConfig {
     /// RFC 7616 challenge-response. Nothing is sent until the server asks.
     #[serde(rename_all = "camelCase")]
     Digest { username: String, password: String },
+    /// Windows integrated auth over HTTP: MS-NTHT carrying MS-NLMP. NTLMv2.
+    #[serde(rename_all = "camelCase")]
+    Ntlm {
+        username: String,
+        password: String,
+        /// Empty is legitimate: a local account has no domain.
+        domain: String,
+        /// Sent as the client's own name. Empty is legitimate.
+        workstation: String,
+    },
     /// RFC 5849 request signing. Still the way into a few long-lived APIs.
     #[serde(rename = "oauth1")]
     OAuth1(OAuth1Settings),
