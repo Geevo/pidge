@@ -62,10 +62,29 @@ fn method(method: HttpMethod) -> Method {
 }
 
 fn append_query_params(url: &mut url::Url, request: &HttpRequest) {
+    /*
+     * A row that the URL already carries is not appended again.
+     *
+     * The two are one thing shown twice: editing the table rewrites the URL's
+     * query, and typing a query in the URL fills the table. Appending on top of
+     * that sent every parameter twice — `?postcode=SW1A%201AA&postcode=SW1A%201AA`
+     * — which an API is entitled to reject, and one did, with a 400 that Bruno
+     * never saw.
+     *
+     * The comparison is on decoded pairs, so it holds however either side spelt
+     * the encoding. Only the URL as it arrived is consulted: two identical rows
+     * still send two copies, because that is what the table says.
+     */
+    let in_url: std::collections::HashSet<(String, String)> = url
+        .query_pairs()
+        .map(|(name, value)| (name.into_owned(), value.into_owned()))
+        .collect();
+
     let active: Vec<_> = request
         .query_params
         .iter()
         .filter(|entry| entry.is_active())
+        .filter(|entry| !in_url.contains(&(entry.name.trim().to_string(), entry.value.clone())))
         .collect();
 
     // An API key placed in the query string is a query param like any other,
@@ -368,6 +387,57 @@ mod tests {
                 vec![KeyValueEntry::new("page", "2")],
             ),
             "filter=a%20b&raw=x+y&path=/v1/items&page=2"
+        );
+    }
+
+    /*
+     * What the desktop app sends: the table and the URL hold the same pair,
+     * because editing either one writes the other. It goes out once.
+     */
+    #[test]
+    fn a_row_the_url_already_carries_is_not_sent_twice() {
+        assert_eq!(
+            query_for(
+                "https://example.com/lookup?postcode=SW1A%201AA",
+                vec![KeyValueEntry::new("postcode", "SW1A 1AA")],
+            ),
+            "postcode=SW1A%201AA"
+        );
+    }
+
+    /// Matching is on the decoded pair, so the spelling of the encoding is moot.
+    #[test]
+    fn the_match_ignores_how_each_side_encoded_it() {
+        assert_eq!(
+            query_for(
+                "https://example.com/lookup?q=a+b",
+                vec![KeyValueEntry::new("q", "a b")],
+            ),
+            "q=a+b"
+        );
+    }
+
+    /// A row that differs from the URL's is a second parameter, not a duplicate.
+    #[test]
+    fn a_row_with_another_value_is_still_appended() {
+        assert_eq!(
+            query_for(
+                "https://example.com/s?tag=red",
+                vec![KeyValueEntry::new("tag", "blue")],
+            ),
+            "tag=red&tag=blue"
+        );
+    }
+
+    /// Two identical rows are two copies on purpose; only the URL is deduped against.
+    #[test]
+    fn the_table_may_repeat_itself() {
+        assert_eq!(
+            query_for(
+                "https://example.com/s",
+                vec![KeyValueEntry::new("id", "7"), KeyValueEntry::new("id", "7")],
+            ),
+            "id=7&id=7"
         );
     }
 

@@ -75,6 +75,9 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
             "method": request.method,
             "path": request.path,
             "query": request.query_pairs(),
+            // The query as it arrived. `query` is a map, so it cannot show a
+            // parameter that was sent twice — which is a thing worth testing.
+            "rawQuery": request.query,
             "contentType": request.header("content-type"),
             "body": request.body_text(),
         })),

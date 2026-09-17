@@ -63,6 +63,25 @@ async fn rejects_unsupported_schemes_and_empty_input() {
 }
 
 #[tokio::test]
+async fn a_param_in_both_the_url_and_the_table_arrives_once() {
+    let server = TestServer::start().await.unwrap();
+
+    // What the UI produces: editing the table writes the URL, so the same pair
+    // is in both. The server should see it once.
+    let mut request = HttpRequest::get(server.url("/echo?postcode=SW1A%201AA"));
+    request.query_params = vec![KeyValueEntry::new("postcode", "SW1A 1AA")];
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+    let body = body_json(&response.body);
+
+    assert_eq!(body["rawQuery"], "postcode=SW1A%201AA");
+    assert_eq!(body["query"]["postcode"], "SW1A 1AA");
+}
+
+#[tokio::test]
 async fn query_params_are_appended_without_dropping_existing_ones() {
     let server = TestServer::start().await.unwrap();
     let mut request = HttpRequest::get(server.url("/echo?existing=1"));
