@@ -360,6 +360,14 @@ builder. Two decisions worth knowing:
   query in the URL fills the table — so appending the table on top of the URL
   sent every parameter twice. The match is on decoded pairs, against the URL as
   it arrived, so two identical rows still send two copies.
+- **Encoding can be turned off per request.** `encodeQuery` is on by default
+  and is what almost everyone wants. Off is for a value that is already encoded,
+  or that holds a `/` or `:` a server wants to see unescaped; the text then goes
+  in as typed and is the user's to get right. The switch lives beside the params
+  table and rewrites the URL as it is flipped, so what will be sent is on screen
+  rather than a send away. The UI is where the app encodes — `paramsChanged`
+  writes the query into the URL — and the engine applies the same rule to
+  anything it appends itself.
 - **Query values are percent-encoded, and the typed query is left alone.** The
   `url` crate's `query_pairs_mut` serialises as a form does — a space becomes
   `+` — and rewrites the query already in the URL while it is there. `+` means

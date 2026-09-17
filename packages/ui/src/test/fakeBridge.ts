@@ -163,6 +163,7 @@ export function historyEntry(value: HttpResponse): HistoryEntry {
       auth: { type: "none" },
       body: { type: "none" },
       timeoutMs: null,
+      encodeQuery: true,
     },
     status: value.status,
     statusText: value.statusText,

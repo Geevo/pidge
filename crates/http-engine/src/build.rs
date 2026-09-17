@@ -124,9 +124,9 @@ fn append_query_params(url: &mut url::Url, request: &HttpRequest) {
         if !query.is_empty() {
             query.push('&');
         }
-        query.push_str(&encode(name));
+        query.push_str(&maybe_encode(name, request.encode_query));
         query.push('=');
-        query.push_str(&encode(value));
+        query.push_str(&maybe_encode(value, request.encode_query));
     }
 
     url.set_query(Some(&query));
@@ -142,6 +142,16 @@ const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
 
 fn encode(value: &str) -> String {
     utf8_percent_encode(value, UNRESERVED).to_string()
+}
+
+/// With encoding off the text goes in as typed; `Url` still escapes what cannot
+/// appear in a query at all, such as a space, so the result is a valid URL.
+fn maybe_encode(value: &str, encode_query: bool) -> String {
+    if encode_query {
+        encode(value)
+    } else {
+        value.to_string()
+    }
 }
 
 fn build_headers(request: &HttpRequest) -> Result<HeaderMap, RequestError> {
@@ -438,6 +448,44 @@ mod tests {
                 vec![KeyValueEntry::new("id", "7"), KeyValueEntry::new("id", "7")],
             ),
             "id=7&id=7"
+        );
+    }
+
+    /*
+     * Encoding off is for a value that is already encoded, or that a server
+     * wants to see unescaped. `Url` still escapes what cannot appear in a query
+     * at all, so the result is a valid URL either way.
+     */
+    #[test]
+    fn encoding_can_be_turned_off_for_a_request() {
+        let request = HttpRequest {
+            url: "https://example.com/s".to_string(),
+            query_params: vec![
+                KeyValueEntry::new("path", "/v1/a:b"),
+                KeyValueEntry::new("pre", "%2F"),
+            ],
+            encode_query: false,
+            ..HttpRequest::default()
+        };
+        let mut url = normalize_url(&request.url).expect("url");
+        append_query_params(&mut url, &request);
+
+        // The `/` and `:` survive, and the already-encoded value is not encoded twice.
+        assert_eq!(url.query(), Some("path=/v1/a:b&pre=%2F"));
+    }
+
+    /// The same values with encoding on, for contrast.
+    #[test]
+    fn encoding_on_escapes_the_same_values() {
+        assert_eq!(
+            query_for(
+                "https://example.com/s",
+                vec![
+                    KeyValueEntry::new("path", "/v1/a:b"),
+                    KeyValueEntry::new("pre", "%2F")
+                ],
+            ),
+            "path=%2Fv1%2Fa%3Ab&pre=%252F"
         );
     }
 

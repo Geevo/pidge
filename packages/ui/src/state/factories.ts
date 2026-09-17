@@ -12,6 +12,7 @@ export function blankRequest(): HttpRequest {
     auth: { type: "none" },
     body: { type: "none" },
     timeoutMs: null,
+    encodeQuery: true,
   };
 }
 

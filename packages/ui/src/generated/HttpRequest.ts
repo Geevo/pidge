@@ -12,4 +12,14 @@ export type HttpRequest = { id: string, method: HttpMethod, url: string, queryPa
 /**
  * Overrides the default timeout for this request only.
  */
-timeoutMs: number | null, };
+timeoutMs: number | null, 
+/**
+ * Whether query parameters are percent-encoded on their way into the URL.
+ *
+ * On is right for almost everything. Off is for a value that is already
+ * encoded, or that holds a `/` or `:` a server wants to see unescaped —
+ * at which point the text is the user's responsibility, not ours.
+ *
+ * Defaulted, so a request saved before this existed still loads.
+ */
+encodeQuery: boolean, };

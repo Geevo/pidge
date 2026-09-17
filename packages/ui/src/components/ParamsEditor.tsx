@@ -13,16 +13,34 @@ interface Props {
  */
 export function ParamsEditor({ request, onChange }: Props) {
   const handleChange = (queryParams: KeyValueEntry[]) => {
-    const synced = paramsChanged(request.url, queryParams);
+    const synced = paramsChanged(request.url, queryParams, request.encodeQuery);
     onChange({ ...request, url: synced.url, queryParams: [...synced.queryParams] });
   };
 
+  // Flipping the switch rewrites the URL under the new rule, so the answer to
+  // "what will you send?" is on screen rather than a send away.
+  const setEncodeQuery = (encodeQuery: boolean) => {
+    const synced = paramsChanged(request.url, request.queryParams, encodeQuery);
+    onChange({ ...request, encodeQuery, url: synced.url });
+  };
+
   return (
-    <KeyValueTable
-      label="Query parameters"
-      rows={request.queryParams}
-      namePlaceholder="param"
-      onChange={handleChange}
-    />
+    <>
+      <label className="ac-table-check" title="Percent-encode parameter names and values">
+        <input
+          type="checkbox"
+          checked={request.encodeQuery}
+          onChange={(event) => setEncodeQuery(event.target.checked)}
+        />
+        <span>URL-encode parameters</span>
+      </label>
+
+      <KeyValueTable
+        label="Query parameters"
+        rows={request.queryParams}
+        namePlaceholder="param"
+        onChange={handleChange}
+      />
+    </>
   );
 }

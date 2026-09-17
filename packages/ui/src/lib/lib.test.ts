@@ -48,6 +48,33 @@ describe("response bodies", () => {
   });
 });
 
+describe("url encoding of params", () => {
+  const row = (name: string, value: string) => ({ id: name, enabled: true, name, value });
+
+  it("percent-encodes by default", () => {
+    expect(paramsChanged("https://x/lookup", [row("postcode", "SW1A 1AA")]).url).toBe(
+      "https://x/lookup?postcode=SW1A%201AA",
+    );
+  });
+
+  /*
+   * Off is for a value that is already encoded, or that holds a `/` or `:` the
+   * server wants to see. What goes in the URL is then exactly what was typed.
+   */
+  it("writes the text as typed when encoding is off", () => {
+    expect(paramsChanged("https://x/s", [row("path", "/v1/a:b")], false).url).toBe(
+      "https://x/s?path=/v1/a:b",
+    );
+    expect(paramsChanged("https://x/s", [row("pre", "%2F")], false).url).toBe(
+      "https://x/s?pre=%2F",
+    );
+  });
+
+  it("would otherwise encode an already-encoded value twice", () => {
+    expect(paramsChanged("https://x/s", [row("pre", "%2F")]).url).toBe("https://x/s?pre=%252F");
+  });
+});
+
 describe("syntax from the content type", () => {
   it("names the language the server said it sent", () => {
     expect(syntaxForMime("application/json")).toBe("json");
