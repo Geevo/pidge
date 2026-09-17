@@ -6,6 +6,7 @@ import { baseMimeType, isJsonMime, isTextMime, prettyJson, syntaxForMime } from 
 import { paramsChanged, parseQueryParams, urlChanged } from "./url";
 import { shortenUrl } from "./format";
 import { matchEditingCommand } from "./shortcuts";
+import { createHistory, record, redo, undo } from "./textHistory";
 
 describe("formatting", () => {
   it("formats sizes the way the status line shows them", () => {
@@ -47,6 +48,77 @@ describe("response bodies", () => {
     expect(looksBinary(new Uint8Array([104, 0, 105]))).toBe(true);
     expect(looksBinary(new Uint8Array([104, 105]))).toBe(false);
     expect(looksBinary(new Uint8Array())).toBe(false);
+  });
+});
+
+describe("the url field's own undo history", () => {
+  const at = (value: string) => ({ value, caret: value.length });
+
+  it("folds a run of typing into one step", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("e"), 1000);
+    history = record(history, at("ex"), 1050);
+    history = record(history, at("exa"), 1100);
+
+    expect(history.entries).toHaveLength(2);
+    expect(undo(history)?.snapshot.value).toBe("");
+  });
+
+  it("starts a new step after a pause", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("one"), 1000);
+    history = record(history, at("one two"), 5000);
+
+    expect(undo(history)?.snapshot.value).toBe("one");
+  });
+
+  /* A URL reads in parts, so its punctuation is where a step should end. */
+  it("starts a new step at the punctuation between parts of a url", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("example.com"), 1000);
+    history = record(history, at("example.com/"), 1010);
+    history = record(history, at("example.com/users"), 1020);
+
+    const first = undo(history);
+    expect(first?.snapshot.value).toBe("example.com");
+  });
+
+  it("treats a run of backspaces as one step", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("hello"), 1000);
+    history = record(history, at("hell"), 2000);
+    history = record(history, at("hel"), 2050);
+    history = record(history, at("he"), 2100);
+
+    expect(undo(history)?.snapshot.value).toBe("hello");
+  });
+
+  it("walks back and forward again", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("one"), 1000);
+    history = record(history, at("one/two"), 5000);
+
+    const back = undo(history)!;
+    expect(back.snapshot.value).toBe("one");
+    expect(redo(back.history)?.snapshot.value).toBe("one/two");
+  });
+
+  it("drops the redo future once something else is typed", () => {
+    let history = createHistory(at(""));
+    history = record(history, at("one"), 1000);
+    history = record(history, at("one/two"), 5000);
+
+    const back = undo(history)!;
+    const next = record(back.history, at("one/three"), 9000);
+
+    expect(redo(next)).toBeNull();
+    expect(undo(next)?.snapshot.value).toBe("one");
+  });
+
+  it("has nothing to undo at the beginning, or to redo at the end", () => {
+    const history = createHistory(at("start"));
+    expect(undo(history)).toBeNull();
+    expect(redo(history)).toBeNull();
   });
 });
 

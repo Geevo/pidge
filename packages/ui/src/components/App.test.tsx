@@ -303,28 +303,32 @@ describe("keyboard shortcuts", () => {
   });
 
   /*
-   * WebKitGTK delivers the keystroke and then does nothing with it: the command
-   * works, the binding does not exist. The app runs the edit itself, on every
-   * platform, so there is one behaviour rather than two.
+   * The field keeps its own history: WebKitGTK does not bind these keys, and
+   * the browser's own history undoes a whole run of typing at once. Steps break
+   * at the punctuation between the parts of a URL, so one press takes back one
+   * piece rather than the lot.
    */
-  it("runs undo and redo in the URL field itself", async () => {
+  it("undoes and redoes a step at a time in the URL field", async () => {
     const { user } = setup();
     await ready();
 
-    const commands: string[] = [];
-    const execCommand = vi.fn((command: string) => {
-      commands.push(command);
-      return true;
-    });
-    Object.defineProperty(document, "execCommand", { configurable: true, value: execCommand });
-
-    const field = screen.getByRole("textbox", { name: "URL" });
+    const field = screen.getByRole<HTMLInputElement>("textbox", { name: "URL" });
     await user.click(field);
-    await user.keyboard("{Control>}z{/Control}");
-    await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
-    await user.keyboard("{Control>}y{/Control}");
+    await user.type(field, "example.com/users?a=1");
+    expect(field.value).toBe("example.com/users?a=1");
 
-    expect(commands).toEqual(["undo", "redo", "redo"]);
+    // Back to the start of the value, then to the start of the query.
+    await user.keyboard("{Control>}z{/Control}");
+    expect(field.value).toBe("example.com/users?a");
+
+    await user.keyboard("{Control>}z{/Control}");
+    expect(field.value).toBe("example.com/users");
+
+    await user.keyboard("{Control>}z{/Control}");
+    expect(field.value).toBe("example.com");
+
+    await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+    expect(field.value).toBe("example.com/users");
   });
 
   it("sends on Enter inside the URL field", async () => {
