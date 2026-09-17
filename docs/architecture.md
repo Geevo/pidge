@@ -355,6 +355,15 @@ builder. Two decisions worth knowing:
   overwriting what someone typed would be worse than either alternative.
 - **A `Content-Type` you set is never replaced.** The body type supplies one
   only when you have not.
+- **Query values are percent-encoded, and the typed query is left alone.** The
+  `url` crate's `query_pairs_mut` serialises as a form does — a space becomes
+  `+` — and rewrites the query already in the URL while it is there. `+` means
+  space in a form body, not in a URL: a server is entitled to read `SW1A+1AA`
+  as a postcode with a plus in it, and one did, answering 400 to a request that
+  curl and Bruno could make. The query string is assembled by hand instead:
+  what the user typed is carried across byte for byte, and appended pairs are
+  encoded to RFC 3986's unreserved set, which is what `encodeURIComponent` and
+  curl produce.
 
 ## Auth that needs a round trip
 
