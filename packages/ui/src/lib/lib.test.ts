@@ -4,6 +4,7 @@ import { decodeBase64, decodeText, looksBinary } from "./base64";
 import { formatBytes, formatDuration, requestLabel, statusClass } from "./format";
 import { baseMimeType, isJsonMime, isTextMime, prettyJson, syntaxForMime } from "./mime";
 import { paramsChanged, parseQueryParams, urlChanged } from "./url";
+import { shortenUrl } from "./format";
 
 describe("formatting", () => {
   it("formats sizes the way the status line shows them", () => {
@@ -45,6 +46,29 @@ describe("response bodies", () => {
     expect(looksBinary(new Uint8Array([104, 0, 105]))).toBe(true);
     expect(looksBinary(new Uint8Array([104, 105]))).toBe(false);
     expect(looksBinary(new Uint8Array())).toBe(false);
+  });
+});
+
+describe("shortening a url for the status line", () => {
+  it("leaves a url that fits alone", () => {
+    expect(shortenUrl("https://example.com/v1/users?a=1")).toBe("https://example.com/v1/users?a=1");
+  });
+
+  /* The query is the half worth keeping, so the cut favours the tail. */
+  it("cuts the middle and keeps the query", () => {
+    const long = `https://api.example.com/very/long/path/${"segment/".repeat(12)}?search=luke&format=wookiee`;
+    const short = shortenUrl(long);
+
+    expect(short.length).toBeLessThanOrEqual(88);
+    expect(short.startsWith("https://api.example.com")).toBe(true);
+    expect(short.endsWith("?search=luke&format=wookiee")).toBe(true);
+    expect(short).toContain("…");
+  });
+
+  it("keeps enough of the front to tell one host from another", () => {
+    expect(shortenUrl("https://example.com/" + "x".repeat(400), 30).startsWith("https://exa")).toBe(
+      true,
+    );
   });
 });
 

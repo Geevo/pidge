@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { HttpResponse } from "../types";
-import { formatBytes, formatDuration, statusClass } from "../lib/format";
+import { formatBytes, formatDuration, shortenUrl, statusClass } from "../lib/format";
 import { CertificateDialog } from "./CertificateDialog";
 import { LockIcon } from "./icons";
 
@@ -9,7 +9,14 @@ interface Props {
   response: HttpResponse;
 }
 
-/** `200 OK · 143 ms · 2.4 KB`, with the padlock when the connection was TLS. */
+/**
+ * `200 OK · 143 ms · 2.4 KB`, with the padlock when the connection was TLS, and
+ * the URL the request actually reached.
+ *
+ * That last part is not always the URL in the address bar: redirects, resolved
+ * variables and the params table all have a say in what goes on the wire, and
+ * when they disagree with what was typed this is the only place it shows.
+ */
 export function StatusSummary({ response }: Props) {
   const [certificateOpen, setCertificateOpen] = useState(false);
   const tls = response.tls;
@@ -46,6 +53,11 @@ export function StatusSummary({ response }: Props) {
           </button>
         </>
       ) : null}
+
+      <span className="ac-status__sep">·</span>
+      <span className="ac-status__url" title={response.finalUrl}>
+        {shortenUrl(response.finalUrl)}
+      </span>
 
       {certificateOpen && tls ? (
         <CertificateDialog
