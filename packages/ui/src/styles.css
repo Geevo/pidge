@@ -942,8 +942,15 @@ input[type="checkbox"]:hover {
   padding: 6px 8px;
 }
 
+/*
+ * A fixed column, not a minimum. With `min-width` a label longer than the
+ * minimum — "Consumer secret" — pushed its own row's input right and left the
+ * fields in a ragged line. This is wide enough for the longest label in any of
+ * these panes.
+ */
 .ac-field label {
-  min-width: 84px;
+  width: 104px;
+  flex: none;
   color: var(--ac-text-muted);
 }
 
