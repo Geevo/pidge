@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { decodeBase64, decodeText, looksBinary } from "./base64";
 import { formatBytes, formatDuration, requestLabel, statusClass } from "./format";
-import { baseMimeType, isJsonMime, isTextMime, prettyJson } from "./mime";
+import { baseMimeType, isJsonMime, isTextMime, prettyJson, syntaxForMime } from "./mime";
 import { paramsChanged, parseQueryParams, urlChanged } from "./url";
 
 describe("formatting", () => {
@@ -45,6 +45,41 @@ describe("response bodies", () => {
     expect(looksBinary(new Uint8Array([104, 0, 105]))).toBe(true);
     expect(looksBinary(new Uint8Array([104, 105]))).toBe(false);
     expect(looksBinary(new Uint8Array())).toBe(false);
+  });
+});
+
+describe("syntax from the content type", () => {
+  it("names the language the server said it sent", () => {
+    expect(syntaxForMime("application/json")).toBe("json");
+    expect(syntaxForMime("application/vnd.api+json")).toBe("json");
+    expect(syntaxForMime("text/html; charset=utf-8")).toBe("html");
+    expect(syntaxForMime("application/xml")).toBe("xml");
+    expect(syntaxForMime("text/xml")).toBe("xml");
+    expect(syntaxForMime("application/soap+xml")).toBe("xml");
+    expect(syntaxForMime("image/svg+xml")).toBe("xml");
+    expect(syntaxForMime("text/css")).toBe("css");
+    expect(syntaxForMime("application/javascript")).toBe("javascript");
+    expect(syntaxForMime("text/javascript")).toBe("javascript");
+    expect(syntaxForMime("application/yaml")).toBe("yaml");
+    expect(syntaxForMime("application/vnd.oai.openapi+yaml")).toBe("yaml");
+  });
+
+  /** XHTML matches both rules; it is markup people read as HTML. */
+  it("reads XHTML as HTML rather than as XML", () => {
+    expect(syntaxForMime("application/xhtml+xml")).toBe("html");
+  });
+
+  it("highlights nothing it cannot name", () => {
+    expect(syntaxForMime("text/plain")).toBe("text");
+    expect(syntaxForMime("text/csv")).toBe("text");
+    expect(syntaxForMime(null)).toBe("text");
+  });
+
+  /** These used to be rendered as "binary response" and never reached a viewer. */
+  it("counts YAML and ndjson as text", () => {
+    expect(isTextMime("application/yaml")).toBe(true);
+    expect(isTextMime("application/x-yaml")).toBe(true);
+    expect(isTextMime("application/x-ndjson")).toBe(true);
   });
 });
 

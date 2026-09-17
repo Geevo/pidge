@@ -260,14 +260,34 @@ Two details worth knowing:
 
 ## Response bodies
 
-A JSON body is rendered in the same CodeMirror the request body uses, in
-read-only mode, which brings syntax highlighting and fold arrows for free rather
-than needing a bespoke tree view. `Collapse all` and `Expand all` run
-CodeMirror's own commands against the view.
+A body is rendered in the same CodeMirror the request body uses, in read-only
+mode, which brings syntax highlighting and fold arrows for free rather than
+needing a bespoke tree view. `Collapse all` and `Expand all` run CodeMirror's
+own commands against the view.
 
-Folding is enabled only for JSON that actually parses. Invalid JSON is shown
-verbatim with no language attached, so a broken payload does not render as a
-wall of red.
+`syntaxForMime` picks the language from the response's content type: JSON, HTML,
+XML, YAML, CSS or JavaScript, and plain text for anything else. The content type
+is the only evidence used. Sniffing the bytes gets HTML and XML wrong in both
+directions, and a document highlighted as the wrong language is harder to read
+than one with no highlighting at all. XHTML is the one special case — it matches
+both rules and is treated as HTML, which is how it reads.
+
+Folding is offered for every language, since each knows its own blocks, and
+withheld from plain text, which has none. Invalid JSON is the exception in the
+other direction: it is shown verbatim with no language attached, so a broken
+payload does not render as a wall of red.
+
+Only JSON is reformatted. Whitespace carries meaning in HTML and YAML, so
+re-indenting them would change the document you asked to look at.
+
+The six languages are bundled rather than fetched on demand: they cost 181 KB
+of the frontend bundle, which is read from disk, and a body should be
+highlighted the moment it arrives.
+
+The highlight style is one set of rules for all of them, built from the same
+palette as the rest of the app — names in the accent colour, text green, numbers
+amber, keywords orange, comments faint, and anything the parser rejected in the
+danger colour.
 
 ### Giving the editor a height
 

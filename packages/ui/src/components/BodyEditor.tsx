@@ -1,6 +1,6 @@
 import type { HttpRequest, MultipartEntry, RequestBody } from "../types";
 import { emptyMultipartRow } from "../state/factories";
-import { prettyJson } from "../lib/mime";
+import { prettyJson, syntaxForMime } from "../lib/mime";
 import { CodeEditor } from "./CodeEditor";
 import { CloseIcon } from "./icons";
 import { KeyValueTable } from "./KeyValueTable";
@@ -104,7 +104,9 @@ export function BodyEditor({ request, onChange, onSubmit }: Props) {
       {body.type === "json" || body.type === "text" ? (
         <CodeEditor
           value={body.text}
-          language={body.type === "json" ? "json" : "text"}
+          // A text body is highlighted as whatever the Content type box says it
+          // is, so a hand-written XML envelope reads like XML.
+          language={body.type === "json" ? "json" : syntaxForMime(body.contentType)}
           ariaLabel="Request body"
           onSubmit={onSubmit}
           onChange={(text) =>

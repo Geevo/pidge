@@ -620,7 +620,7 @@ describe("pane layout", () => {
   });
 });
 
-describe("json responses", () => {
+describe("response bodies", () => {
   it("offers collapse and expand for valid JSON", async () => {
     const { bridge, user } = setup();
     await ready();
@@ -645,6 +645,41 @@ describe("json responses", () => {
 
     expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
     await waitFor(() => expect(responseBodyText()).toContain("{ not json"));
+  });
+
+  it("highlights and folds markup, not only JSON", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({
+        body: btoa("<html><body><p>hello</p></body></html>"),
+        mimeType: "text/html; charset=utf-8",
+      }),
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    // Folding is the visible half; the language is what makes it possible.
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
+    await waitFor(() => expect(responseBodyText()).toContain("hello"));
+  });
+
+  /** YAML used to be refused as binary before it reached the viewer at all. */
+  it("shows a YAML body rather than calling it binary", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({ body: btoa("openapi: 3.1.0\ninfo:\n  title: Test\n"), mimeType: "application/yaml" }),
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await waitFor(() => expect(responseBodyText()).toContain("openapi"));
+    expect(screen.queryByText(/Binary response/)).not.toBeInTheDocument();
   });
 
   it("falls back to plain text for a body too large to highlight", async () => {

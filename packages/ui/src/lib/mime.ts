@@ -15,10 +15,55 @@ export function isTextMime(mimeType: string | null): boolean {
     base.startsWith("text/") ||
     isJsonMime(mimeType) ||
     base.endsWith("+xml") ||
-    ["application/xml", "application/javascript", "application/x-www-form-urlencoded"].includes(
-      base,
-    )
+    base.endsWith("+yaml") ||
+    [
+      "application/xml",
+      "application/javascript",
+      "application/ecmascript",
+      "application/x-javascript",
+      "application/yaml",
+      "application/x-yaml",
+      "application/x-ndjson",
+      "application/x-www-form-urlencoded",
+    ].includes(base)
   );
+}
+
+/** What the editor can highlight. `text` is everything else. */
+export type SyntaxLanguage = "json" | "html" | "xml" | "css" | "javascript" | "yaml" | "text";
+
+/**
+ * The language to highlight a body in, from its content type.
+ *
+ * The server's own word is the only evidence worth trusting here: sniffing the
+ * bytes gets XML and HTML wrong in both directions, and highlighting a document
+ * as the wrong language is worse than not highlighting it at all.
+ */
+export function syntaxForMime(mimeType: string | null): SyntaxLanguage {
+  const base = baseMimeType(mimeType);
+  if (isJsonMime(mimeType)) return "json";
+  // Before the +xml test below: XHTML is both, and it reads as HTML.
+  if (base === "text/html" || base === "application/xhtml+xml") return "html";
+  if (base === "application/xml" || base === "text/xml" || base.endsWith("+xml")) return "xml";
+  if (base === "text/css") return "css";
+  if (
+    base === "application/javascript" ||
+    base === "text/javascript" ||
+    base === "application/x-javascript" ||
+    base === "application/ecmascript"
+  ) {
+    return "javascript";
+  }
+  if (
+    base === "application/yaml" ||
+    base === "text/yaml" ||
+    base === "application/x-yaml" ||
+    base === "text/x-yaml" ||
+    base.endsWith("+yaml")
+  ) {
+    return "yaml";
+  }
+  return "text";
 }
 
 /**
