@@ -5,6 +5,7 @@ import { formatBytes, formatDuration, requestLabel, statusClass } from "./format
 import { baseMimeType, isJsonMime, isTextMime, prettyJson, syntaxForMime } from "./mime";
 import { paramsChanged, parseQueryParams, urlChanged } from "./url";
 import { shortenUrl } from "./format";
+import { matchEditingCommand } from "./shortcuts";
 
 describe("formatting", () => {
   it("formats sizes the way the status line shows them", () => {
@@ -46,6 +47,37 @@ describe("response bodies", () => {
     expect(looksBinary(new Uint8Array([104, 0, 105]))).toBe(true);
     expect(looksBinary(new Uint8Array([104, 105]))).toBe(false);
     expect(looksBinary(new Uint8Array())).toBe(false);
+  });
+});
+
+describe("undo and redo keys", () => {
+  const press = (key: string, extra: Partial<Record<"shiftKey" | "altKey", boolean>> = {}) => ({
+    key,
+    ctrlKey: true,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...extra,
+  });
+
+  it("names the command behind each combination", () => {
+    expect(matchEditingCommand(press("z"))).toBe("undo");
+    expect(matchEditingCommand(press("Z", { shiftKey: true }))).toBe("redo");
+    expect(matchEditingCommand(press("y"))).toBe("redo");
+  });
+
+  it("ignores everything else", () => {
+    expect(matchEditingCommand(press("z", { altKey: true }))).toBeNull();
+    expect(matchEditingCommand(press("a"))).toBeNull();
+    expect(
+      matchEditingCommand({
+        key: "z",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+      }),
+    ).toBeNull();
   });
 });
 

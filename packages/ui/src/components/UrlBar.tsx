@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useRef } from "react";
 
 import type { HttpMethod } from "../types";
+import { matchEditingCommand } from "../lib/shortcuts";
 import { MethodSelector } from "./MethodSelector";
 
 interface Props {
@@ -27,6 +28,9 @@ interface Props {
  * tabs, the params table rewriting the query, a session restored at startup.
  * Those genuinely replace what is in the field, and losing the undo history
  * along with them is the honest outcome.
+ *
+ * Keeping the history is only half of it — see `onKeyDown`, which runs undo and
+ * redo itself, because WebKitGTK never binds those keys.
  */
 export const UrlBar = forwardRef<HTMLInputElement, Props>(function UrlBar(
   { method, url, sending, onMethodChange, onUrlChange, onSend, onCancel },
@@ -64,6 +68,14 @@ export const UrlBar = forwardRef<HTMLInputElement, Props>(function UrlBar(
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
             if (!sending) onSend();
+            return;
+          }
+
+          // WebKitGTK leaves Ctrl+Z unbound, so the app runs the edit itself.
+          const editing = matchEditingCommand(event);
+          if (editing) {
+            event.preventDefault();
+            document.execCommand(editing);
           }
         }}
       />
