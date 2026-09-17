@@ -355,6 +355,11 @@ builder. Two decisions worth knowing:
   overwriting what someone typed would be worse than either alternative.
 - **A `Content-Type` you set is never replaced.** The body type supplies one
   only when you have not.
+- **A parameter in both the URL and the table is sent once.** They are one
+  thing shown twice — editing the table rewrites the URL's query, and typing a
+  query in the URL fills the table — so appending the table on top of the URL
+  sent every parameter twice. The match is on decoded pairs, against the URL as
+  it arrived, so two identical rows still send two copies.
 - **Query values are percent-encoded, and the typed query is left alone.** The
   `url` crate's `query_pairs_mut` serialises as a form does — a space becomes
   `+` — and rewrites the query already in the URL while it is there. `+` means
