@@ -280,6 +280,15 @@ payload does not render as a wall of red.
 Only JSON is reformatted. Whitespace carries meaning in HTML and YAML, so
 re-indenting them would change the document you asked to look at.
 
+Formatting is a toggle rather than a fact of the body. `renderBody` works out
+the formatted form whenever the text parses, whatever the content type says —
+parsing is proof, where sniffing would be a guess — and `Pretty` switches
+between that and the bytes as they arrived. It starts on when the server called
+the body JSON and off when it did not, which is what makes the single line of
+JSON an API returns as `text/plain` readable without the app having to claim it
+knows better than the header. Formatted implies JSON, so the highlighting and
+the fold arrows follow the toggle.
+
 The six languages are bundled rather than fetched on demand: they cost 181 KB
 of the frontend bundle, which is read from disk, and a body should be
 highlighted the moment it arrives.

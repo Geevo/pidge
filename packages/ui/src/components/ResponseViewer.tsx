@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { foldAll, unfoldAll } from "@codemirror/language";
 import type { EditorView } from "@codemirror/view";
 
@@ -139,6 +139,29 @@ function ResponseBody({
     view.current = editor;
   }, []);
 
+  /*
+   * A body that parses as JSON can be shown formatted whatever its content type
+   * says, because parsing it is proof rather than a guess. It starts formatted
+   * when the server called it JSON and raw when it did not: plenty of APIs
+   * answer `text/plain` with a single line of JSON, and that line is unreadable
+   * until someone asks for it to be broken up.
+   */
+  const formattable = rendered.kind === "text" && rendered.json !== null;
+  const startsFormatted = rendered.kind === "text" && rendered.language === "json";
+  const [formatted, setFormatted] = useState(startsFormatted);
+
+  /*
+   * A new response is a new question, so the last one's choice does not carry.
+   * Adjusted during the render that noticed rather than in an effect
+   * afterwards, which is the pattern React asks for and avoids painting the
+   * previous body's state for a frame.
+   */
+  const [shown, setShown] = useState(rendered);
+  if (shown !== rendered) {
+    setShown(rendered);
+    setFormatted(startsFormatted);
+  }
+
   if (rendered.kind === "binary") {
     return (
       <p className="ac-empty">
@@ -166,32 +189,54 @@ function ResponseBody({
     );
   }
 
+  // Formatted means it is JSON, so it is highlighted and folded as JSON.
+  const asJson = formatted ? rendered.json : null;
+  const text = asJson ?? rendered.text;
+  const language = asJson === null ? rendered.language : "json";
+  const foldable = isFoldable(language);
+
   return (
     <div className="ac-response-body__rich">
-      {isFoldable(rendered.language) ? (
+      {formattable || foldable ? (
         <div className="ac-response-tools">
-          <button
-            type="button"
-            className="ac-button ac-button--quiet"
-            onClick={() => view.current && foldAll(view.current)}
-          >
-            Collapse all
-          </button>
-          <button
-            type="button"
-            className="ac-button ac-button--quiet"
-            onClick={() => view.current && unfoldAll(view.current)}
-          >
-            Expand all
-          </button>
+          {formattable ? (
+            <button
+              type="button"
+              className="ac-button ac-button--quiet"
+              aria-pressed={formatted}
+              title={formatted ? "Show the body as it arrived" : "Format this JSON across lines"}
+              onClick={() => setFormatted((current) => !current)}
+            >
+              Pretty
+            </button>
+          ) : null}
+
+          {foldable ? (
+            <>
+              <button
+                type="button"
+                className="ac-button ac-button--quiet"
+                onClick={() => view.current && foldAll(view.current)}
+              >
+                Collapse all
+              </button>
+              <button
+                type="button"
+                className="ac-button ac-button--quiet"
+                onClick={() => view.current && unfoldAll(view.current)}
+              >
+                Expand all
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
 
       <CodeEditor
-        value={rendered.text}
-        language={rendered.language}
+        value={text}
+        language={language}
         readOnly
-        folding={isFoldable(rendered.language)}
+        folding={foldable}
         wrap={wrapLines}
         ariaLabel="Response body"
         onReady={onReady}
@@ -201,13 +246,19 @@ function ResponseBody({
 }
 
 type RenderedBody =
-  { kind: "text"; text: string; language: SyntaxLanguage } | { kind: "binary" } | { kind: "empty" };
+  /** `json` holds the formatted form when the body parses, whatever its type. */
+  | { kind: "text"; text: string; language: SyntaxLanguage; json: string | null }
+  | { kind: "binary" }
+  | { kind: "empty" };
 
 /**
- * Pretty-print valid JSON, show everything else as the server sent it, and
- * refuse to render bytes that clearly are not text. Only JSON is reformatted:
- * whitespace carries meaning in HTML and YAML, so re-indenting them would
- * change the document you asked to see.
+ * Decode the body, name its language, and work out its formatted form if it is
+ * JSON. Bytes that clearly are not text are refused.
+ *
+ * Only JSON is ever reformatted: whitespace carries meaning in HTML and YAML,
+ * so re-indenting those would change the document you asked to see. The
+ * formatted form is computed whatever the content type says, so a `text/plain`
+ * body that happens to be JSON can be formatted on request.
  */
 export function renderBody(response: HttpResponse): RenderedBody {
   const bytes = decodeBase64(response.body);
@@ -217,17 +268,13 @@ export function renderBody(response: HttpResponse): RenderedBody {
   if (binaryByType || looksBinary(bytes)) return { kind: "binary" };
 
   const text = decodeText(bytes);
+  const json = prettyJson(text);
   if (isJsonMime(response.mimeType)) {
-    const formatted = prettyJson(text);
     // Invalid JSON is shown verbatim, and without the JSON language, so a
     // parse error does not turn into a wall of red.
-    return {
-      kind: "text",
-      text: formatted ?? text,
-      language: formatted === null ? "text" : "json",
-    };
+    return { kind: "text", text, language: json === null ? "text" : "json", json };
   }
-  return { kind: "text", text, language: syntaxForMime(response.mimeType) };
+  return { kind: "text", text, language: syntaxForMime(response.mimeType), json };
 }
 
 function titleFor(error: RequestError): string {

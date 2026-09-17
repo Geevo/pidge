@@ -689,6 +689,51 @@ describe("response bodies", () => {
     await waitFor(() => expect(responseBodyText()).toContain("hello"));
   });
 
+  /*
+   * Plenty of APIs answer `text/plain` with one long line of JSON. The content
+   * type is not evidence, but a successful parse is, so the body can be offered
+   * formatted without the app pretending to know what it is.
+   */
+  it("offers to format JSON that arrived as one line of text", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({ body: btoa('{"a":{"b":[1,2,3]},"c":"d"}'), mimeType: "text/plain; charset=utf-8" }),
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    // Raw to begin with: the server did not call it JSON.
+    const pretty = screen.getByRole("button", { name: "Pretty" });
+    expect(pretty).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(responseBodyText()).toContain('{"a":{"b":[1,2,3]},"c":"d"}'));
+
+    await user.click(pretty);
+    expect(pretty).toHaveAttribute("aria-pressed", "true");
+    // Formatted, and folded as JSON once it is.
+    await waitFor(() => expect(responseBodyText()).toContain('"b": ['));
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
+  });
+
+  /** A JSON content type still arrives formatted, and can be put back. */
+  it("can show a JSON body as it actually arrived", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa('{"a":1,"b":2}') }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    const pretty = screen.getByRole("button", { name: "Pretty" });
+    expect(pretty).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(pretty);
+    await waitFor(() => expect(responseBodyText()).toContain('{"a":1,"b":2}'));
+  });
+
   /** YAML used to be refused as binary before it reached the viewer at all. */
   it("shows a YAML body rather than calling it binary", async () => {
     const { bridge, user } = setup();

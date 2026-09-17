@@ -32,7 +32,9 @@ No macOS build. It ought to build there; nobody has tried.
   `HEAD`, `OPTIONS`.
 - Bodies as JSON, plain text, form-encoded or multipart. A response comes back
   highlighted and foldable: JSON, HTML, XML, YAML, CSS and JavaScript, chosen
-  by what the server said it sent.
+  by what the server said it sent. Anything that parses as JSON can be
+  formatted whatever it was called — including the one long line an API hands
+  you as `text/plain` — and put back the way it arrived.
 - Query parameters and headers as tables, each row switched on and off, and a
   switch for whether parameters are URL-encoded — the URL bar shows you the
   difference as you flip it.

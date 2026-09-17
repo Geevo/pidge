@@ -722,6 +722,12 @@ input[type="checkbox"]:hover {
   color: var(--ac-text);
 }
 
+/* A quiet button that is also a toggle says so while it is on. */
+.ac-button--quiet[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ac-accent) 14%, transparent);
+  color: var(--ac-accent);
+}
+
 .ac-button--danger {
   border-color: color-mix(in srgb, var(--ac-danger) 45%, transparent);
   color: var(--ac-danger);
