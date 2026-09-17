@@ -2,6 +2,7 @@ use api_client_core::{
     ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, MultipartValue, RequestBody,
     RequestError, RequestErrorKind, redact,
 };
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method, RequestBuilder};
 
@@ -82,14 +83,46 @@ fn append_query_params(url: &mut url::Url, request: &HttpRequest) {
         return;
     }
 
-    let mut pairs = url.query_pairs_mut();
-    for entry in active {
-        pairs.append_pair(entry.name.trim(), &entry.value);
+    /*
+     * Built by hand rather than with `query_pairs_mut`, for two reasons.
+     *
+     * It encodes as a form does, so a space becomes `+`. That is the rule for a
+     * form body, not for a URL, and a server is entitled to read `SW1A+1AA` as
+     * a postcode containing a plus. curl, Bruno and every browser send `%20`
+     * here, and a request that works in those should work in this.
+     *
+     * It also re-serialises the query already in the URL, so what the user
+     * typed comes back changed — their own `%20` turned into `+`, anything
+     * else re-encoded to the crate's taste. The typed query is evidence; it is
+     * carried across untouched.
+     */
+    let mut query = url.query().unwrap_or_default().to_string();
+    for (name, value) in active
+        .iter()
+        .map(|entry| (entry.name.trim(), entry.value.as_str()))
+        .chain(api_key)
+    {
+        if !query.is_empty() {
+            query.push('&');
+        }
+        query.push_str(&encode(name));
+        query.push('=');
+        query.push_str(&encode(value));
     }
-    if let Some((key, value)) = api_key {
-        pairs.append_pair(key, value);
-    }
-    pairs.finish();
+
+    url.set_query(Some(&query));
+}
+
+/// Everything but RFC 3986's unreserved set, which is what `encodeURIComponent`
+/// and curl both produce.
+const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~');
+
+fn encode(value: &str) -> String {
+    utf8_percent_encode(value, UNRESERVED).to_string()
 }
 
 fn build_headers(request: &HttpRequest) -> Result<HeaderMap, RequestError> {
@@ -278,5 +311,74 @@ fn with_content_type(
         builder
     } else {
         builder.header(CONTENT_TYPE, fallback)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use api_client_core::KeyValueEntry;
+
+    fn query_for(url: &str, params: Vec<KeyValueEntry>) -> String {
+        let request = HttpRequest {
+            url: url.to_string(),
+            query_params: params,
+            ..HttpRequest::default()
+        };
+        let mut url = normalize_url(&request.url).expect("url");
+        append_query_params(&mut url, &request);
+        url.query().unwrap_or_default().to_string()
+    }
+
+    /*
+     * A space is `%20` in a URL. `+` means space only in a form body, and a
+     * server that takes the query literally answers 400 to the plus — which is
+     * how this was found, against an API that Bruno could call and this could
+     * not.
+     */
+    #[test]
+    fn a_space_in_a_value_is_percent_encoded() {
+        assert_eq!(
+            query_for(
+                "https://example.com/lookup",
+                vec![KeyValueEntry::new("postcode", "SW1A 1AA")],
+            ),
+            "postcode=SW1A%201AA"
+        );
+    }
+
+    /// A plus the user typed is a plus, not a space.
+    #[test]
+    fn a_literal_plus_survives() {
+        assert_eq!(
+            query_for(
+                "https://example.com/c",
+                vec![KeyValueEntry::new("phone", "+44 7700 900000")],
+            ),
+            "phone=%2B44%207700%20900000"
+        );
+    }
+
+    /// The query already in the URL is the user's own text and is not rewritten.
+    #[test]
+    fn the_typed_query_is_left_exactly_as_typed() {
+        assert_eq!(
+            query_for(
+                "https://example.com/s?filter=a%20b&raw=x+y&path=/v1/items",
+                vec![KeyValueEntry::new("page", "2")],
+            ),
+            "filter=a%20b&raw=x+y&path=/v1/items&page=2"
+        );
+    }
+
+    #[test]
+    fn separators_inside_a_value_cannot_split_it() {
+        assert_eq!(
+            query_for(
+                "https://example.com/s",
+                vec![KeyValueEntry::new("q", "a&b=c#d")],
+            ),
+            "q=a%26b%3Dc%23d"
+        );
     }
 }
