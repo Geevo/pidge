@@ -30,8 +30,9 @@ No macOS build. It ought to build there; nobody has tried.
 
 - Every method you would expect: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`,
   `HEAD`, `OPTIONS`.
-- Bodies as JSON, plain text, form-encoded or multipart, with JSON highlighted
-  and foldable on the way back.
+- Bodies as JSON, plain text, form-encoded or multipart. A response comes back
+  highlighted and foldable: JSON, HTML, XML, YAML, CSS and JavaScript, chosen
+  by what the server said it sent.
 - Query parameters and headers as tables, each row switched on and off.
 - Auth without hand-rolling a header: bearer, basic, digest, NTLM, API key,
   OAuth 1 and OAuth 2. A header you typed yourself always wins over the tab.

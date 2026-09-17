@@ -5,8 +5,14 @@ import type { EditorView } from "@codemirror/view";
 import type { HttpResponse, RequestError, ResponsePane, TabStatus } from "../types";
 import { decodeBase64, decodeText, looksBinary } from "../lib/base64";
 import { formatBytes } from "../lib/format";
-import { isJsonMime, isTextMime, prettyJson } from "../lib/mime";
-import { CodeEditor } from "./CodeEditor";
+import {
+  isJsonMime,
+  isTextMime,
+  prettyJson,
+  syntaxForMime,
+  type SyntaxLanguage,
+} from "../lib/mime";
+import { CodeEditor, isFoldable } from "./CodeEditor";
 import { ResponseHeaders } from "./ResponseHeaders";
 import { StatusSummary } from "./StatusSummary";
 
@@ -162,7 +168,7 @@ function ResponseBody({
 
   return (
     <div className="ac-response-body__rich">
-      {rendered.isJson ? (
+      {isFoldable(rendered.language) ? (
         <div className="ac-response-tools">
           <button
             type="button"
@@ -183,9 +189,9 @@ function ResponseBody({
 
       <CodeEditor
         value={rendered.text}
-        language={rendered.isJson ? "json" : "text"}
+        language={rendered.language}
         readOnly
-        folding={rendered.isJson}
+        folding={isFoldable(rendered.language)}
         wrap={wrapLines}
         ariaLabel="Response body"
         onReady={onReady}
@@ -195,12 +201,13 @@ function ResponseBody({
 }
 
 type RenderedBody =
-  { kind: "text"; text: string; isJson: boolean } | { kind: "binary" } | { kind: "empty" };
+  { kind: "text"; text: string; language: SyntaxLanguage } | { kind: "binary" } | { kind: "empty" };
 
 /**
- * Pretty-print valid JSON, show text as-is, and refuse to render bytes that
- * clearly are not text. Invalid JSON is shown verbatim rather than hidden
- * behind a parse error.
+ * Pretty-print valid JSON, show everything else as the server sent it, and
+ * refuse to render bytes that clearly are not text. Only JSON is reformatted:
+ * whitespace carries meaning in HTML and YAML, so re-indenting them would
+ * change the document you asked to see.
  */
 export function renderBody(response: HttpResponse): RenderedBody {
   const bytes = decodeBase64(response.body);
@@ -214,9 +221,13 @@ export function renderBody(response: HttpResponse): RenderedBody {
     const formatted = prettyJson(text);
     // Invalid JSON is shown verbatim, and without the JSON language, so a
     // parse error does not turn into a wall of red.
-    return { kind: "text", text: formatted ?? text, isJson: formatted !== null };
+    return {
+      kind: "text",
+      text: formatted ?? text,
+      language: formatted === null ? "text" : "json",
+    };
   }
-  return { kind: "text", text, isJson: false };
+  return { kind: "text", text, language: syntaxForMime(response.mimeType) };
 }
 
 function titleFor(error: RequestError): string {
