@@ -175,6 +175,35 @@ export function CodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /*
+   * CodeMirror positions every line from measurements it takes once, and it
+   * only retakes them when it notices something change. Two things it does not
+   * notice: the pane being resized by the splitter, which changes the height
+   * but not the width, and the mono web font arriving after the editor was
+   * built, which changes how tall a line is. Either leaves the gutter drawn
+   * against one set of numbers and the text against another — line numbers down
+   * the side of an empty pane, with the body pushed somewhere below it.
+   */
+  useEffect(() => {
+    const editor = view.current;
+    const node = host.current;
+    if (!editor || !node) return;
+
+    const remeasure = () => editor.requestMeasure();
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(node);
+
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) remeasure();
+    });
+
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     view.current?.dispatch({
       effects: languageCompartment.current.reconfigure(LANGUAGES[language]()),
