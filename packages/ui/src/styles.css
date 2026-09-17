@@ -340,22 +340,63 @@ input[type="checkbox"]:hover {
 }
 
 /*
- * A switch above a table, reading as a caption rather than as one of its rows.
- * `.ac-check` is for a cell and centres itself, which is wrong here.
+ * The strip above a table, for anything that applies to the whole of it. It
+ * sits at the right so the eye meets the table's own columns first.
  */
-.ac-table-check {
+.ac-table-tools {
   display: flex;
   flex: none;
-  gap: 6px;
+  justify-content: flex-end;
+  padding: 5px 10px 3px;
+}
+
+/*
+ * A switch, not a checkbox: this turns a behaviour on and off rather than
+ * ticking one item in a list, and it reads that way at a glance.
+ */
+.ac-switch {
+  display: inline-flex;
+  gap: 8px;
   align-items: center;
-  padding: 6px 10px 2px;
   color: var(--ac-text-muted);
   font-size: var(--ac-font-size-small);
   cursor: pointer;
+  user-select: none;
 }
 
-.ac-table-check input {
-  margin: 0;
+.ac-switch:hover {
+  color: var(--ac-text);
+}
+
+/* Specific enough to beat the checkbox rules near the top of this file. */
+.ac-switch input[type="checkbox"] {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+}
+
+/* The knob. The tick the base checkbox draws here is not wanted. */
+.ac-switch input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ac-text-faint);
+  clip-path: none;
+  transform: none;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease;
+}
+
+.ac-switch input[type="checkbox"]:checked::before {
+  transform: translateX(11px);
+  background: var(--ac-accent-text);
 }
 
 :focus-visible {

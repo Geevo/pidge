@@ -26,14 +26,17 @@ export function ParamsEditor({ request, onChange }: Props) {
 
   return (
     <>
-      <label className="ac-table-check" title="Percent-encode parameter names and values">
-        <input
-          type="checkbox"
-          checked={request.encodeQuery}
-          onChange={(event) => setEncodeQuery(event.target.checked)}
-        />
-        <span>URL-encode parameters</span>
-      </label>
+      <div className="ac-table-tools">
+        <label className="ac-switch" title="Percent-encode parameter names and values">
+          <span>URL-encode</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={request.encodeQuery}
+            onChange={(event) => setEncodeQuery(event.target.checked)}
+          />
+        </label>
+      </div>
 
       <KeyValueTable
         label="Query parameters"
