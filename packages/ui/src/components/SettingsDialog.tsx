@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ClientIdentitySettings, Settings, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
 import { Select } from "./Select";
+import logo from "../assets/app-icon.svg";
 
 interface Props {
   settings: Settings;
@@ -296,12 +297,20 @@ export function SettingsDialog({
 
           {section === "about" ? (
             <div className="ac-about">
-              <p className="ac-about__name">
-                API Client <span className="ac-about__version">{version || "unknown version"}</span>
-              </p>
-              <p className="ac-hint">
-                A local-first HTTP client. Nothing leaves this machine except the requests you send.
-              </p>
+              <div className="ac-about__head">
+                <img className="ac-about__logo" src={logo} alt="" width="56" height="56" />
+                <div>
+                  <p className="ac-about__name">
+                    API Client{" "}
+                    <span className="ac-about__version">{version || "unknown version"}</span>
+                  </p>
+                  <p className="ac-hint">
+                    A no-thrills, local-first HTTP client. No cloud, no accounts, no workspaces —
+                    just an API tester.
+                  </p>
+                </div>
+              </div>
+
               {storagePath ? (
                 <p className="ac-hint">
                   State is kept in <code>{storagePath}</code>

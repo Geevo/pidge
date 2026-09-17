@@ -1427,8 +1427,21 @@ input[type="checkbox"]:hover {
   padding: 4px 8px;
 }
 
+.ac-about__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+
+/* The app icon itself, so About shows the thing on the taskbar. */
+.ac-about__logo {
+  flex: none;
+  border-radius: 12px;
+}
+
 .ac-about__name {
-  margin: 4px 0 2px;
+  margin: 0 0 2px;
   font-weight: 600;
 }
 
