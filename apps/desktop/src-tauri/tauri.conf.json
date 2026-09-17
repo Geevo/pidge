@@ -29,7 +29,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": ["licenses/*"],
+    "resources": {
+      "../../../packages/ui/src/fonts/IBMPlexSans-LICENSE.txt": "licenses/IBMPlexSans-LICENSE.txt",
+      "../../../packages/ui/src/fonts/IBMPlexMono-LICENSE.txt": "licenses/IBMPlexMono-LICENSE.txt",
+      "../../../THIRD-PARTY-LICENSES.md": "licenses/THIRD-PARTY-LICENSES.md"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

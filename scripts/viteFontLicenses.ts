@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +13,8 @@ import type { Plugin } from "vite";
  * the source tree for a packager to remember.
  *
  * One source of truth: the files next to the woff2 in `packages/ui/src/fonts`.
+ * The desktop bundle lists those same paths in `tauri.conf.json`, so nothing is
+ * copied anywhere for it to find.
  */
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,15 +26,9 @@ const NOTICE_FILE = "THIRD-PARTY-LICENSES.md";
 export interface FontLicenseOptions {
   /** Directory inside the build output. */
   outDir?: string;
-  /**
-   * An extra directory on disk to copy the same files into, for bundlers that
-   * read from the filesystem rather than from the build output. The desktop app
-   * uses this so Tauri can list them under `bundle.resources`.
-   */
-  copyTo?: string;
 }
 
-export function fontLicenses({ outDir = "licenses", copyTo }: FontLicenseOptions = {}): Plugin {
+export function fontLicenses({ outDir = "licenses" }: FontLicenseOptions = {}): Plugin {
   const sources = [
     ...LICENCE_FILES.map((name) => ({ name, path: join(fontDir, name) })),
     { name: NOTICE_FILE, path: join(repoRoot, NOTICE_FILE) },
@@ -49,16 +45,6 @@ export function fontLicenses({ outDir = "licenses", copyTo }: FontLicenseOptions
           fileName: `${outDir}/${source.name}`,
           source: readFileSync(source.path, "utf8"),
         });
-      }
-    },
-
-    closeBundle() {
-      if (!copyTo) return;
-      mkdirSync(copyTo, { recursive: true });
-      // Only the licences: this directory is a resource glob in
-      // tauri.conf.json, so anything else here lands in the installed package.
-      for (const source of sources) {
-        copyFileSync(source.path, join(copyTo, source.name));
       }
     },
   };

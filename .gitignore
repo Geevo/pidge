@@ -17,8 +17,6 @@ apps/vscode/media/licenses/
 apps/vscode/bin/
 apps/vscode/*.vsix
 apps/desktop/src-tauri/gen/
-# Copied from packages/ui/src/fonts by the frontend build.
-apps/desktop/src-tauri/licenses/
 
 # Editors and OS
 .DS_Store
