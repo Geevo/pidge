@@ -4,9 +4,87 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Client</title>
+    <!--
+      The window paints before the stylesheet and the bundle arrive, and an
+      undressed webview is white. These few rules are inline for that reason:
+      they cannot wait on a file. The colours repeat the base tokens from
+      styles.css deliberately — this has to work when that file has not loaded.
+
+      The spinner fades in after 400ms, so a start that beats it shows nothing
+      at all rather than a flash of loading.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --boot-bg: #ffffff;
+        --boot-fg: #868f9e;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --boot-bg: #16181d;
+          --boot-fg: #6d7684;
+        }
+      }
+
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--boot-bg);
+      }
+
+      .boot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+
+      .boot__spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--boot-fg);
+        border-top-color: transparent;
+        border-radius: 50%;
+        opacity: 0;
+        animation:
+          boot-fade 140ms linear 400ms forwards,
+          boot-spin 700ms linear infinite;
+      }
+
+      @keyframes boot-fade {
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Still say something is happening, without the movement. */
+      @media (prefers-reduced-motion: reduce) {
+        .boot__spinner {
+          border-top-color: var(--boot-fg);
+          animation: boot-fade 140ms linear 400ms forwards;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Loading">
+        <div class="boot__spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

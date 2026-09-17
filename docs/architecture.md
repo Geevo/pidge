@@ -196,6 +196,27 @@ VS Code, where the editor owns the frame. Every call through it is caught:
 an effect that throws unmounts the entire application — window chrome must not
 be able to do that.
 
+## Before the app has loaded
+
+A webview paints white until something tells it otherwise, and the bundle that
+would tell it is the thing being waited for. `apps/desktop/index.html` therefore
+carries its own `<style>`: the page background, following
+`prefers-color-scheme`, and a spinner inside `#root` that React's first render
+replaces. Both repeat values from `styles.css` on purpose — they have to work
+when that file has not arrived.
+
+Measured in the dev build, where the module graph is slowest: the HTML is parsed
+at 121 ms and React's first frame lands at 1077 ms. That was a second of blank
+window; it is now a second of the app's own background.
+
+The spinner fades in at 400 ms, so a start quicker than that shows nothing at
+all rather than a flash of loading, and it holds still under
+`prefers-reduced-motion`.
+
+No second window: a splash window would have to be created, positioned,
+themed and then closed, and it cannot show anything the first window cannot
+show earlier.
+
 ## Panes
 
 `SplitPane` arranges the request and response either as rows or as columns, with
