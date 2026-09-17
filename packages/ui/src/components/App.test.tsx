@@ -621,7 +621,7 @@ describe("pane layout", () => {
 });
 
 describe("url encoding", () => {
-  const urlField = () => screen.getByRole("textbox", { name: "URL" });
+  const urlField = () => screen.getByRole<HTMLInputElement>("textbox", { name: "URL" });
 
   /*
    * The switch rewrites the URL as it is flipped, so what will be sent is on
