@@ -1,4 +1,4 @@
-import type { AuthConfig, HttpRequest } from "../types";
+import type { ApiKeyPlacement, AuthConfig, HttpRequest } from "../types";
 import { Select } from "./Select";
 
 interface Props {
@@ -8,22 +8,35 @@ interface Props {
 
 type AuthKind = AuthConfig["type"];
 
-/** None, Bearer, Basic. Anything else is a header you type yourself. */
 const AUTH_KINDS = [
   { value: "none", label: "None" },
   { value: "bearer", label: "Bearer token" },
   { value: "basic", label: "Basic" },
+  { value: "apiKey", label: "API key" },
 ];
 
-export function AuthEditor({ request, onChange }: Props) {
-  const setAuth = (auth: AuthConfig) => onChange({ ...request, auth });
+const PLACEMENTS = [
+  { value: "header", label: "Header" },
+  { value: "query", label: "Query parameter" },
+];
 
-  const changeKind = (kind: AuthKind) => {
-    if (kind === request.auth.type) return;
-    if (kind === "none") setAuth({ type: "none" });
-    else if (kind === "bearer") setAuth({ type: "bearer", token: "" });
-    else setAuth({ type: "basic", username: "", password: "" });
-  };
+/** What each scheme starts as when it is picked. */
+function blank(kind: AuthKind): AuthConfig {
+  switch (kind) {
+    case "bearer":
+      return { type: "bearer", token: "" };
+    case "basic":
+      return { type: "basic", username: "", password: "" };
+    case "apiKey":
+      return { type: "apiKey", key: "", value: "", placement: "header" };
+    case "none":
+      return { type: "none" };
+  }
+}
+
+export function AuthEditor({ request, onChange }: Props) {
+  const auth = request.auth;
+  const setAuth = (next: AuthConfig) => onChange({ ...request, auth: next });
 
   return (
     <div>
@@ -34,13 +47,16 @@ export function AuthEditor({ request, onChange }: Props) {
         <Select
           id="ac-auth-kind"
           labelledBy="ac-auth-kind-label"
-          value={request.auth.type}
+          value={auth.type}
           options={AUTH_KINDS}
-          onChange={(value) => changeKind(value as AuthKind)}
+          onChange={(value) => {
+            const kind = value as AuthKind;
+            if (kind !== auth.type) setAuth(blank(kind));
+          }}
         />
       </div>
 
-      {request.auth.type === "bearer" ? (
+      {auth.type === "bearer" ? (
         <div className="ac-field">
           <label htmlFor="ac-auth-token">Token</label>
           <input
@@ -48,13 +64,13 @@ export function AuthEditor({ request, onChange }: Props) {
             type="text"
             spellCheck={false}
             placeholder="{{token}}"
-            value={request.auth.token}
-            onChange={(event) => setAuth({ type: "bearer", token: event.target.value })}
+            value={auth.token}
+            onChange={(event) => setAuth({ ...auth, token: event.target.value })}
           />
         </div>
       ) : null}
 
-      {request.auth.type === "basic" ? (
+      {auth.type === "basic" ? (
         <>
           <div className="ac-field">
             <label htmlFor="ac-auth-user">Username</label>
@@ -62,14 +78,8 @@ export function AuthEditor({ request, onChange }: Props) {
               id="ac-auth-user"
               type="text"
               spellCheck={false}
-              value={request.auth.username}
-              onChange={(event) =>
-                setAuth({
-                  type: "basic",
-                  username: event.target.value,
-                  password: request.auth.type === "basic" ? request.auth.password : "",
-                })
-              }
+              value={auth.username}
+              onChange={(event) => setAuth({ ...auth, username: event.target.value })}
             />
           </div>
           <div className="ac-field">
@@ -77,20 +87,59 @@ export function AuthEditor({ request, onChange }: Props) {
             <input
               id="ac-auth-pass"
               type="password"
-              value={request.auth.password}
-              onChange={(event) =>
-                setAuth({
-                  type: "basic",
-                  username: request.auth.type === "basic" ? request.auth.username : "",
-                  password: event.target.value,
-                })
-              }
+              value={auth.password}
+              onChange={(event) => setAuth({ ...auth, password: event.target.value })}
             />
           </div>
         </>
       ) : null}
 
-      {request.auth.type === "none" ? (
+      {auth.type === "apiKey" ? (
+        <>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-key">Key</label>
+            <input
+              id="ac-auth-key"
+              type="text"
+              spellCheck={false}
+              placeholder="X-API-Key"
+              value={auth.key}
+              onChange={(event) => setAuth({ ...auth, key: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-key-value">Value</label>
+            <input
+              id="ac-auth-key-value"
+              type="text"
+              spellCheck={false}
+              placeholder="{{apiKey}}"
+              value={auth.value}
+              onChange={(event) => setAuth({ ...auth, value: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label id="ac-auth-key-in-label" htmlFor="ac-auth-key-in">
+              Send in
+            </label>
+            <Select
+              id="ac-auth-key-in"
+              labelledBy="ac-auth-key-in-label"
+              value={auth.placement}
+              options={PLACEMENTS}
+              onChange={(value) => setAuth({ ...auth, placement: value as ApiKeyPlacement })}
+            />
+          </div>
+          {auth.placement === "query" ? (
+            <p className="ac-hint">
+              A key in the query string ends up in server logs and browser history. A header is
+              safer where the API accepts one.
+            </p>
+          ) : null}
+        </>
+      ) : null}
+
+      {auth.type === "none" ? (
         <p className="ac-hint">No auth. Add an Authorization header directly if you need one.</p>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 use api_client_core::{
-    AuthConfig, HttpMethod, HttpRequest, MultipartValue, RequestBody, RequestError,
-    RequestErrorKind, redact,
+    ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, MultipartValue, RequestBody,
+    RequestError, RequestErrorKind, redact,
 };
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method, RequestBuilder};
@@ -63,12 +63,28 @@ fn append_query_params(url: &mut url::Url, request: &HttpRequest) {
         .iter()
         .filter(|entry| entry.is_active())
         .collect();
-    if active.is_empty() {
+
+    // An API key placed in the query string is a query param like any other,
+    // and belongs here rather than in a second place that edits the URL.
+    let api_key = match &request.auth {
+        AuthConfig::ApiKey {
+            key,
+            value,
+            placement: ApiKeyPlacement::Query,
+        } if !key.trim().is_empty() => Some((key.trim(), value.as_str())),
+        _ => None,
+    };
+
+    if active.is_empty() && api_key.is_none() {
         return;
     }
+
     let mut pairs = url.query_pairs_mut();
     for entry in active {
         pairs.append_pair(entry.name.trim(), &entry.value);
+    }
+    if let Some((key, value)) = api_key {
+        pairs.append_pair(key, value);
     }
     pairs.finish();
 }
@@ -98,27 +114,45 @@ fn build_headers(request: &HttpRequest) -> Result<HeaderMap, RequestError> {
     Ok(headers)
 }
 
-/// An explicit `Authorization` header always wins; the user typed it on purpose.
-/// The auth helper is skipped and the conflict is reported, never silently resolved.
+/// A header the user typed always wins; they typed it on purpose. The auth
+/// helper is skipped and the conflict is reported, never silently resolved.
+///
+/// Which header that is depends on the scheme: `Authorization` for bearer and
+/// basic, but an API key names its own, and a key in the query string collides
+/// with nothing.
 fn apply_auth(
     builder: RequestBuilder,
     request: &HttpRequest,
     warnings: &mut Vec<String>,
 ) -> RequestBuilder {
-    let explicit = request.find_header("authorization").is_some();
+    let occupied = |name: &str| request.find_header(name).is_some();
 
-    match (&request.auth, explicit) {
-        (AuthConfig::None, _) => builder,
-        (_, true) => {
+    match &request.auth {
+        AuthConfig::None => builder,
+
+        AuthConfig::Bearer { .. } | AuthConfig::Basic { .. } if occupied("authorization") => {
             warnings.push(
                 "An explicit Authorization header is set, so the Auth tab was ignored.".to_string(),
             );
             builder
         }
-        (AuthConfig::Bearer { token }, false) => builder.bearer_auth(token),
-        (AuthConfig::Basic { username, password }, false) => {
-            builder.basic_auth(username, Some(password))
+        AuthConfig::Bearer { token } => builder.bearer_auth(token),
+        AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
+
+        // The query placement is handled with the other query params.
+        AuthConfig::ApiKey {
+            placement: ApiKeyPlacement::Query,
+            ..
+        } => builder,
+        AuthConfig::ApiKey { key, .. } if key.trim().is_empty() => builder,
+        AuthConfig::ApiKey { key, .. } if occupied(key.trim()) => {
+            warnings.push(format!(
+                "An explicit {} header is set, so the Auth tab was ignored.",
+                key.trim()
+            ));
+            builder
         }
+        AuthConfig::ApiKey { key, value, .. } => builder.header(key.trim(), value),
     }
 }
 

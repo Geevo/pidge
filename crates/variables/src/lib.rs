@@ -147,6 +147,15 @@ pub fn resolve_request(
             username: resolve(username),
             password: resolve(password),
         },
+        AuthConfig::ApiKey {
+            key,
+            value,
+            placement,
+        } => AuthConfig::ApiKey {
+            key: resolve(key),
+            value: resolve(value),
+            placement: *placement,
+        },
     };
 
     resolved.body = match &request.body {

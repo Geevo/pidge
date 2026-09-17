@@ -1294,3 +1294,58 @@ describe("browsing for a certificate", () => {
     expect(within(dialog).getByLabelText("File")).toBeInTheDocument();
   });
 });
+
+describe("API key auth", () => {
+  it("sends the key in the header it names", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "API key");
+
+    await user.type(screen.getByLabelText("Key"), "X-API-Key");
+    await user.type(screen.getByLabelText("Value"), "secret-key");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toEqual({
+      type: "apiKey",
+      key: "X-API-Key",
+      value: "secret-key",
+      placement: "header",
+    });
+  });
+
+  it("can put it in the query string instead, and says why not to", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "API key");
+    await user.type(screen.getByLabelText("Key"), "api_key");
+    await choose(user, screen.getByLabelText("Send in"), "Query parameter");
+
+    expect(screen.getByText(/ends up in server logs/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toMatchObject({ type: "apiKey", placement: "query" });
+  });
+
+  it("starts each scheme empty rather than carrying the last one over", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "Bearer token");
+    await user.type(screen.getByLabelText("Token"), "a-token");
+
+    await choose(user, screen.getByLabelText("Auth"), "API key");
+    expect(screen.getByLabelText("Key")).toHaveValue("");
+    expect(screen.getByLabelText("Value")).toHaveValue("");
+  });
+});
