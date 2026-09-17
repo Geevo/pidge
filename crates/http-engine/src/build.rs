@@ -489,6 +489,25 @@ mod tests {
         );
     }
 
+    /*
+     * The one thing turning encoding off cannot do is put a raw space on the
+     * wire, because a space cannot appear in a request line at all. The address
+     * bar shows the space the user typed; `Url` escapes it on the way out.
+     */
+    #[test]
+    fn a_space_is_escaped_even_with_encoding_off() {
+        let request = HttpRequest {
+            url: "https://example.com/lookup".to_string(),
+            query_params: vec![KeyValueEntry::new("postcode", "SW1A 1AA")],
+            encode_query: false,
+            ..HttpRequest::default()
+        };
+        let mut url = normalize_url(&request.url).expect("url");
+        append_query_params(&mut url, &request);
+
+        assert_eq!(url.query(), Some("postcode=SW1A%201AA"));
+    }
+
     #[test]
     fn separators_inside_a_value_cannot_split_it() {
         assert_eq!(
