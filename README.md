@@ -33,7 +33,9 @@ No macOS build. It ought to build there; nobody has tried.
 - Bodies as JSON, plain text, form-encoded or multipart. A response comes back
   highlighted and foldable: JSON, HTML, XML, YAML, CSS and JavaScript, chosen
   by what the server said it sent.
-- Query parameters and headers as tables, each row switched on and off.
+- Query parameters and headers as tables, each row switched on and off, and a
+  switch for whether parameters are URL-encoded — the URL bar shows you the
+  difference as you flip it.
 - Auth without hand-rolling a header: bearer, basic, digest, NTLM, API key,
   OAuth 1 and OAuth 2. A header you typed yourself always wins over the tab.
 - `{{variables}}` from flat environments, so one request runs against staging

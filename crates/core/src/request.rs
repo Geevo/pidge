@@ -324,6 +324,19 @@ pub struct HttpRequest {
     /// Overrides the default timeout for this request only.
     #[ts(type = "number | null")]
     pub timeout_ms: Option<u64>,
+    /// Whether query parameters are percent-encoded on their way into the URL.
+    ///
+    /// On is right for almost everything. Off is for a value that is already
+    /// encoded, or that holds a `/` or `:` a server wants to see unescaped —
+    /// at which point the text is the user's responsibility, not ours.
+    ///
+    /// Defaulted, so a request saved before this existed still loads.
+    #[serde(default = "encode_query_default")]
+    pub encode_query: bool,
+}
+
+fn encode_query_default() -> bool {
+    true
 }
 
 impl HttpRequest {
@@ -338,6 +351,7 @@ impl HttpRequest {
             auth: AuthConfig::None,
             body: RequestBody::None,
             timeout_ms: None,
+            encode_query: true,
         }
     }
 

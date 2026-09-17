@@ -339,6 +339,25 @@ input[type="checkbox"]:hover {
   cursor: pointer;
 }
 
+/*
+ * A switch above a table, reading as a caption rather than as one of its rows.
+ * `.ac-check` is for a cell and centres itself, which is wrong here.
+ */
+.ac-table-check {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px 2px;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+  cursor: pointer;
+}
+
+.ac-table-check input {
+  margin: 0;
+}
+
 :focus-visible {
   outline: 2px solid var(--ac-focus);
   outline-offset: 1px;

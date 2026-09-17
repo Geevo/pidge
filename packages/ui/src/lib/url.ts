@@ -59,15 +59,22 @@ export function urlChanged(url: string, existing: readonly KeyValueEntry[]): Url
  * Called when the user edits the params table. Rewrites only the query string,
  * leaving scheme, host, path, and fragment exactly as typed.
  */
-export function paramsChanged(url: string, params: readonly KeyValueEntry[]): UrlSyncResult {
+export function paramsChanged(
+  url: string,
+  params: readonly KeyValueEntry[],
+  encode = true,
+): UrlSyncResult {
   const hashIndex = url.indexOf("#");
   const fragment = hashIndex === -1 ? "" : url.slice(hashIndex);
   const withoutFragment = hashIndex === -1 ? url : url.slice(0, hashIndex);
   const base = withoutFragment.split("?")[0]!;
 
+  // Off means the text goes in as typed, for a value that is already encoded
+  // or that a server wants to see unescaped. It is then the user's to get right.
+  const write = (value: string) => (encode ? encodeURIComponent(value) : value);
   const query = params
     .filter((entry) => entry.enabled && entry.name.trim() !== "")
-    .map((entry) => `${encodeURIComponent(entry.name.trim())}=${encodeURIComponent(entry.value)}`)
+    .map((entry) => `${write(entry.name.trim())}=${write(entry.value)}`)
     .join("&");
 
   return {
