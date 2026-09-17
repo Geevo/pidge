@@ -620,6 +620,29 @@ describe("pane layout", () => {
   });
 });
 
+describe("url encoding", () => {
+  const urlField = () => screen.getByRole("textbox", { name: "URL" });
+
+  /*
+   * The switch rewrites the URL as it is flipped, so what will be sent is on
+   * screen. A value with a space is the case that sent a 400 for a while.
+   */
+  it("shows the difference in the URL bar as it is flipped", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.type(urlField(), "https://api.example.com/lookup?postcode=SW1A 1AA");
+    const encode = screen.getByRole("switch", { name: /URL-encode/ });
+    expect(encode).toBeChecked();
+
+    await user.click(encode);
+    expect(urlField().value).toBe("https://api.example.com/lookup?postcode=SW1A 1AA");
+
+    await user.click(encode);
+    expect(urlField().value).toBe("https://api.example.com/lookup?postcode=SW1A%201AA");
+  });
+});
+
 describe("response bodies", () => {
   it("offers collapse and expand for valid JSON", async () => {
     const { bridge, user } = setup();
