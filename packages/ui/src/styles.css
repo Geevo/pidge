@@ -2171,11 +2171,10 @@ body.ac-dragging--columns * {
   color: var(--ac-text);
 }
 
-/* Windows: full-height rectangles, and a red one to close. */
-.ac-window-buttons--windows {
-  border-left: 1px solid var(--ac-border);
-}
-
+/*
+ * Windows: full-height rectangles, and a red one to close. No rule dividing
+ * them from the title bar — Windows draws its caption buttons flush.
+ */
 .ac-window-buttons--windows .ac-window-button {
   width: 38px;
 }
