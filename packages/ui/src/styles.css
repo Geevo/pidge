@@ -50,15 +50,15 @@
 
 :root {
   --ac-bg: #ffffff;
-  --ac-bg-subtle: #f6f7f9;
+  --ac-bg-subtle: #f4f6f8;
   --ac-bg-raised: #ffffff;
   --ac-bg-input: #ffffff;
-  --ac-border: #d8dce3;
-  --ac-border-strong: #b9c0cb;
+  --ac-border: #eaecf1;
+  --ac-border-strong: #dcdfe6;
   --ac-text: #1c2024;
   --ac-text-muted: #5b6472;
   --ac-text-faint: #868f9e;
-  --ac-accent: #1f6feb;
+  --ac-accent: #2563eb;
   --ac-accent-text: #ffffff;
   --ac-focus: #1f6feb;
   --ac-danger: #c0392f;
@@ -102,7 +102,22 @@
   /* The chevron on a dropdown; see `.ac-select`, which draws the rest. */
   --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235b6472' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 
-  --ac-radius: 4px;
+  --ac-radius: 7px;
+  --ac-radius-sm: 5px;
+  --ac-radius-lg: 12px;
+  --ac-radius-pill: 999px;
+
+  /*
+   * Interactive surfaces, mixed from the text colour so one definition serves
+   * both themes. Controls are filled rather than outlined: a border at rest is
+   * what makes a toolbar read as a row of boxes.
+   */
+  --ac-fill: color-mix(in srgb, var(--ac-text) 6%, transparent);
+  --ac-fill-hover: color-mix(in srgb, var(--ac-text) 11%, transparent);
+  --ac-fill-active: color-mix(in srgb, var(--ac-text) 16%, transparent);
+  --ac-ring: 0 0 0 3px color-mix(in srgb, var(--ac-focus) 30%, transparent);
+  --ac-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 12px 32px rgb(0 0 0 / 14%);
+  --ac-shadow-strong: 0 2px 6px rgb(0 0 0 / 12%), 0 18px 48px rgb(0 0 0 / 20%);
 
   /* The bundled faces first; the rest is insurance if a file fails to load. */
   --ac-font:
@@ -116,15 +131,17 @@
   --ac-font-size: 13px;
   --ac-font-size-small: 12px;
   --ac-row-height: 28px;
+  /* Buttons, selects and the URL bar all sit on this, so a toolbar lines up. */
+  --ac-control-height: 32px;
 }
 
 :root[data-theme="dark"] {
-  --ac-bg: #16181d;
-  --ac-bg-subtle: #1c1f26;
-  --ac-bg-raised: #21252d;
+  --ac-bg: #141619;
+  --ac-bg-subtle: #1a1d23;
+  --ac-bg-raised: #22262e;
   --ac-bg-input: #1b1e25;
-  --ac-border: #2d323c;
-  --ac-border-strong: #424956;
+  --ac-border: #24282f;
+  --ac-border-strong: #333944;
   --ac-text: #e4e7ec;
   --ac-text-muted: #9aa3b2;
   --ac-text-faint: #6d7684;
@@ -149,6 +166,10 @@
   --ac-method-options-text: #5aa9e6;
 
   --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+
+  /* Dark swallows a shadow, so what floats has to be lighter as well. */
+  --ac-shadow: 0 2px 8px rgb(0 0 0 / 40%), 0 16px 48px rgb(0 0 0 / 50%);
+  --ac-shadow-strong: 0 4px 12px rgb(0 0 0 / 50%), 0 24px 64px rgb(0 0 0 / 60%);
 
   color-scheme: dark;
 }
@@ -400,8 +421,8 @@ input[type="checkbox"]:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ac-focus);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--ac-ring);
 }
 
 /* ---------- layout ---------- */
@@ -424,13 +445,6 @@ input[type="checkbox"]:hover {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
-}
-
-.ac-split {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
   min-height: 0;
 }
 
@@ -505,16 +519,30 @@ input[type="checkbox"]:hover {
   min-width: 0;
 }
 
+/* The one control people look at all day, so it gets height and no cage. */
 .ac-url-input {
   flex: 1;
   min-width: 0;
-  height: var(--ac-row-height);
-  padding: 0 8px;
-  border: 1px solid var(--ac-border-strong);
+  height: var(--ac-control-height);
+  padding: 0 12px;
+  border: 1px solid transparent;
   border-radius: var(--ac-radius);
-  background: var(--ac-bg-input);
+  background: var(--ac-fill);
   /* Ligature fonts turn `//` and `->` into glyphs; a URL must read literally. */
   font-variant-ligatures: none;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.ac-url-input:hover {
+  background: var(--ac-fill-hover);
+}
+
+.ac-url-input:focus {
+  outline: none;
+  background: var(--ac-bg-input);
+  box-shadow: var(--ac-ring);
 }
 
 /*
@@ -526,18 +554,31 @@ input[type="checkbox"]:hover {
 .ac-select {
   display: inline-flex;
   align-items: center;
-  height: var(--ac-row-height);
+  height: var(--ac-control-height);
   /* The right side belongs to the chevron. */
-  padding: 0 20px 0 6px;
-  border: 1px solid var(--ac-border-strong);
+  padding: 0 24px 0 10px;
+  border: 1px solid transparent;
   border-radius: var(--ac-radius);
-  background-color: var(--ac-bg-input);
+  background-color: var(--ac-fill);
   background-image: var(--ac-select-arrow);
   background-repeat: no-repeat;
-  background-position: right 6px center;
+  background-position: right 8px center;
   color: var(--ac-text);
   text-align: left;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.ac-select:hover {
+  background-color: var(--ac-fill-hover);
+}
+
+.ac-select:focus-visible,
+.ac-select[aria-expanded="true"] {
+  outline: none;
+  box-shadow: var(--ac-ring);
 }
 
 .ac-select__value {
@@ -558,10 +599,10 @@ input[type="checkbox"]:hover {
   margin: 0;
   padding: 4px;
   overflow-y: auto;
-  border: 1px solid var(--ac-border-strong);
+  border: 1px solid transparent;
   border-radius: var(--ac-radius);
   background: var(--ac-bg-raised);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  box-shadow: var(--ac-shadow);
   list-style: none;
 }
 
@@ -684,18 +725,31 @@ input[type="checkbox"]:hover {
 
 /* ---------- buttons ---------- */
 
+/*
+ * A control is a surface, not an outline. A bordered rectangle at rest is the
+ * thing that makes a toolbar read as a row of boxes; a filled shape that lifts
+ * under the pointer reads as something to press.
+ */
 .ac-button {
-  height: var(--ac-row-height);
-  padding: 0 10px;
-  border: 1px solid var(--ac-border-strong);
+  height: var(--ac-control-height);
+  padding: 0 12px;
+  border: 1px solid transparent;
   border-radius: var(--ac-radius);
-  background: var(--ac-bg-raised);
+  background: var(--ac-fill);
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease;
 }
 
 .ac-button:hover:not(:disabled) {
-  border-color: var(--ac-accent);
+  background: var(--ac-fill-hover);
+}
+
+.ac-button:active:not(:disabled) {
+  background: var(--ac-fill-active);
 }
 
 .ac-button:disabled {
@@ -705,10 +759,19 @@ input[type="checkbox"]:hover {
 
 .ac-button--primary {
   min-width: 68px;
-  border-color: var(--ac-accent);
+  border-color: transparent;
   background: var(--ac-accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ac-accent) 35%, transparent);
   color: var(--ac-accent-text);
   font-weight: 600;
+}
+
+.ac-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ac-accent) 88%, white);
+}
+
+.ac-button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--ac-accent) 88%, black);
 }
 
 .ac-button--quiet {
@@ -718,7 +781,7 @@ input[type="checkbox"]:hover {
 }
 
 .ac-button--quiet:hover:not(:disabled) {
-  background: var(--ac-bg-subtle);
+  background: var(--ac-fill);
   color: var(--ac-text);
 }
 
@@ -782,15 +845,20 @@ input[type="checkbox"]:hover {
   display: flex;
   align-items: stretch;
   min-height: 34px;
-  border-bottom: 1px solid var(--ac-border);
   background: var(--ac-bg-subtle);
 }
 
+/*
+ * The padding is on the list, not the bar: the bar also carries the window
+ * buttons, and those are aligned to the desktop's own, not to us.
+ */
 .ac-tabbar__list {
   display: flex;
   flex: 1;
+  gap: 2px;
   align-items: stretch;
   min-width: 0;
+  padding: 4px 4px 0;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -808,33 +876,66 @@ input[type="checkbox"]:hover {
   gap: 4px;
   min-width: 0;
   max-width: 240px;
-  padding-right: 5px;
-  border-right: 1px solid var(--ac-border);
+  padding-right: 4px;
+  border-radius: var(--ac-radius) var(--ac-radius) 0 0;
   color: var(--ac-text-muted);
   transition:
     background-color 120ms ease,
     color 120ms ease;
 }
 
-.ac-tab:hover {
-  background: var(--ac-bg-raised);
+.ac-tab:hover:not(.ac-tab--active) {
+  background: var(--ac-fill);
   color: var(--ac-text);
 }
 
+/*
+ * The open tab is not a shape. The strip and the toolbar beneath it are the
+ * same colour, so a filled tab has nothing to connect to and reads as a card
+ * dropped on a flat band. Brighter text and a line under it say the same and
+ * leave the strip whole.
+ */
 .ac-tab--active {
-  background: var(--ac-bg);
   color: var(--ac-text);
 }
 
-/* A bottom rule rather than an inset shadow, so it sits flush on the border. */
+.ac-tab--active .ac-tab__button {
+  font-weight: 600;
+}
+
 .ac-tab--active::after {
   content: "";
   position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
   height: 2px;
+  border-radius: 2px 2px 0 0;
   background: var(--ac-accent);
+}
+
+/*
+ * Without a fill behind them, tabs need something to say where one ends. A
+ * hairline in the gap does it, and it steps aside around the tab being pointed
+ * at or the one that is open: a line beside a highlight reads as clutter.
+ */
+.ac-tab + .ac-tab::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  width: 1px;
+  height: 16px;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--ac-text) 14%, transparent);
+  transition: opacity 120ms ease;
+}
+
+.ac-tab:hover::before,
+.ac-tab--active::before,
+.ac-tab:hover + .ac-tab::before,
+.ac-tab--active + .ac-tab::before {
+  opacity: 0;
 }
 
 .ac-tab__button {
@@ -925,29 +1026,40 @@ input[type="checkbox"]:hover {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--ac-border);
+  padding: 6px 8px;
 }
 
+/* One track, one filled selection: a segmented control rather than a row. */
 .ac-subtab {
-  padding: 3px 8px;
+  padding: 4px 10px;
   border: 0;
-  border-radius: var(--ac-radius);
+  border-radius: var(--ac-radius-pill);
   background: transparent;
   color: var(--ac-text-muted);
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-subtab:hover {
+  background: var(--ac-fill);
 }
 
 .ac-subtab[aria-selected="true"] {
-  background: var(--ac-bg-subtle);
+  background: var(--ac-fill-hover);
   color: var(--ac-text);
   font-weight: 600;
 }
 
 .ac-subtab__count {
   margin-left: 4px;
+  padding: 0 5px;
+  border-radius: var(--ac-radius-pill);
+  background: color-mix(in srgb, var(--ac-text) 10%, transparent);
   color: var(--ac-text-faint);
-  font-size: var(--ac-font-size-small);
+  font-size: 11px;
 }
 
 /* ---------- key/value tables ---------- */
@@ -958,17 +1070,35 @@ input[type="checkbox"]:hover {
 }
 
 .ac-kv th {
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--ac-border);
+  padding: 4px 9px;
   color: var(--ac-text-faint);
-  font-size: var(--ac-font-size-small);
+  font-size: 11px;
   font-weight: 500;
+  letter-spacing: 0.02em;
   text-align: left;
+  text-transform: uppercase;
 }
 
+/*
+ * No grid of lines, but these cells are fields and have to look like it: each
+ * one is its own filled shape with a gap around it, so a row reads as two
+ * things to type in rather than text sitting on a rule.
+ */
 .ac-kv td {
-  padding: 0;
-  border-bottom: 1px solid var(--ac-border);
+  padding: 2px 3px;
+}
+
+/*
+ * With the rules gone, the row itself has to answer "which one am I on". The
+ * tint is deliberately fainter than a field's own fill, so it reads as the row
+ * lighting up behind the cells rather than as another box.
+ */
+.ac-kv tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.ac-kv tbody tr:hover {
+  background: color-mix(in srgb, var(--ac-text) 4%, transparent);
 }
 
 .ac-kv__check {
@@ -982,15 +1112,31 @@ input[type="checkbox"]:hover {
 
 .ac-kv input[type="text"] {
   width: 100%;
-  height: var(--ac-row-height);
-  padding: 0 6px;
-  border: 0;
-  background: transparent;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius-sm);
+  background: var(--ac-fill);
   font-family: var(--ac-font-mono);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.ac-kv input[type="text"]:hover {
+  background: var(--ac-fill-hover);
 }
 
 .ac-kv input[type="text"]:focus {
+  border-color: color-mix(in srgb, var(--ac-focus) 55%, transparent);
   background: var(--ac-bg-input);
+  box-shadow: var(--ac-ring);
+}
+
+/* The empty row is an invitation; it sits back until it is pointed at. */
+.ac-kv tbody tr:last-child input[type="text"]:not(:hover):not(:focus) {
+  background: color-mix(in srgb, var(--ac-text) 3%, transparent);
 }
 
 /* ---------- forms ---------- */
@@ -1014,16 +1160,6 @@ input[type="checkbox"]:hover {
   color: var(--ac-text-muted);
 }
 
-.ac-field input[type="text"],
-.ac-field input[type="password"],
-.ac-field .ac-select {
-  flex: 1;
-  height: var(--ac-row-height);
-  border: 1px solid var(--ac-border-strong);
-  border-radius: var(--ac-radius);
-  background-color: var(--ac-bg-input);
-}
-
 /*
  * The text fields here hold paths and numbers, which are easier to check
  * character by character. A dropdown holds prose the app wrote itself, so it
@@ -1031,19 +1167,43 @@ input[type="checkbox"]:hover {
  */
 .ac-field input[type="text"],
 .ac-field input[type="password"] {
-  padding: 0 6px;
+  flex: 1;
+  height: var(--ac-control-height);
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-fill);
   font-family: var(--ac-font-mono);
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+/*
+ * A select already dresses itself; in a field it only has to fill the row.
+ * Restating its colours here would land at the same specificity but later in
+ * the file, which is how its hover state went missing.
+ */
+.ac-field .ac-select {
+  flex: 1;
+}
+
+.ac-field input[type="text"]:hover,
+.ac-field input[type="password"]:hover {
+  background-color: var(--ac-fill-hover);
+}
+
+.ac-field input[type="text"]:focus,
+.ac-field input[type="password"]:focus {
+  outline: none;
+  background-color: var(--ac-bg-input);
+  box-shadow: var(--ac-ring);
 }
 
 .ac-hint {
   padding: 6px 8px;
   color: var(--ac-text-faint);
   font-size: var(--ac-font-size-small);
-}
-
-/* A file extension is one token; breaking `.pfx` across lines reads as noise. */
-.ac-hint code {
-  white-space: nowrap;
 }
 
 /* ---------- editor ---------- */
@@ -1103,17 +1263,27 @@ input[type="checkbox"]:hover {
 .ac-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--ac-border);
+  gap: 10px;
   font-family: var(--ac-font-mono);
   font-size: var(--ac-font-size-small);
   /* Timings and sizes change on every send; tabular figures keep them still. */
   font-variant-numeric: tabular-nums;
 }
 
+/* The code is the thing worth seeing from across the room, so it is a pill in
+   its own band's colour; the rest of the line is quiet text, spaced rather
+   than punctuated. */
 .ac-status__code {
+  padding: 2px 8px;
+  border-radius: var(--ac-radius-pill);
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  font-size: var(--ac-font-size-small);
   font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ac-status > span:not(.ac-status__code):not(.ac-status__url) {
+  color: var(--ac-text-muted);
 }
 
 .ac-status__code[data-band="ok"] {
@@ -1130,10 +1300,6 @@ input[type="checkbox"]:hover {
 }
 .ac-status__code[data-band="other"] {
   color: var(--ac-status-other);
-}
-
-.ac-status__sep {
-  color: var(--ac-text-faint);
 }
 
 /*
@@ -1413,8 +1579,8 @@ input[type="checkbox"]:hover {
 .ac-rail-button {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: var(--ac-radius);
   background: transparent;
@@ -1431,7 +1597,14 @@ input[type="checkbox"]:hover {
 }
 
 .ac-rail-button:hover {
+  background: var(--ac-fill);
   color: var(--ac-text);
+}
+
+.ac-rail-button[aria-pressed="true"],
+.ac-rail-button[aria-expanded="true"] {
+  background: var(--ac-fill-hover);
+  color: var(--ac-accent);
 }
 
 .ac-spacer {
@@ -1462,16 +1635,21 @@ input[type="checkbox"]:hover {
   z-index: 10;
 }
 
+/*
+ * What floats is lighter than what it covers as well as shadowed: a dark
+ * background swallows a shadow, and a dialog the same colour as the window
+ * behind it does not read as being in front of anything.
+ */
 .ac-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 100%);
   max-height: 80%;
   overflow: hidden;
-  border: 1px solid var(--ac-border-strong);
-  border-radius: var(--ac-radius);
-  background: var(--ac-bg);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius-lg);
+  background: var(--ac-bg-raised);
+  box-shadow: var(--ac-shadow);
 }
 
 /*
@@ -1750,10 +1928,11 @@ input[type="checkbox"]:hover {
   font-size: var(--ac-font-size-small);
 }
 
+/* A file extension is one token; breaking `.pfx` across lines reads as noise. */
 .ac-hint code {
   font-family: var(--ac-font-mono);
   font-size: var(--ac-font-size-small);
-  word-break: break-all;
+  white-space: nowrap;
 }
 
 /* ---------- split panes ---------- */
@@ -1794,6 +1973,7 @@ input[type="checkbox"]:hover {
  * makes it look like something you can pull.
  */
 .ac-split__divider {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
@@ -1832,10 +2012,6 @@ input[type="checkbox"]:hover {
   top: 0;
   bottom: 0;
   width: 1px;
-}
-
-.ac-split__divider {
-  position: relative;
 }
 
 /* The grip: a short bar in the middle, so the line reads as draggable. */
