@@ -84,11 +84,21 @@ export function ColumnsIcon(props: IconProps) {
   );
 }
 
+/*
+ * Sliders rather than a cog. A cog needs teeth to read as one, and teeth turn
+ * to mush at fourteen pixels with this stroke — the one drawn here before was
+ * a ring with eight ticks around it, which read as the sun already sitting at
+ * the bottom of the same rail.
+ */
 export function SettingsIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <circle cx="8" cy="8" r="2.2" />
-      <path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5" />
+      <path d="M2.5 4.5H4M7 4.5h6.5" />
+      <circle cx="5.5" cy="4.5" r="1.5" />
+      <path d="M2.5 8h6M11.5 8h2" />
+      <circle cx="10" cy="8" r="1.5" />
+      <path d="M2.5 11.5h3M8.5 11.5h5" />
+      <circle cx="7" cy="11.5" r="1.5" />
     </Svg>
   );
 }
