@@ -1423,36 +1423,75 @@ input[type="checkbox"]:hover {
 
 /* ---------- about ---------- */
 
+/*
+ * A centred column: the icon, what this is, and the small print. It fills the
+ * section because the dialog has a fixed height, so About is not a short block
+ * of text stranded at the top of a tall box.
+ */
 .ac-about {
-  padding: 4px 8px;
-}
-
-.ac-about__head {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 4px 0 8px;
+  justify-content: center;
+  min-height: 100%;
+  padding: 20px 28px;
+  text-align: center;
 }
 
-/* The app icon itself, so About shows the thing on the taskbar. */
 .ac-about__logo {
   flex: none;
-  border-radius: 12px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
 }
 
 .ac-about__name {
-  margin: 0 0 2px;
+  margin: 18px 0 0;
+  font-size: 17px;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .ac-about__version {
+  margin: 4px 0 0;
   color: var(--ac-text-muted);
   font-family: var(--ac-font-mono);
-  font-weight: 400;
+  font-size: var(--ac-font-size-small);
 }
 
-.ac-about .ac-hint {
-  padding: 4px 0;
+.ac-about__tagline {
+  /* A readable measure rather than the full width of the dialog, and even
+     lines rather than a last one holding a single word. */
+  max-width: 48ch;
+  margin: 16px 0 0;
+  color: var(--ac-text);
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+.ac-about__tagline--minor {
+  margin-top: 6px;
+  color: var(--ac-text-muted);
+}
+
+.ac-about__footnotes {
+  width: 100%;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ac-border);
+  color: var(--ac-text-faint);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-about__footnotes p {
+  margin: 0 0 4px;
+}
+
+.ac-about__footnotes p:last-child {
+  margin-bottom: 0;
+}
+
+.ac-about__footnotes code {
+  overflow-wrap: anywhere;
 }
 
 .ac-dialog__message {
