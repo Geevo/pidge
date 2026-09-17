@@ -297,29 +297,24 @@ export function SettingsDialog({
 
           {section === "about" ? (
             <div className="ac-about">
-              <div className="ac-about__head">
-                <img className="ac-about__logo" src={logo} alt="" width="56" height="56" />
-                <div>
-                  <p className="ac-about__name">
-                    API Client{" "}
-                    <span className="ac-about__version">{version || "unknown version"}</span>
-                  </p>
-                  <p className="ac-hint">
-                    A no-thrills, local-first HTTP client. No cloud, no accounts, no workspaces —
-                    just an API tester.
-                  </p>
-                </div>
-              </div>
+              <img className="ac-about__logo" src={logo} alt="" width="96" height="96" />
 
-              {storagePath ? (
-                <p className="ac-hint">
-                  State is kept in <code>{storagePath}</code>
-                </p>
-              ) : null}
-              <p className="ac-hint">
-                MIT licensed. IBM Plex Sans and IBM Plex Mono are bundled under the SIL Open Font
-                License 1.1.
+              <h3 className="ac-about__name">API Client</h3>
+              <p className="ac-about__version">{version || "unknown version"}</p>
+
+              <p className="ac-about__tagline">A no-thrills, local-first HTTP client.</p>
+              <p className="ac-about__tagline ac-about__tagline--minor">
+                No cloud, no accounts, no workspaces. Just an API tester.
               </p>
+
+              <div className="ac-about__footnotes">
+                {storagePath ? (
+                  <p>
+                    State is kept in <code>{storagePath}</code>
+                  </p>
+                ) : null}
+                <p>MIT licensed. IBM Plex Sans and Mono under the SIL Open Font License 1.1.</p>
+              </div>
             </div>
           ) : null}
         </div>
