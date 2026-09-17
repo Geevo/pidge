@@ -705,6 +705,7 @@ describe("window chrome", () => {
     const bridge = new FakeBridge();
     const calls: string[] = [];
     const controls = {
+      buttons: "kde" as const,
       minimize: () => {
         calls.push("minimize");
         return Promise.resolve();
@@ -730,6 +731,9 @@ describe("window chrome", () => {
 
     expect(screen.getByRole("button", { name: "Minimise" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Maximise" })).toBeInTheDocument();
+    // The host said KDE, so it gets Breeze's buttons rather than Windows'.
+    expect(document.querySelector(".ac-window-buttons--kde")).toBeInTheDocument();
+    expect(document.querySelector(".ac-window-buttons--windows")).not.toBeInTheDocument();
     // All eight edges and corners, or the undecorated window cannot be resized.
     expect(document.querySelectorAll(".ac-resize-edge")).toHaveLength(8);
 
@@ -740,6 +744,7 @@ describe("window chrome", () => {
   it("survives a host whose window controls fail", async () => {
     const bridge = new FakeBridge();
     const controls = {
+      buttons: "windows" as const,
       minimize: () => Promise.reject(new Error("no window")),
       toggleMaximize: () => Promise.reject(new Error("no window")),
       close: () => Promise.reject(new Error("no window")),

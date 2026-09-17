@@ -33,6 +33,7 @@ pub fn run() {
             commands::save_request,
             commands::delete_saved_request,
             commands::clear_history,
+            commands::window_buttons,
         ])
         .run(tauri::generate_context!())
         .expect("failed to start the desktop window");

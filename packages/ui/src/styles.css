@@ -1853,17 +1853,23 @@ body.ac-dragging--columns * {
   align-self: stretch;
 }
 
+/*
+ * The title-bar buttons, drawn the way the host's desktop draws them. The
+ * glyphs live in WindowChrome; what differs here is the button behind them —
+ * Windows fills a tall rectangle, Breeze lights a circle under the pointer,
+ * Adwaita keeps a circle there all the time.
+ */
 .ac-window-buttons {
   display: flex;
   flex: none;
   align-items: stretch;
-  border-left: 1px solid var(--ac-border);
 }
 
 .ac-window-button {
   display: grid;
+  flex: none;
   place-items: center;
-  width: 38px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--ac-text-muted);
@@ -1874,13 +1880,89 @@ body.ac-dragging--columns * {
 }
 
 .ac-window-button:hover {
-  background: var(--ac-bg-raised);
   color: var(--ac-text);
 }
 
-.ac-window-button--close:hover {
+/* Windows: full-height rectangles, and a red one to close. */
+.ac-window-buttons--windows {
+  border-left: 1px solid var(--ac-border);
+}
+
+.ac-window-buttons--windows .ac-window-button {
+  width: 38px;
+}
+
+.ac-window-buttons--windows .ac-window-button:hover {
+  background: var(--ac-bg-raised);
+}
+
+.ac-window-buttons--windows .ac-window-button--close:hover {
   background: #c42b1c;
   color: #ffffff;
+}
+
+/* Breeze: chevrons, and a circle that appears under the pointer. */
+.ac-window-buttons--kde {
+  align-items: center;
+  padding-right: 3px;
+}
+
+.ac-window-buttons--kde .ac-window-button {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  margin: 0 3px;
+}
+
+/*
+ * The circle is drawn behind the glyph rather than on the button, because KWin
+ * keeps it tight around the glyph while the button stays big enough to hit.
+ */
+.ac-window-buttons--kde .ac-window-button::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transition: background-color 120ms ease;
+}
+
+.ac-window-buttons--kde .ac-window-button > svg {
+  position: relative;
+}
+
+.ac-window-buttons--kde .ac-window-button:hover::before {
+  background: color-mix(in srgb, var(--ac-text) 16%, transparent);
+}
+
+/*
+ * Breeze does not put a saturated red under the cross: it is a flushed pink
+ * with dark ink on top. Both were sampled from a KWin title bar.
+ */
+.ac-window-buttons--kde .ac-window-button--close:hover::before {
+  background: #ff98a2;
+}
+
+.ac-window-buttons--kde .ac-window-button--close:hover {
+  color: #23262b;
+}
+
+/* Adwaita: circles that are always there and only deepen under the pointer. */
+.ac-window-buttons--gnome {
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+}
+
+.ac-window-buttons--gnome .ac-window-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ac-text) 10%, transparent);
+}
+
+.ac-window-buttons--gnome .ac-window-button:hover {
+  background: color-mix(in srgb, var(--ac-text) 20%, transparent);
 }
 
 /*

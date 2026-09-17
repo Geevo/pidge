@@ -52,6 +52,16 @@ export interface FilePickFilter {
 /** Commands a host can push into the UI. */
 export type HostCommand = "newRequest";
 
+/**
+ * Which desktop's title-bar buttons to draw.
+ *
+ * The three disagree about everything: Breeze draws chevrons and a diamond,
+ * Adwaita a bar and two rings, Windows a line and a square, and the shape of
+ * the button behind the glyph differs as well. The host knows which desktop it
+ * is on; the UI only draws what it is told.
+ */
+export type WindowButtonStyle = "windows" | "kde" | "gnome";
+
 /** Which edge or corner a resize drag started from. */
 export type ResizeEdge =
   "North" | "NorthEast" | "East" | "SouthEast" | "South" | "SouthWest" | "West" | "NorthWest";
@@ -64,6 +74,8 @@ export type ResizeEdge =
  * there and no window chrome is rendered.
  */
 export interface WindowControls {
+  /** Which desktop's buttons the title bar should draw. */
+  readonly buttons: WindowButtonStyle;
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;

@@ -17,6 +17,7 @@ export type {
   ResizeEdge,
   SaveRequestInput,
   SendOutcome,
+  WindowButtonStyle,
   WindowControls,
 } from "./bridge";
 
