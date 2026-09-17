@@ -23,6 +23,22 @@ export function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(2)} s`;
 }
 
+/**
+ * Shortens a URL for the status line, cutting the middle rather than the end.
+ *
+ * The end is the part worth seeing: a query is where a request usually differs
+ * from what was typed. Cutting from the tail, as `text-overflow` does, would
+ * hide exactly that and leave a row of identical hosts.
+ */
+export function shortenUrl(url: string, max = 88): string {
+  if (url.length <= max) return url;
+
+  // The tail gets the larger share, for the query.
+  const head = Math.max(12, Math.floor((max - 1) * 0.4));
+  const tail = max - 1 - head;
+  return `${url.slice(0, head)}…${url.slice(url.length - tail)}`;
+}
+
 /** Colour band for a status code, used for the status dot. */
 export function statusClass(status: number): "ok" | "redirect" | "client" | "server" | "other" {
   if (status >= 200 && status < 300) return "ok";

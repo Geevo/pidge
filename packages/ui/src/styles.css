@@ -1137,6 +1137,30 @@ input[type="checkbox"]:hover {
 }
 
 /*
+ * The URL the request reached. It takes what is left of the row and is cut in
+ * the middle by `shortenUrl` first, so a long one never pushes the status code
+ * and timing off the line; the whole thing is on the title.
+ */
+/*
+ * The row holds its width, item by item. Without this a long URL squeezes the
+ * status code and the timing until they wrap onto a second line.
+ */
+.ac-status > * {
+  flex-shrink: 0;
+}
+
+.ac-status__url {
+  color: var(--ac-text-faint);
+  /* The one part of the row allowed to give up space. Declared after the rule
+     above, which is as specific and would otherwise freeze this too. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
  * The padlock. A button rather than an icon, because it opens the certificate,
  * and it says which protocol beside it: "encrypted" on its own answers less
  * than people assume it does.

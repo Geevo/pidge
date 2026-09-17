@@ -1270,6 +1270,22 @@ describe("the padlock", () => {
     expect(screen.queryByRole("button", { name: "View certificate" })).not.toBeInTheDocument();
   });
 
+  /*
+   * The address bar says what was asked for; this says what was reached. A
+   * redirect is the plainest case of the two disagreeing.
+   */
+  it("shows the url the request actually reached", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ finalUrl: "https://example.com/v2/users?page=2" }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "https://example.com/v1/users");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(screen.getByText("https://example.com/v2/users?page=2")).toBeInTheDocument();
+  });
+
   it("shows the certificate the server presented", async () => {
     const { bridge, user } = setup();
     await ready();

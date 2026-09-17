@@ -472,6 +472,18 @@ the adapters.
 
 A cancelled request is not recorded in history: it never really happened.
 
+### The URL on the status line
+
+The address bar says what was asked for. The status line says what was reached,
+from `finalUrl` on the response, which the engine has always returned and which
+nothing showed until now. Redirects, resolved variables and the params table can
+each make the two differ, and when they do this is the only place it is visible.
+
+Long URLs are cut in the middle rather than the end, by `shortenUrl`: the query
+is the half worth seeing, since that is where a request usually stops matching
+what was typed. The whole URL is on the element's title, and the rest of the row
+holds its width so a long one cannot push the status code onto a second line.
+
 ## Response size
 
 Bodies are streamed and cut off at `max_response_bytes` (50 MB by default), with
