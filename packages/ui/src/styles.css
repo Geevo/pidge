@@ -2328,3 +2328,52 @@ body.ac-dragging--columns * {
   bottom: 0;
   cursor: nwse-resize;
 }
+
+/* ---------- the window's own furniture ---------- */
+
+/*
+ * The rail runs the whole height of the window, so the status bar starts where
+ * the panes do rather than sliding underneath it.
+ */
+.ac-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ac-workspace__panes {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * The bottom bar. Always there, so a response does not shove the layout upwards
+ * when it lands, and quiet when there is nothing to say.
+ */
+.ac-statusbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  background: var(--ac-bg-subtle);
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+}
+
+/* Inside the bar the summary is the bar; it brings no chrome of its own. */
+.ac-statusbar .ac-status {
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-statusbar__note {
+  color: var(--ac-text-muted);
+}
+
+.ac-statusbar__note--bad {
+  color: var(--ac-danger);
+}

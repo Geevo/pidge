@@ -18,6 +18,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { PromptDialog } from "./PromptDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { SplitPane, clampPercent } from "./SplitPane";
+import { StatusBar } from "./StatusBar";
 import { ResizeEdges } from "./WindowChrome";
 import { UrlBar } from "./UrlBar";
 import { BookmarkIcon, CloseIcon, ColumnsIcon, HistoryIcon, RowsIcon, SettingsIcon } from "./icons";
@@ -232,60 +233,66 @@ export function App({ bridge }: Props) {
           </button>
         </nav>
 
-        {state.drawer ? (
-          <aside className="ac-drawer">
-            {state.drawer === "history" ? (
-              <HistoryPanel
-                history={state.app.history}
-                onOpen={(entry) => client.newTab(entry.request)}
-                onClear={() => void client.clearHistory()}
-              />
-            ) : (
-              <SavedRequestsPanel
-                savedRequests={state.app.savedRequests}
-                onOpen={(saved) => client.newTab(saved.request, saved.name, saved.id)}
-                onDelete={(id) => void client.deleteSavedRequest(id)}
-              />
-            )}
-          </aside>
-        ) : null}
+        <div className="ac-workspace">
+          <div className="ac-workspace__panes">
+            {state.drawer ? (
+              <aside className="ac-drawer">
+                {state.drawer === "history" ? (
+                  <HistoryPanel
+                    history={state.app.history}
+                    onOpen={(entry) => client.newTab(entry.request)}
+                    onClear={() => void client.clearHistory()}
+                  />
+                ) : (
+                  <SavedRequestsPanel
+                    savedRequests={state.app.savedRequests}
+                    onOpen={(saved) => client.newTab(saved.request, saved.name, saved.id)}
+                    onDelete={(id) => void client.deleteSavedRequest(id)}
+                  />
+                )}
+              </aside>
+            ) : null}
 
-        <main className="ac-main">
-          <SplitPane
-            layout={state.app.settings.paneLayout}
-            percent={tab.splitPercent ?? state.app.settings.splitPercent}
-            firstLabel="request"
-            secondLabel="response"
-            onCommit={(percent) =>
-              client.dispatch({
-                type: "setSplitPercent",
-                tabId: tab.id,
-                percent: clampPercent(percent),
-              })
-            }
-            first={
-              <RequestEditor
-                request={tab.request}
-                pane={runtime.requestPane}
-                onPaneChange={(pane) =>
-                  client.dispatch({ type: "setRequestPane", tabId: tab.id, pane })
+            <main className="ac-main">
+              <SplitPane
+                layout={state.app.settings.paneLayout}
+                percent={tab.splitPercent ?? state.app.settings.splitPercent}
+                firstLabel="request"
+                secondLabel="response"
+                onCommit={(percent) =>
+                  client.dispatch({
+                    type: "setSplitPercent",
+                    tabId: tab.id,
+                    percent: clampPercent(percent),
+                  })
                 }
-                onChange={setRequest}
-                onSubmit={send}
-              />
-            }
-            second={
-              <ResponseViewer
-                status={runtime.status}
-                pane={runtime.responsePane}
-                wrapLines={state.app.settings.wrapResponseLines}
-                onPaneChange={(pane) =>
-                  client.dispatch({ type: "setResponsePane", tabId: tab.id, pane })
+                first={
+                  <RequestEditor
+                    request={tab.request}
+                    pane={runtime.requestPane}
+                    onPaneChange={(pane) =>
+                      client.dispatch({ type: "setRequestPane", tabId: tab.id, pane })
+                    }
+                    onChange={setRequest}
+                    onSubmit={send}
+                  />
+                }
+                second={
+                  <ResponseViewer
+                    status={runtime.status}
+                    pane={runtime.responsePane}
+                    wrapLines={state.app.settings.wrapResponseLines}
+                    onPaneChange={(pane) =>
+                      client.dispatch({ type: "setResponsePane", tabId: tab.id, pane })
+                    }
+                  />
                 }
               />
-            }
-          />
-        </main>
+            </main>
+          </div>
+
+          <StatusBar status={runtime.status} />
+        </div>
       </div>
 
       {closing ? (

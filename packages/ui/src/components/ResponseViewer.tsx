@@ -4,6 +4,7 @@ import type { EditorView } from "@codemirror/view";
 
 import type { HttpResponse, RequestError, ResponsePane, TabStatus } from "../types";
 import { decodeBase64, decodeText, looksBinary } from "../lib/base64";
+import { errorTitle } from "../lib/errors";
 import { formatBytes } from "../lib/format";
 import {
   isJsonMime,
@@ -14,7 +15,6 @@ import {
 } from "../lib/mime";
 import { CodeEditor, isFoldable } from "./CodeEditor";
 import { ResponseHeaders } from "./ResponseHeaders";
-import { StatusSummary } from "./StatusSummary";
 
 /**
  * Past this, the body is shown as plain text. Highlighting and folding a
@@ -48,8 +48,6 @@ export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props)
 
   return (
     <section className="ac-pane ac-pane--response" aria-label="Response">
-      {status.state === "done" ? <StatusSummary response={status.response} /> : null}
-
       {status.state === "done" && status.response.warnings.length > 0 ? (
         <div className="ac-warnings" role="note">
           {status.response.warnings.map((warning) => (
@@ -113,7 +111,7 @@ export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props)
 function ErrorView({ error }: { error: RequestError }) {
   return (
     <div className="ac-error" role="alert">
-      <p className="ac-error__title">{titleFor(error)}</p>
+      <p className="ac-error__title">{errorTitle(error)}</p>
       <p className="ac-error__message">{error.message}</p>
       {error.detail ? (
         <details>
@@ -282,28 +280,4 @@ export function renderBody(response: HttpResponse): RenderedBody {
     return { kind: "text", text, language: json === null ? "text" : "json", json };
   }
   return { kind: "text", text, language: syntaxForMime(response.mimeType), json };
-}
-
-function titleFor(error: RequestError): string {
-  const titles: Record<RequestError["kind"], string> = {
-    invalidUrl: "Invalid URL",
-    unsupportedScheme: "Unsupported scheme",
-    unresolvedVariable: "Unresolved variable",
-    invalidHeader: "Invalid header",
-    auth: "Authentication failed",
-    dns: "DNS lookup failed",
-    connectionRefused: "Connection refused",
-    connectionFailed: "Connection failed",
-    tls: "TLS error",
-    timeout: "Timed out",
-    cancelled: "Cancelled",
-    tooManyRedirects: "Too many redirects",
-    redirect: "Redirect error",
-    bodySerialization: "Could not build request body",
-    bodyRead: "Could not read response body",
-    responseTooLarge: "Response too large",
-    io: "I/O error",
-    other: "Request failed",
-  };
-  return titles[error.kind];
 }

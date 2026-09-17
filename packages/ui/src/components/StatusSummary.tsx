@@ -27,20 +27,16 @@ export function StatusSummary({ response }: Props) {
       <span className="ac-status__code" data-band={statusClass(response.status)}>
         {response.status} {response.statusText}
       </span>
-      <span className="ac-status__sep">·</span>
       <span>{formatDuration(response.durationMs)}</span>
-      <span className="ac-status__sep">·</span>
       <span>{formatBytes(response.sizeBytes)}</span>
       {response.truncated ? (
         <>
-          <span className="ac-status__sep">·</span>
           <span title="The response hit the size limit and was cut short.">truncated</span>
         </>
       ) : null}
 
       {tls ? (
         <>
-          <span className="ac-status__sep">·</span>
           <button
             type="button"
             className={`ac-lock${expired ? " ac-lock--bad" : ""}`}
@@ -54,7 +50,6 @@ export function StatusSummary({ response }: Props) {
         </>
       ) : null}
 
-      <span className="ac-status__sep">·</span>
       <span className="ac-status__url" title={response.finalUrl}>
         {shortenUrl(response.finalUrl)}
       </span>
