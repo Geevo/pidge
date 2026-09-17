@@ -298,8 +298,26 @@ future, and the history starts again whenever something other than typing
 replaces the field — switching tabs, or the params table rewriting the query —
 so undo cannot walk into another request's URL.
 
-Each step calls the same `onUrlChange` as typing, so the params table and the
-rest of the state follow the field back and forth.
+Each step calls the same handler as typing, so the params table and the rest of
+the state follow the field back and forth.
+
+### Every field, wired once
+
+The keys and the history are the same in every text field, so they are installed
+once at the document rather than wired into forty-odd inputs — `lib/fieldHistory`
+keeps a history per element, records on `input`, and steps it on the key. It
+covers the URL bar, the params and headers tables, the auth fields and the
+dialogs, and it covers the next field somebody adds without them having to know
+any of this.
+
+Two things it stays out of. Anything inside a `.cm-editor` belongs to CodeMirror,
+which binds the keys itself and keeps a better history than ours. And `number`
+inputs are left alone, because asking one for a caret position throws.
+
+When a field's text was replaced by something other than typing — a different
+tab's request, the params table rewriting the query — the recorded history no
+longer matches what is on screen, and the field starts again from there rather
+than stepping back into text the person never typed.
 
 ## Response bodies
 

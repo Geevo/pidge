@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PlatformBridge } from "../bridge";
+import { installFieldHistory } from "../lib/fieldHistory";
 import { matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
@@ -79,6 +80,12 @@ export function App({ bridge }: Props) {
   );
 
   const save = useCallback(() => setSaveOpen(true), []);
+
+  /*
+   * Undo and redo for every text field, wired once here rather than in each of
+   * them. `fieldHistory` explains why the app has to do this itself.
+   */
+  useEffect(() => installFieldHistory(), []);
 
   // Shortcuts are global: the URL field is the default focus, but Send has to
   // work from the body editor and the headers table too.

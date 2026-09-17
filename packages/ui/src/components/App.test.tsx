@@ -331,6 +331,23 @@ describe("keyboard shortcuts", () => {
     expect(field.value).toBe("example.com/users");
   });
 
+  /* The same history serves every field, not just the URL bar. */
+  it("undoes in the params table too", async () => {
+    const { user } = setup();
+    await ready();
+
+    const value = screen.getByRole<HTMLInputElement>("textbox", { name: "Value 1" });
+    await user.click(value);
+    await user.type(value, "alpha/beta");
+    expect(value.value).toBe("alpha/beta");
+
+    await user.keyboard("{Control>}z{/Control}");
+    expect(value.value).toBe("alpha");
+
+    await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+    expect(value.value).toBe("alpha/beta");
+  });
+
   it("sends on Enter inside the URL field", async () => {
     const { bridge, user } = setup();
     await ready();
