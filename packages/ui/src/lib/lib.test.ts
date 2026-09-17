@@ -7,6 +7,7 @@ import { paramsChanged, parseQueryParams, urlChanged } from "./url";
 import { shortenUrl } from "./format";
 import { matchEditingCommand } from "./shortcuts";
 import { createHistory, record, redo, undo } from "./textHistory";
+import { installFieldHistory } from "./fieldHistory";
 
 describe("formatting", () => {
   it("formats sizes the way the status line shows them", () => {
@@ -119,6 +120,76 @@ describe("the url field's own undo history", () => {
     const history = createHistory(at("start"));
     expect(undo(history)).toBeNull();
     expect(redo(history)).toBeNull();
+  });
+});
+
+describe("undo wired to every field", () => {
+  const typeInto = (node: HTMLInputElement, text: string) => {
+    node.value = text;
+    node.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  const pressUndo = (node: HTMLElement, shiftKey = false) =>
+    node.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "z", ctrlKey: true, shiftKey, bubbles: true }),
+    );
+
+  it("steps back through what was typed in an ordinary input", () => {
+    const field = document.createElement("input");
+    document.body.append(field);
+    const stop = installFieldHistory(document);
+
+    field.dispatchEvent(new Event("focusin", { bubbles: true }));
+    typeInto(field, "alpha");
+    typeInto(field, "alpha/beta");
+
+    pressUndo(field);
+    expect(field.value).toBe("alpha");
+
+    pressUndo(field, true);
+    expect(field.value).toBe("alpha/beta");
+
+    stop();
+    field.remove();
+  });
+
+  /* CodeMirror binds these keys itself and keeps a better history than ours. */
+  it("keeps its hands off a CodeMirror editor", () => {
+    const editor = document.createElement("div");
+    editor.className = "cm-editor";
+    const field = document.createElement("textarea");
+    editor.append(field);
+    document.body.append(editor);
+    const stop = installFieldHistory(document);
+
+    field.dispatchEvent(new Event("focusin", { bubbles: true }));
+    field.value = "one";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.value = "one/two";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    expect(field.value).toBe("one/two");
+
+    stop();
+    editor.remove();
+  });
+
+  it("does nothing when the text was replaced by something other than typing", () => {
+    const field = document.createElement("input");
+    document.body.append(field);
+    const stop = installFieldHistory(document);
+
+    field.dispatchEvent(new Event("focusin", { bubbles: true }));
+    typeInto(field, "typed");
+
+    // A tab switch, say: the value changes with no input event behind it.
+    field.value = "from somewhere else";
+    pressUndo(field);
+    expect(field.value).toBe("from somewhere else");
+
+    stop();
+    field.remove();
   });
 });
 
