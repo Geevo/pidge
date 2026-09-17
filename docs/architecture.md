@@ -274,6 +274,12 @@ Three sections — General, Certs, About — behind one draft. The draft is a si
 `Settings` object shared by all three rather than one per section, so an edit
 made under Certs is still there when Save is pressed from General.
 
+The dialog has a fixed height rather than one that fits its contents. The
+sections are not the same length — General needs about 220px of body and Certs
+about 430px — and a dialog that jumps a quarter of its height when a tab is
+pressed is disorienting. It is sized to the tallest, still capped at 80% of the
+window, and anything past that scrolls.
+
 About shows the host's own version, which travels with the state: `LoadedState`
 already carried the storage path, and the version goes the same way rather than
 being baked into the frontend at build time, where it could drift from the
