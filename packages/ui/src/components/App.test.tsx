@@ -1434,3 +1434,43 @@ describe("OAuth 2 auth", () => {
     expect(screen.getByText(/browser flows are not here/)).toBeInTheDocument();
   });
 });
+
+describe("OAuth 1 auth", () => {
+  it("sends the consumer and token pairs to the host", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "OAuth 1");
+
+    await user.type(screen.getByLabelText("Consumer key"), "consumer");
+    await user.type(screen.getByLabelText("Consumer secret"), "consumer-secret");
+    await user.type(screen.getByLabelText("Token"), "user-token");
+    await user.type(screen.getByLabelText("Token secret"), "user-secret");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toMatchObject({
+      type: "oauth1",
+      consumerKey: "consumer",
+      consumerSecret: "consumer-secret",
+      token: "user-token",
+      tokenSecret: "user-secret",
+      signatureMethod: "hmacSha1",
+    });
+  });
+
+  it("warns about PLAINTEXT when it is chosen", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "OAuth 1");
+    expect(screen.queryByText(/Only over HTTPS/)).not.toBeInTheDocument();
+
+    await choose(user, screen.getByLabelText("Signature"), "PLAINTEXT");
+    expect(screen.getByText(/Only over HTTPS/)).toBeInTheDocument();
+  });
+});

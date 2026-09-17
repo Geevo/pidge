@@ -2,7 +2,8 @@
 
 use api_client_core::{
     ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry,
-    OAuth2ClientAuth, OAuth2Grant, OAuth2Settings, RequestBody, RequestErrorKind,
+    OAuth1Settings, OAuth1Signature, OAuth2ClientAuth, OAuth2Grant, OAuth2Settings, RequestBody,
+    RequestErrorKind,
 };
 use api_client_http_engine::{CancellationHandle, EngineConfig, HttpEngine, normalize_url};
 use api_client_testserver::TestServer;
@@ -961,4 +962,112 @@ async fn oauth2_with_no_token_url_says_so_before_sending_anything() {
 
     assert_eq!(error.kind, RequestErrorKind::Auth);
     assert!(error.message.contains("token URL"));
+}
+
+#[tokio::test]
+async fn signs_a_request_with_oauth1() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/auth?page=2"));
+    request.auth = AuthConfig::OAuth1(OAuth1Settings {
+        consumer_key: "consumer".to_string(),
+        consumer_secret: "consumer-secret".to_string(),
+        token: "user-token".to_string(),
+        token_secret: "user-secret".to_string(),
+        signature_method: OAuth1Signature::HmacSha1,
+        realm: "things".to_string(),
+    });
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    let header = body_json(&response.body)["authorization"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    assert!(
+        header.starts_with("OAuth "),
+        "not an OAuth header: {header}"
+    );
+    for expected in [
+        "realm=\"things\"",
+        "oauth_consumer_key=\"consumer\"",
+        "oauth_token=\"user-token\"",
+        "oauth_signature_method=\"HMAC-SHA1\"",
+        "oauth_version=\"1.0\"",
+        "oauth_nonce=",
+        "oauth_timestamp=",
+        "oauth_signature=",
+    ] {
+        assert!(
+            header.contains(expected),
+            "{expected} missing from {header}"
+        );
+    }
+
+    // The signature is base64 and percent-encoded, so it never contains a raw
+    // `+` or `=`; those would break the header the server parses.
+    let signature = header
+        .split("oauth_signature=\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .unwrap_or_default();
+    assert!(!signature.is_empty());
+    assert!(!signature.contains('+'), "unencoded signature: {signature}");
+}
+
+#[tokio::test]
+async fn omits_the_token_when_there_is_not_one_yet() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/auth"));
+    request.auth = AuthConfig::OAuth1(OAuth1Settings {
+        consumer_key: "consumer".to_string(),
+        consumer_secret: "consumer-secret".to_string(),
+        ..OAuth1Settings::default()
+    });
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    let header = body_json(&response.body)["authorization"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        !header.contains("oauth_token="),
+        "sent an empty token: {header}"
+    );
+    assert!(!header.contains("realm="), "sent an empty realm: {header}");
+}
+
+#[tokio::test]
+async fn plaintext_signing_sends_the_key_itself() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/auth"));
+    request.auth = AuthConfig::OAuth1(OAuth1Settings {
+        consumer_key: "consumer".to_string(),
+        consumer_secret: "consumer-secret".to_string(),
+        token_secret: "user-secret".to_string(),
+        signature_method: OAuth1Signature::Plaintext,
+        ..OAuth1Settings::default()
+    });
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    let header = body_json(&response.body)["authorization"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // `consumer-secret&user-secret`, percent-encoded once for the header.
+    assert!(
+        header.contains("oauth_signature=\"consumer-secret%26user-secret\""),
+        "unexpected signature in {header}"
+    );
 }

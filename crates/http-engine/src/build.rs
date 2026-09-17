@@ -5,6 +5,7 @@ use api_client_core::{
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method, RequestBuilder};
 
+use crate::oauth1;
 use crate::url_input::normalize_url;
 
 pub struct Prepared {
@@ -34,8 +35,10 @@ pub fn prepare(client: &Client, request: &HttpRequest) -> Result<Prepared, Reque
         "sending request"
     );
 
-    let mut builder = client.request(method(request.method), url).headers(headers);
-    builder = apply_auth(builder, request, &mut warnings);
+    let mut builder = client
+        .request(method(request.method), url.clone())
+        .headers(headers);
+    builder = apply_auth(builder, request, &url, &mut warnings)?;
     builder = apply_body(builder, request, user_content_type, &mut warnings)?;
 
     if let Some(timeout_ms) = request.timeout_ms.filter(|ms| *ms > 0) {
@@ -123,16 +126,18 @@ fn build_headers(request: &HttpRequest) -> Result<HeaderMap, RequestError> {
 fn apply_auth(
     builder: RequestBuilder,
     request: &HttpRequest,
+    url: &url::Url,
     warnings: &mut Vec<String>,
-) -> RequestBuilder {
+) -> Result<RequestBuilder, RequestError> {
     let occupied = |name: &str| request.find_header(name).is_some();
 
-    match &request.auth {
+    Ok(match &request.auth {
         AuthConfig::None => builder,
 
         AuthConfig::Bearer { .. }
         | AuthConfig::Basic { .. }
         | AuthConfig::Digest { .. }
+        | AuthConfig::OAuth1(_)
         | AuthConfig::OAuth2(_)
             if occupied("authorization") =>
         {
@@ -146,6 +151,19 @@ fn apply_auth(
         AuthConfig::Digest { .. } | AuthConfig::OAuth2(_) => builder,
         AuthConfig::Bearer { token } => builder.bearer_auth(token),
         AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
+
+        // Signed here, over the URL that is about to be requested.
+        AuthConfig::OAuth1(settings) => {
+            let header = oauth1::authorization(
+                request.method.as_str(),
+                url,
+                &request.body,
+                settings,
+                oauth1::nonce(),
+                oauth1::timestamp(),
+            )?;
+            builder.header(reqwest::header::AUTHORIZATION, header)
+        }
 
         // The query placement is handled with the other query params.
         AuthConfig::ApiKey {
@@ -161,7 +179,7 @@ fn apply_auth(
             builder
         }
         AuthConfig::ApiKey { key, value, .. } => builder.header(key.trim(), value),
-    }
+    })
 }
 
 fn apply_body(

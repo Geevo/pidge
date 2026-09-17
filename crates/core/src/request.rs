@@ -95,6 +95,9 @@ pub enum AuthConfig {
     /// RFC 7616 challenge-response. Nothing is sent until the server asks.
     #[serde(rename_all = "camelCase")]
     Digest { username: String, password: String },
+    /// RFC 5849 request signing. Still the way into a few long-lived APIs.
+    #[serde(rename = "oauth1")]
+    OAuth1(OAuth1Settings),
     /// A token fetched from a token endpoint and sent as a bearer token.
     /// Spelled out, because camelCasing the variant gives "oAuth2".
     #[serde(rename = "oauth2")]
@@ -107,6 +110,43 @@ pub enum AuthConfig {
         #[serde(default)]
         placement: ApiKeyPlacement,
     },
+}
+
+/// OAuth 1.0a. Two pairs: the client's, and optionally the user's.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct OAuth1Settings {
+    pub consumer_key: String,
+    pub consumer_secret: String,
+    /// The user's token, for two-legged requests. Empty is legitimate.
+    pub token: String,
+    pub token_secret: String,
+    pub signature_method: OAuth1Signature,
+    /// Sent in the header if set; it is not part of the signature.
+    pub realm: String,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum OAuth1Signature {
+    #[default]
+    HmacSha1,
+    HmacSha256,
+    /// Sends the secrets as the signature. Only defensible over TLS.
+    Plaintext,
+}
+
+impl OAuth1Signature {
+    /// The name the specification gives it, which goes in the signed params.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OAuth1Signature::HmacSha1 => "HMAC-SHA1",
+            OAuth1Signature::HmacSha256 => "HMAC-SHA256",
+            OAuth1Signature::Plaintext => "PLAINTEXT",
+        }
+    }
 }
 
 /// The machine-to-machine half of OAuth 2: the grants that are a request to a

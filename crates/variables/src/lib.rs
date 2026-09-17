@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 
 use api_client_core::{
-    AuthConfig, HttpRequest, KeyValueEntry, MultipartEntry, MultipartValue, OAuth2Settings,
-    RequestBody, RequestError, RequestErrorKind,
+    AuthConfig, HttpRequest, KeyValueEntry, MultipartEntry, MultipartValue, OAuth1Settings,
+    OAuth2Settings, RequestBody, RequestError, RequestErrorKind,
 };
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -151,6 +151,14 @@ pub fn resolve_request(
             username: resolve(username),
             password: resolve(password),
         },
+        AuthConfig::OAuth1(settings) => AuthConfig::OAuth1(OAuth1Settings {
+            consumer_key: resolve(&settings.consumer_key),
+            consumer_secret: resolve(&settings.consumer_secret),
+            token: resolve(&settings.token),
+            token_secret: resolve(&settings.token_secret),
+            signature_method: settings.signature_method,
+            realm: resolve(&settings.realm),
+        }),
         AuthConfig::OAuth2(settings) => AuthConfig::OAuth2(OAuth2Settings {
             grant: settings.grant,
             token_url: resolve(&settings.token_url),
