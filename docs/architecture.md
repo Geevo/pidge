@@ -326,6 +326,24 @@ Above 2 MB the body falls back to a plain `<pre>` with a note. Highlighting and
 folding a document that size costs more than it is worth, and the fallback still
 shows everything.
 
+### Why the content policy leaves `style-src` alone
+
+CodeMirror ships its styles as a stylesheet it inserts into the document at
+runtime, so the policy has to allow inline styles. The config asks for exactly
+that — `style-src 'self' 'unsafe-inline'` — but Tauri rewrites the policy as it
+serves the page and adds a nonce to that directive, and a policy that carries a
+nonce ignores `'unsafe-inline'` altogether. The editor's stylesheet was
+therefore blocked in release builds, though never in development, where the page
+comes from the dev server and is not rewritten.
+
+What it looked like: the line numbers drew in one column, the body drew a
+thousand pixels below them in the wrong font, and nothing was highlighted,
+because every rule the editor relies on had been dropped.
+
+`dangerousDisableAssetCspModification` names the directives Tauri must leave as
+written. Only `style-src` is listed, so scripts are still nonced and still
+locked down; the one directive we deliberately opened stays open.
+
 ## Settings
 
 Three sections — General, Certs, About — behind one draft. The draft is a single
