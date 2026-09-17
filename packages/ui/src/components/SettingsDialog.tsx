@@ -307,14 +307,15 @@ export function SettingsDialog({
                 No cloud, no accounts, no workspaces. Just an API tester.
               </p>
 
-              <div className="ac-about__footnotes">
-                {storagePath ? (
-                  <p>
-                    State is kept in <code>{storagePath}</code>
-                  </p>
-                ) : null}
-                <p>MIT licensed. IBM Plex Sans and Mono under the SIL Open Font License 1.1.</p>
-              </div>
+              {storagePath ? (
+                <p className="ac-about__storage">
+                  State is kept in <code>{storagePath}</code>
+                </p>
+              ) : null}
+
+              <p className="ac-about__licence">
+                MIT licensed. IBM Plex Sans and Mono under the SIL Open Font License 1.1.
+              </p>
             </div>
           ) : null}
         </div>
