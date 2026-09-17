@@ -9,6 +9,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+base64.workspace = true
 md-5 = "0.10"
 p12-keystore = "0.3"
 rcgen = "0.14"

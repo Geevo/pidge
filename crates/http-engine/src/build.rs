@@ -130,7 +130,10 @@ fn apply_auth(
     match &request.auth {
         AuthConfig::None => builder,
 
-        AuthConfig::Bearer { .. } | AuthConfig::Basic { .. } | AuthConfig::Digest { .. }
+        AuthConfig::Bearer { .. }
+        | AuthConfig::Basic { .. }
+        | AuthConfig::Digest { .. }
+        | AuthConfig::OAuth2(_)
             if occupied("authorization") =>
         {
             warnings.push(
@@ -138,8 +141,9 @@ fn apply_auth(
             );
             builder
         }
-        // Nothing to send yet: the engine answers the challenge and retries.
-        AuthConfig::Digest { .. } => builder,
+        // Neither of these can be applied here: digest waits for a challenge,
+        // and OAuth 2 has to fetch a token first. The engine adds both.
+        AuthConfig::Digest { .. } | AuthConfig::OAuth2(_) => builder,
         AuthConfig::Bearer { token } => builder.bearer_auth(token),
         AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
 

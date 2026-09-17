@@ -1375,3 +1375,62 @@ describe("digest auth", () => {
     });
   });
 });
+
+describe("OAuth 2 auth", () => {
+  async function pickOAuth(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "OAuth 2");
+  }
+
+  it("sends the client credentials settings to the host", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await pickOAuth(user);
+
+    await user.type(screen.getByLabelText("Token URL"), "https://id.example.com/token");
+    await user.type(screen.getByLabelText("Client ID"), "test-client");
+    await user.type(screen.getByLabelText("Client secret"), "test-secret");
+    await user.type(screen.getByLabelText("Scope"), "read:things");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toMatchObject({
+      type: "oauth2",
+      grant: "clientCredentials",
+      tokenUrl: "https://id.example.com/token",
+      clientId: "test-client",
+      clientSecret: "test-secret",
+      scope: "read:things",
+      clientAuth: "basicHeader",
+    });
+  });
+
+  it("asks only for the fields the chosen grant needs", async () => {
+    const { user } = setup();
+    await ready();
+    await pickOAuth(user);
+
+    // Client credentials needs neither a user nor a refresh token.
+    expect(screen.queryByLabelText("Refresh token")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Username")).not.toBeInTheDocument();
+
+    await choose(user, screen.getByLabelText("Grant"), "Password");
+    expect(screen.getByLabelText("Username")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Refresh token")).not.toBeInTheDocument();
+
+    await choose(user, screen.getByLabelText("Grant"), "Refresh token");
+    expect(screen.getByLabelText("Refresh token")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Username")).not.toBeInTheDocument();
+  });
+
+  it("says what it does not do", async () => {
+    const { user } = setup();
+    await ready();
+    await pickOAuth(user);
+
+    expect(screen.getByText(/browser flows are not here/)).toBeInTheDocument();
+  });
+});

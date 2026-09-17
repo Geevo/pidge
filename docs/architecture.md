@@ -331,6 +331,24 @@ A challenge that cannot be answered — a different scheme, a malformed header,
 was asked, so it is returned with a warning saying why there was no second
 attempt.
 
+OAuth 2 needs a round trip of a different shape: a token before anything can be
+sent at all. `crates/http-engine/src/oauth2.rs` posts the form, reads the access
+token and attaches it as a bearer token, for the three grants that are just a
+request — client credentials, password, refresh token. Authorization code and
+the other interactive flows are deliberately absent: they need a browser and a
+redirect listener, which is a different kind of program from this one.
+
+Tokens are cached until shortly before they expire, keyed by everything that
+decides which token comes back — endpoint, grant, client, scope, user, refresh
+token — so changing any of it asks for a new one instead of reusing a token
+minted for something else. A burst of requests to one API costs one token
+request.
+
+A token that cannot be got is an error rather than a response, with its own
+`RequestErrorKind::Auth`: the request never left, and reporting it as a failed
+send would be a lie. The endpoint's own `error` field is quoted, since
+`invalid_client` says more than 401 does.
+
 The test server issues a challenge and then recomputes the digest itself, so the
 test fails if the client's answer is merely well-formed rather than correct.
 
