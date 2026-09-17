@@ -225,6 +225,7 @@ function titleFor(error: RequestError): string {
     unsupportedScheme: "Unsupported scheme",
     unresolvedVariable: "Unresolved variable",
     invalidHeader: "Invalid header",
+    auth: "Authentication failed",
     dns: "DNS lookup failed",
     connectionRefused: "Connection refused",
     connectionFailed: "Connection failed",

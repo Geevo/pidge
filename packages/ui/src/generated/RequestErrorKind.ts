@@ -4,4 +4,4 @@
  * Normalized failure categories. The UI switches on these; `detail` carries
  * the technical chain for diagnostics without dumping it into the main view.
  */
-export type RequestErrorKind = "invalidUrl" | "unsupportedScheme" | "unresolvedVariable" | "invalidHeader" | "dns" | "connectionRefused" | "connectionFailed" | "tls" | "timeout" | "cancelled" | "tooManyRedirects" | "redirect" | "bodySerialization" | "bodyRead" | "responseTooLarge" | "io" | "other";
+export type RequestErrorKind = "invalidUrl" | "unsupportedScheme" | "unresolvedVariable" | "invalidHeader" | "dns" | "connectionRefused" | "connectionFailed" | "tls" | "timeout" | "cancelled" | "tooManyRedirects" | "redirect" | "auth" | "bodySerialization" | "bodyRead" | "responseTooLarge" | "io" | "other";

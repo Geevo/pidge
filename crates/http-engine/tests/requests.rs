@@ -2,7 +2,7 @@
 
 use api_client_core::{
     ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry,
-    RequestBody, RequestErrorKind,
+    OAuth2ClientAuth, OAuth2Grant, OAuth2Settings, RequestBody, RequestErrorKind,
 };
 use api_client_http_engine::{CancellationHandle, EngineConfig, HttpEngine, normalize_url};
 use api_client_testserver::TestServer;
@@ -833,4 +833,132 @@ async fn digest_sends_nothing_until_it_is_asked() {
 
     // A server that does not challenge gets no credentials.
     assert_eq!(body_json(&response.body)["authorization"], "");
+}
+
+fn oauth2(server: &TestServer, grant: OAuth2Grant) -> OAuth2Settings {
+    OAuth2Settings {
+        grant,
+        token_url: server.url("/oauth/token"),
+        client_id: "test-client".to_string(),
+        client_secret: "test-secret".to_string(),
+        ..OAuth2Settings::default()
+    }
+}
+
+#[tokio::test]
+async fn fetches_a_token_with_client_credentials_and_sends_it() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/oauth/protected"));
+    request.auth = AuthConfig::OAuth2(oauth2(&server, OAuth2Grant::ClientCredentials));
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 200);
+    assert!(
+        body_json(&response.body)["token"]
+            .as_str()
+            .unwrap()
+            .starts_with("issued-token-"),
+        "no token reached the API: {}",
+        String::from_utf8_lossy(&response.body)
+    );
+}
+
+#[tokio::test]
+async fn reuses_the_token_across_requests() {
+    let server = TestServer::start().await.unwrap();
+    let engine = engine();
+    let settings = oauth2(&server, OAuth2Grant::ClientCredentials);
+
+    let mut first = HttpRequest::get(server.url("/oauth/protected"));
+    first.auth = AuthConfig::OAuth2(settings.clone());
+    let mut second = HttpRequest::get(server.url("/oauth/protected"));
+    second.auth = AuthConfig::OAuth2(settings);
+
+    let one = engine
+        .execute(first, CancellationHandle::new())
+        .await
+        .unwrap();
+    let two = engine
+        .execute(second, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    // The same token, so the endpoint was asked once rather than twice.
+    assert_eq!(body_json(&one.body)["token"], body_json(&two.body)["token"]);
+}
+
+#[tokio::test]
+async fn sends_the_client_in_the_body_when_asked_to() {
+    let server = TestServer::start().await.unwrap();
+    let mut settings = oauth2(&server, OAuth2Grant::ClientCredentials);
+    settings.client_auth = OAuth2ClientAuth::RequestBody;
+    // A different scope, so this does not read the previous test's token.
+    settings.scope = "read:things".to_string();
+
+    let mut request = HttpRequest::get(server.url("/oauth/protected"));
+    request.auth = AuthConfig::OAuth2(settings);
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+    assert_eq!(response.status, 200);
+}
+
+#[tokio::test]
+async fn the_password_grant_sends_the_username_and_password() {
+    let server = TestServer::start().await.unwrap();
+    let mut settings = oauth2(&server, OAuth2Grant::Password);
+    settings.username = "ada".to_string();
+    settings.password = "lovelace".to_string();
+
+    let mut request = HttpRequest::get(server.url("/oauth/protected"));
+    request.auth = AuthConfig::OAuth2(settings);
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+    assert_eq!(response.status, 200);
+}
+
+#[tokio::test]
+async fn a_refused_token_request_reports_what_the_endpoint_said() {
+    let server = TestServer::start().await.unwrap();
+    let mut settings = oauth2(&server, OAuth2Grant::ClientCredentials);
+    settings.client_secret = "the-wrong-secret".to_string();
+
+    let mut request = HttpRequest::get(server.url("/oauth/protected"));
+    request.auth = AuthConfig::OAuth2(settings);
+
+    let error = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap_err();
+
+    assert_eq!(error.kind, RequestErrorKind::Auth);
+    assert!(
+        error.message.contains("invalid_client"),
+        "unhelpful message: {}",
+        error.message
+    );
+    assert!(error.detail.is_some());
+}
+
+#[tokio::test]
+async fn oauth2_with_no_token_url_says_so_before_sending_anything() {
+    let mut request = HttpRequest::get("http://127.0.0.1:1/never-reached");
+    request.auth = AuthConfig::OAuth2(OAuth2Settings::default());
+
+    let error = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap_err();
+
+    assert_eq!(error.kind, RequestErrorKind::Auth);
+    assert!(error.message.contains("token URL"));
 }

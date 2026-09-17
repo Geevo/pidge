@@ -95,6 +95,10 @@ pub enum AuthConfig {
     /// RFC 7616 challenge-response. Nothing is sent until the server asks.
     #[serde(rename_all = "camelCase")]
     Digest { username: String, password: String },
+    /// A token fetched from a token endpoint and sent as a bearer token.
+    /// Spelled out, because camelCasing the variant gives "oAuth2".
+    #[serde(rename = "oauth2")]
+    OAuth2(OAuth2Settings),
     /// A key in a header or the query string, which is most "API key" auth.
     #[serde(rename_all = "camelCase")]
     ApiKey {
@@ -103,6 +107,58 @@ pub enum AuthConfig {
         #[serde(default)]
         placement: ApiKeyPlacement,
     },
+}
+
+/// The machine-to-machine half of OAuth 2: the grants that are a request to a
+/// token endpoint. The interactive flows need a browser and a redirect, which
+/// is a different kind of program.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct OAuth2Settings {
+    pub grant: OAuth2Grant,
+    pub token_url: String,
+    pub client_id: String,
+    pub client_secret: String,
+    /// Space separated, as the specification has it.
+    pub scope: String,
+    /// The password grant only.
+    pub username: String,
+    pub password: String,
+    /// The refresh token grant only.
+    pub refresh_token: String,
+    pub client_auth: OAuth2ClientAuth,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum OAuth2Grant {
+    #[default]
+    ClientCredentials,
+    Password,
+    RefreshToken,
+}
+
+/// How the client identifies itself to the token endpoint. The specification
+/// prefers the header and allows the body; servers differ on which they accept.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum OAuth2ClientAuth {
+    #[default]
+    BasicHeader,
+    RequestBody,
+}
+
+impl OAuth2Grant {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OAuth2Grant::ClientCredentials => "client_credentials",
+            OAuth2Grant::Password => "password",
+            OAuth2Grant::RefreshToken => "refresh_token",
+        }
+    }
 }
 
 /// Where an API key goes. A header by default: a query string ends up in logs.

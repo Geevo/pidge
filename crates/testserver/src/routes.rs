@@ -1,4 +1,5 @@
 use std::io;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use serde_json::json;
@@ -105,6 +106,18 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
                 .body(vec![b'x'; size])
         }
 
+        // An OAuth 2 token endpoint: issues a token for the right client, and
+        // an RFC 6749 error object for the wrong one.
+        ["oauth", "token"] => oauth_token_route(request),
+
+        // Anything with `Authorization: Bearer issued-token-N` gets through.
+        ["oauth", "protected"] => match request.header("authorization") {
+            Some(value) if value.starts_with("Bearer issued-token-") => {
+                Response::ok().json(&json!({ "token": value.trim_start_matches("Bearer ") }))
+            }
+            _ => Response::new(401, "Unauthorized").json(&json!({ "error": "unauthorized" })),
+        },
+
         // Digest, properly: challenge, then verify the client's arithmetic.
         ["digest"] => digest_route(request),
 
@@ -114,6 +127,81 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
 
         _ => Response::new(404, "Not Found").json(&json!({ "error": "not found" })),
     }
+}
+
+/// Counts tokens issued, so a test can tell a fresh token from a cached one.
+static TOKENS_ISSUED: AtomicUsize = AtomicUsize::new(0);
+
+/// The client this endpoint knows, however it identifies itself.
+const OAUTH_CLIENT: (&str, &str) = ("test-client", "test-secret");
+
+fn oauth_token_route(request: &Request) -> Response {
+    let form = form_pairs(&request.body_text());
+    let get = |key: &str| form.get(key).cloned().unwrap_or_default();
+
+    // Either the basic header or the body carries the client's identity.
+    let (id, secret) = match request.header("authorization").and_then(basic_credentials) {
+        Some(pair) => pair,
+        None => (get("client_id"), get("client_secret")),
+    };
+
+    if (id.as_str(), secret.as_str()) != OAUTH_CLIENT {
+        return Response::new(401, "Unauthorized").json(&json!({
+            "error": "invalid_client",
+            "error_description": "The client is not this client.",
+        }));
+    }
+
+    let grant = get("grant_type");
+    let refused = match grant.as_str() {
+        "client_credentials" => None,
+        "password" => {
+            (get("username") != "ada" || get("password") != "lovelace").then_some("invalid_grant")
+        }
+        "refresh_token" => (get("refresh_token") != "a-refresh-token").then_some("invalid_grant"),
+        _ => Some("unsupported_grant_type"),
+    };
+
+    if let Some(error) = refused {
+        return Response::new(400, "Bad Request").json(&json!({
+            "error": error,
+            "error_description": "The grant was refused.",
+        }));
+    }
+
+    let issued = TOKENS_ISSUED.fetch_add(1, Ordering::SeqCst);
+    Response::ok().json(&json!({
+        "access_token": format!("issued-token-{issued}"),
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "scope": get("scope"),
+    }))
+}
+
+/// `user=a&pass=b` into a map, for a form-encoded body.
+fn form_pairs(body: &str) -> std::collections::HashMap<String, String> {
+    body.split('&')
+        .filter(|pair| !pair.is_empty())
+        .filter_map(|pair| pair.split_once('='))
+        .map(|(key, value)| (decode_form(key), decode_form(value)))
+        .collect()
+}
+
+fn decode_form(value: &str) -> String {
+    crate::http::decode(&value.replace('+', " "))
+}
+
+/// The username and password out of a `Basic` header.
+fn basic_credentials(header: &str) -> Option<(String, String)> {
+    use base64::Engine;
+
+    let encoded = header.trim().strip_prefix("Basic ")?;
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .ok()?;
+    let text = String::from_utf8(decoded).ok()?;
+    let (user, password) = text.split_once(':')?;
+    Some((user.to_string(), password.to_string()))
 }
 
 /// The fixed nonce this server challenges with. A real one would be random and

@@ -1,4 +1,10 @@
-import type { ApiKeyPlacement, AuthConfig, HttpRequest } from "../types";
+import type {
+  ApiKeyPlacement,
+  AuthConfig,
+  HttpRequest,
+  OAuth2ClientAuth,
+  OAuth2Grant,
+} from "../types";
 import { Select } from "./Select";
 
 interface Props {
@@ -14,6 +20,18 @@ const AUTH_KINDS = [
   { value: "basic", label: "Basic" },
   { value: "digest", label: "Digest" },
   { value: "apiKey", label: "API key" },
+  { value: "oauth2", label: "OAuth 2" },
+];
+
+const GRANTS = [
+  { value: "clientCredentials", label: "Client credentials" },
+  { value: "password", label: "Password" },
+  { value: "refreshToken", label: "Refresh token" },
+];
+
+const CLIENT_AUTH = [
+  { value: "basicHeader", label: "Basic header" },
+  { value: "requestBody", label: "Request body" },
 ];
 
 const PLACEMENTS = [
@@ -32,6 +50,19 @@ function blank(kind: AuthKind): AuthConfig {
       return { type: "digest", username: "", password: "" };
     case "apiKey":
       return { type: "apiKey", key: "", value: "", placement: "header" };
+    case "oauth2":
+      return {
+        type: "oauth2",
+        grant: "clientCredentials",
+        tokenUrl: "",
+        clientId: "",
+        clientSecret: "",
+        scope: "",
+        username: "",
+        password: "",
+        refreshToken: "",
+        clientAuth: "basicHeader",
+      };
     case "none":
       return { type: "none" };
   }
@@ -145,6 +176,123 @@ export function AuthEditor({ request, onChange }: Props) {
               safer where the API accepts one.
             </p>
           ) : null}
+        </>
+      ) : null}
+
+      {auth.type === "oauth2" ? (
+        <>
+          <div className="ac-field">
+            <label id="ac-auth-grant-label" htmlFor="ac-auth-grant">
+              Grant
+            </label>
+            <Select
+              id="ac-auth-grant"
+              labelledBy="ac-auth-grant-label"
+              value={auth.grant}
+              options={GRANTS}
+              onChange={(value) => setAuth({ ...auth, grant: value as OAuth2Grant })}
+            />
+          </div>
+
+          <div className="ac-field">
+            <label htmlFor="ac-auth-token-url">Token URL</label>
+            <input
+              id="ac-auth-token-url"
+              type="text"
+              spellCheck={false}
+              placeholder="https://id.example.com/oauth/token"
+              value={auth.tokenUrl}
+              onChange={(event) => setAuth({ ...auth, tokenUrl: event.target.value })}
+            />
+          </div>
+
+          <div className="ac-field">
+            <label htmlFor="ac-auth-client-id">Client ID</label>
+            <input
+              id="ac-auth-client-id"
+              type="text"
+              spellCheck={false}
+              value={auth.clientId}
+              onChange={(event) => setAuth({ ...auth, clientId: event.target.value })}
+            />
+          </div>
+
+          <div className="ac-field">
+            <label htmlFor="ac-auth-client-secret">Client secret</label>
+            <input
+              id="ac-auth-client-secret"
+              type="password"
+              value={auth.clientSecret}
+              onChange={(event) => setAuth({ ...auth, clientSecret: event.target.value })}
+            />
+          </div>
+
+          {auth.grant === "password" ? (
+            <>
+              <div className="ac-field">
+                <label htmlFor="ac-auth-owner">Username</label>
+                <input
+                  id="ac-auth-owner"
+                  type="text"
+                  spellCheck={false}
+                  value={auth.username}
+                  onChange={(event) => setAuth({ ...auth, username: event.target.value })}
+                />
+              </div>
+              <div className="ac-field">
+                <label htmlFor="ac-auth-owner-pass">Password</label>
+                <input
+                  id="ac-auth-owner-pass"
+                  type="password"
+                  value={auth.password}
+                  onChange={(event) => setAuth({ ...auth, password: event.target.value })}
+                />
+              </div>
+            </>
+          ) : null}
+
+          {auth.grant === "refreshToken" ? (
+            <div className="ac-field">
+              <label htmlFor="ac-auth-refresh">Refresh token</label>
+              <input
+                id="ac-auth-refresh"
+                type="text"
+                spellCheck={false}
+                value={auth.refreshToken}
+                onChange={(event) => setAuth({ ...auth, refreshToken: event.target.value })}
+              />
+            </div>
+          ) : null}
+
+          <div className="ac-field">
+            <label htmlFor="ac-auth-scope">Scope</label>
+            <input
+              id="ac-auth-scope"
+              type="text"
+              spellCheck={false}
+              placeholder="read:things write:things"
+              value={auth.scope}
+              onChange={(event) => setAuth({ ...auth, scope: event.target.value })}
+            />
+          </div>
+
+          <div className="ac-field">
+            <label id="ac-auth-client-auth-label" htmlFor="ac-auth-client-auth">
+              Send client
+            </label>
+            <Select
+              id="ac-auth-client-auth"
+              labelledBy="ac-auth-client-auth-label"
+              value={auth.clientAuth}
+              options={CLIENT_AUTH}
+              onChange={(value) => setAuth({ ...auth, clientAuth: value as OAuth2ClientAuth })}
+            />
+          </div>
+
+          <p className="ac-hint">
+            The token is fetched before the request and kept until it expires. Authorization code
+            and the other browser flows are not here.
+          </p>
         </>
       ) : null}
 

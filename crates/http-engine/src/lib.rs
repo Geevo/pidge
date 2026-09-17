@@ -8,6 +8,7 @@ mod build;
 mod cancel;
 mod digest;
 mod error;
+mod oauth2;
 mod peer_cert;
 mod tls;
 mod url_input;
@@ -63,6 +64,10 @@ impl Default for EngineConfig {
 pub struct HttpEngine {
     client: reqwest::Client,
     config: EngineConfig,
+    /// OAuth 2 access tokens, kept until they expire so a burst of requests
+    /// costs one token request rather than one each. Shared rather than cloned:
+    /// a cloned engine is the same client and should reuse the same tokens.
+    tokens: std::sync::Arc<oauth2::TokenCache>,
 }
 
 impl HttpEngine {
@@ -96,7 +101,11 @@ impl HttpEngine {
             .with_detail(error::chain(&err))
         })?;
 
-        Ok(Self { client, config })
+        Ok(Self {
+            client,
+            config,
+            tokens: std::sync::Arc::default(),
+        })
     }
 
     pub fn config(&self) -> &EngineConfig {
@@ -141,9 +150,17 @@ impl HttpEngine {
         let prepared = build::prepare(&self.client, request)?;
         let warnings = prepared.warnings;
 
-        let mut response = self
-            .run(prepared.builder, started, timeout_ms, cancellation)
-            .await?;
+        // OAuth 2 needs a token before anything can be sent, and a failure to
+        // get one is an error rather than a response: the request never left.
+        let builder = match &request.auth {
+            AuthConfig::OAuth2(settings) if request.find_header("authorization").is_none() => {
+                let token = oauth2::access_token(&self.client, &self.tokens, settings).await?;
+                prepared.builder.bearer_auth(token)
+            }
+            _ => prepared.builder,
+        };
+
+        let mut response = self.run(builder, started, timeout_ms, cancellation).await?;
         response.warnings = warnings.clone();
 
         let AuthConfig::Digest { username, password } = &request.auth else {

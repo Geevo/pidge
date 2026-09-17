@@ -13,7 +13,7 @@ mod tls;
 pub use error::{RequestError, RequestErrorKind};
 pub use request::{
     ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry,
-    MultipartValue, RequestBody,
+    MultipartValue, OAuth2ClientAuth, OAuth2Grant, OAuth2Settings, RequestBody,
 };
 pub use response::HttpResponse;
 pub use tls::{ClientIdentitySettings, PeerCertificate, TlsDetails, TlsSettings};

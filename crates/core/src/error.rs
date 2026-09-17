@@ -19,6 +19,9 @@ pub enum RequestErrorKind {
     Cancelled,
     TooManyRedirects,
     Redirect,
+    /// The auth helper could not get credentials, e.g. a token endpoint that
+    /// refused. The request itself was never sent.
+    Auth,
     BodySerialization,
     BodyRead,
     ResponseTooLarge,
@@ -34,6 +37,7 @@ impl RequestErrorKind {
             RequestErrorKind::UnsupportedScheme => "Unsupported scheme",
             RequestErrorKind::UnresolvedVariable => "Unresolved variable",
             RequestErrorKind::InvalidHeader => "Invalid header",
+            RequestErrorKind::Auth => "Authentication failed",
             RequestErrorKind::Dns => "DNS lookup failed",
             RequestErrorKind::ConnectionRefused => "Connection refused",
             RequestErrorKind::ConnectionFailed => "Connection failed",

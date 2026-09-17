@@ -47,7 +47,7 @@ impl Request {
     }
 }
 
-fn decode(input: &str) -> String {
+pub(crate) fn decode(input: &str) -> String {
     let bytes = input.replace('+', " ").into_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut index = 0;
