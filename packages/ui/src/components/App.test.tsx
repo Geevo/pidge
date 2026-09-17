@@ -717,8 +717,8 @@ describe("response bodies", () => {
     expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
   });
 
-  /** A JSON content type still arrives formatted, and can be put back. */
-  it("can show a JSON body as it actually arrived", async () => {
+  /** A body the server called JSON is laid out on arrival and asks nothing. */
+  it("does not offer the box for a body that is already JSON", async () => {
     const { bridge, user } = setup();
     await ready();
     bridge.queue(ok({ body: btoa('{"a":1,"b":2}') }));
@@ -727,19 +727,16 @@ describe("response bodies", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
     await screen.findByText("200 OK");
 
-    const pretty = screen.getByRole("checkbox", { name: "Pretty print" });
-    expect(pretty).toBeChecked();
-
-    await user.click(pretty);
-    await waitFor(() => expect(responseBodyText()).toContain('{"a":1,"b":2}'));
+    await waitFor(() => expect(responseBodyText()).toContain('"a": 1'));
+    expect(screen.queryByRole("checkbox", { name: "Pretty print" })).not.toBeInTheDocument();
   });
 
   /*
    * Content type says JSON, body is not: SWAPI's `?format=wookiee` answers
-   * `application/json` with unquoted barewords. Plain stays plain, and the box
-   * says why it cannot help rather than disappearing.
+   * `application/json` with unquoted barewords. Plain stays plain, and nothing
+   * is offered, because there is nothing to offer.
    */
-  it("cannot pretty-print a body that is not JSON, and says so", async () => {
+  it("leaves a body that is not JSON exactly as it arrived", async () => {
     const { bridge, user } = setup();
     await ready();
     bridge.queue(
@@ -750,10 +747,22 @@ describe("response bodies", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
     await screen.findByText("200 OK");
 
-    const pretty = screen.getByRole("checkbox", { name: "Pretty print" });
-    expect(pretty).toBeDisabled();
-    expect(pretty).not.toBeChecked();
     await waitFor(() => expect(responseBodyText()).toContain('"whwokao":whhuanan'));
+    expect(screen.queryByRole("checkbox", { name: "Pretty print" })).not.toBeInTheDocument();
+  });
+
+  /** Text that is only text has nothing to lay out, so nothing is offered. */
+  it("offers nothing for plain text that is not JSON", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa("plain words, no structure"), mimeType: "text/plain" }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await waitFor(() => expect(responseBodyText()).toContain("plain words"));
+    expect(screen.queryByRole("checkbox", { name: "Pretty print" })).not.toBeInTheDocument();
   });
 
   /** YAML used to be refused as binary before it reached the viewer at all. */

@@ -280,20 +280,22 @@ payload does not render as a wall of red.
 Only JSON is reformatted. Whitespace carries meaning in HTML and YAML, so
 re-indenting them would change the document you asked to look at.
 
-Formatting is a checkbox rather than a fact of the body, as it is in a browser's
-network panel. `renderBody` works out the formatted form whenever the text
-parses, whatever the content type says — parsing is proof, where sniffing would
-be a guess — and `Pretty print` switches between that and the bytes as they
-arrived. It starts ticked when the server called the body JSON and unticked when
-it did not, which is what makes the single line of JSON an API returns as
-`text/plain` readable without the app claiming to know better than the header.
-Ticked implies JSON, so the highlighting and the fold arrows follow it.
+A body the server called JSON is laid out on arrival, as it always has been.
 
-The box stays visible and goes disabled when nothing can be laid out, rather
-than disappearing. A body whose content type says JSON but which does not parse
-— SWAPI's `?format=wookiee` answers `application/json` with unquoted barewords —
-is left exactly as it arrived, and the disabled box is the answer to "why will
-this not lay out?".
+`Pretty print` is for the other case, and appears only there: a body whose
+content type is not JSON but whose text parses as JSON anyway. Plenty of APIs
+answer `text/plain` with one long line of it. Unticked — which is how it starts
+— the body is exactly what arrived; ticked, it is laid out, and since ticked
+implies JSON the highlighting and the fold arrows follow.
+
+Asking is what makes that safe. The content type did not claim JSON, so the app
+does not decide that it is; a successful parse only means the offer can be made,
+and the offer is the user's to take.
+
+Nothing else grows a checkbox. Text that is only text has nothing to lay out,
+and neither has a body whose content type says JSON but which does not parse —
+SWAPI's `?format=wookiee` answers `application/json` with unquoted barewords, and
+it is shown exactly as it came.
 
 The six languages are bundled rather than fetched on demand: they cost 181 KB
 of the frontend bundle, which is read from disk, and a body should be

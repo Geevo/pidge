@@ -1890,16 +1890,6 @@ body.ac-dragging--columns * {
   color: var(--ac-text);
 }
 
-.ac-tool-check:has(input:disabled) {
-  color: var(--ac-text-faint);
-  cursor: default;
-}
-
-.ac-tool-check input:disabled {
-  border-color: var(--ac-border);
-  cursor: default;
-}
-
 .ac-response-body__rich .ac-editor {
   flex: 1;
   min-height: 0;

@@ -140,14 +140,19 @@ function ResponseBody({
   }, []);
 
   /*
-   * A body that parses as JSON can be shown formatted whatever its content type
-   * says, because parsing it is proof rather than a guess. It starts formatted
-   * when the server called it JSON and raw when it did not: plenty of APIs
-   * answer `text/plain` with a single line of JSON, and that line is unreadable
-   * until someone asks for it to be broken up.
+   * A body the server called JSON is laid out on arrival, as it always has
+   * been, and has nothing to ask about.
+   *
+   * The checkbox is for the other case: plenty of APIs answer `text/plain` with
+   * a single line of JSON, and that line is unreadable until someone asks for
+   * it to be broken up. Asking is what makes it safe — the content type did not
+   * say JSON, so the app does not decide that it is; a successful parse only
+   * means the offer can be made.
    */
-  const formattable = rendered.kind === "text" && rendered.json !== null;
-  const startsFormatted = rendered.kind === "text" && rendered.language === "json";
+  const sentAsJson = rendered.kind === "text" && rendered.language === "json";
+  const canLayOut = rendered.kind === "text" && rendered.json !== null;
+  const offerToFormat = canLayOut && !sentAsJson;
+  const startsFormatted = sentAsJson;
   const [formatted, setFormatted] = useState(startsFormatted);
 
   /*
@@ -197,43 +202,42 @@ function ResponseBody({
 
   return (
     <div className="ac-response-body__rich">
-      <div className="ac-response-tools">
-        <label
-          className="ac-tool-check"
-          title={
-            formattable
-              ? "Break this JSON across lines. Unticked shows the body as it arrived."
-              : "This body is not JSON, so there is nothing to lay out."
-          }
-        >
-          <input
-            type="checkbox"
-            checked={formatted}
-            disabled={!formattable}
-            onChange={(event) => setFormatted(event.target.checked)}
-          />
-          <span>Pretty print</span>
-        </label>
+      {offerToFormat || foldable ? (
+        <div className="ac-response-tools">
+          {offerToFormat ? (
+            <label
+              className="ac-tool-check"
+              title="This body is not JSON by its content type, but it parses as JSON."
+            >
+              <input
+                type="checkbox"
+                checked={formatted}
+                onChange={(event) => setFormatted(event.target.checked)}
+              />
+              <span>Pretty print</span>
+            </label>
+          ) : null}
 
-        {foldable ? (
-          <>
-            <button
-              type="button"
-              className="ac-button ac-button--quiet"
-              onClick={() => view.current && foldAll(view.current)}
-            >
-              Collapse all
-            </button>
-            <button
-              type="button"
-              className="ac-button ac-button--quiet"
-              onClick={() => view.current && unfoldAll(view.current)}
-            >
-              Expand all
-            </button>
-          </>
-        ) : null}
-      </div>
+          {foldable ? (
+            <>
+              <button
+                type="button"
+                className="ac-button ac-button--quiet"
+                onClick={() => view.current && foldAll(view.current)}
+              >
+                Collapse all
+              </button>
+              <button
+                type="button"
+                className="ac-button ac-button--quiet"
+                onClick={() => view.current && unfoldAll(view.current)}
+              >
+                Expand all
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <CodeEditor
         value={text}
