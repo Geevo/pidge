@@ -706,12 +706,12 @@ describe("response bodies", () => {
     await screen.findByText("200 OK");
 
     // Raw to begin with: the server did not call it JSON.
-    const pretty = screen.getByRole("button", { name: "Pretty" });
-    expect(pretty).toHaveAttribute("aria-pressed", "false");
+    const pretty = screen.getByRole("checkbox", { name: "Pretty print" });
+    expect(pretty).not.toBeChecked();
     await waitFor(() => expect(responseBodyText()).toContain('{"a":{"b":[1,2,3]},"c":"d"}'));
 
     await user.click(pretty);
-    expect(pretty).toHaveAttribute("aria-pressed", "true");
+    expect(pretty).toBeChecked();
     // Formatted, and folded as JSON once it is.
     await waitFor(() => expect(responseBodyText()).toContain('"b": ['));
     expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
@@ -727,11 +727,33 @@ describe("response bodies", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
     await screen.findByText("200 OK");
 
-    const pretty = screen.getByRole("button", { name: "Pretty" });
-    expect(pretty).toHaveAttribute("aria-pressed", "true");
+    const pretty = screen.getByRole("checkbox", { name: "Pretty print" });
+    expect(pretty).toBeChecked();
 
     await user.click(pretty);
     await waitFor(() => expect(responseBodyText()).toContain('{"a":1,"b":2}'));
+  });
+
+  /*
+   * Content type says JSON, body is not: SWAPI's `?format=wookiee` answers
+   * `application/json` with unquoted barewords. Plain stays plain, and the box
+   * says why it cannot help rather than disappearing.
+   */
+  it("cannot pretty-print a body that is not JSON, and says so", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(
+      ok({ body: btoa('{"oaoohuwhao":1,"whwokao":whhuanan}'), mimeType: "application/json" }),
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    const pretty = screen.getByRole("checkbox", { name: "Pretty print" });
+    expect(pretty).toBeDisabled();
+    expect(pretty).not.toBeChecked();
+    await waitFor(() => expect(responseBodyText()).toContain('"whwokao":whhuanan'));
   });
 
   /** YAML used to be refused as binary before it reached the viewer at all. */

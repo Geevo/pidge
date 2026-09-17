@@ -197,40 +197,43 @@ function ResponseBody({
 
   return (
     <div className="ac-response-body__rich">
-      {formattable || foldable ? (
-        <div className="ac-response-tools">
-          {formattable ? (
+      <div className="ac-response-tools">
+        <label
+          className="ac-tool-check"
+          title={
+            formattable
+              ? "Break this JSON across lines. Unticked shows the body as it arrived."
+              : "This body is not JSON, so there is nothing to lay out."
+          }
+        >
+          <input
+            type="checkbox"
+            checked={formatted}
+            disabled={!formattable}
+            onChange={(event) => setFormatted(event.target.checked)}
+          />
+          <span>Pretty print</span>
+        </label>
+
+        {foldable ? (
+          <>
             <button
               type="button"
               className="ac-button ac-button--quiet"
-              aria-pressed={formatted}
-              title={formatted ? "Show the body as it arrived" : "Format this JSON across lines"}
-              onClick={() => setFormatted((current) => !current)}
+              onClick={() => view.current && foldAll(view.current)}
             >
-              Pretty
+              Collapse all
             </button>
-          ) : null}
-
-          {foldable ? (
-            <>
-              <button
-                type="button"
-                className="ac-button ac-button--quiet"
-                onClick={() => view.current && foldAll(view.current)}
-              >
-                Collapse all
-              </button>
-              <button
-                type="button"
-                className="ac-button ac-button--quiet"
-                onClick={() => view.current && unfoldAll(view.current)}
-              >
-                Expand all
-              </button>
-            </>
-          ) : null}
-        </div>
-      ) : null}
+            <button
+              type="button"
+              className="ac-button ac-button--quiet"
+              onClick={() => view.current && unfoldAll(view.current)}
+            >
+              Expand all
+            </button>
+          </>
+        ) : null}
+      </div>
 
       <CodeEditor
         value={text}

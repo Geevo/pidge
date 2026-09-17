@@ -722,12 +722,6 @@ input[type="checkbox"]:hover {
   color: var(--ac-text);
 }
 
-/* A quiet button that is also a toggle says so while it is on. */
-.ac-button--quiet[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--ac-accent) 14%, transparent);
-  color: var(--ac-accent);
-}
-
 .ac-button--danger {
   border-color: color-mix(in srgb, var(--ac-danger) 45%, transparent);
   color: var(--ac-danger);
@@ -1876,8 +1870,34 @@ body.ac-dragging--columns * {
 .ac-response-tools {
   display: flex;
   gap: 4px;
+  align-items: center;
   padding: 3px 6px;
   border-bottom: 1px solid var(--ac-border);
+}
+
+/* A checkbox that belongs with the buttons beside it, at their size. */
+.ac-tool-check {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+  cursor: pointer;
+}
+
+.ac-tool-check:hover {
+  color: var(--ac-text);
+}
+
+.ac-tool-check:has(input:disabled) {
+  color: var(--ac-text-faint);
+  cursor: default;
+}
+
+.ac-tool-check input:disabled {
+  border-color: var(--ac-border);
+  cursor: default;
 }
 
 .ac-response-body__rich .ac-editor {
