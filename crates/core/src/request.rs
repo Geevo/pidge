@@ -92,6 +92,9 @@ pub enum AuthConfig {
     Bearer { token: String },
     #[serde(rename_all = "camelCase")]
     Basic { username: String, password: String },
+    /// RFC 7616 challenge-response. Nothing is sent until the server asks.
+    #[serde(rename_all = "camelCase")]
+    Digest { username: String, password: String },
     /// A key in a header or the query string, which is most "API key" auth.
     #[serde(rename_all = "camelCase")]
     ApiKey {

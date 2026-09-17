@@ -753,3 +753,84 @@ async fn an_api_key_with_no_name_is_ignored() {
         0
     );
 }
+
+#[tokio::test]
+async fn answers_a_digest_challenge_and_retries() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/digest?page=2"));
+    request.auth = AuthConfig::Digest {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    // The server recomputes the digest, so 200 means the arithmetic was right.
+    assert_eq!(response.status, 200);
+    assert_eq!(body_json(&response.body)["authenticated"], true);
+    // Digested over the path and query, not the whole URL.
+    assert_eq!(body_json(&response.body)["uri"], "/digest?page=2");
+    assert!(response.warnings.is_empty());
+}
+
+#[tokio::test]
+async fn a_wrong_digest_password_leaves_the_401_alone() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/digest"));
+    request.auth = AuthConfig::Digest {
+        username: "ada".to_string(),
+        password: "not-the-password".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 401);
+}
+
+#[tokio::test]
+async fn a_challenge_in_another_scheme_is_explained_not_retried() {
+    let server = TestServer::start().await.unwrap();
+    // /status/401 answers without a WWW-Authenticate header at all.
+    let mut request = HttpRequest::get(server.url("/status/401"));
+    request.auth = AuthConfig::Digest {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status, 401);
+    assert_eq!(response.warnings.len(), 1);
+    assert!(
+        response.warnings[0].contains("no challenge"),
+        "unhelpful warning: {}",
+        response.warnings[0]
+    );
+}
+
+#[tokio::test]
+async fn digest_sends_nothing_until_it_is_asked() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/auth"));
+    request.auth = AuthConfig::Digest {
+        username: "ada".to_string(),
+        password: "lovelace".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    // A server that does not challenge gets no credentials.
+    assert_eq!(body_json(&response.body)["authorization"], "");
+}

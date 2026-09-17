@@ -6,6 +6,7 @@
 
 mod build;
 mod cancel;
+mod digest;
 mod error;
 mod peer_cert;
 mod tls;
@@ -14,7 +15,8 @@ mod url_input;
 use std::time::{Duration, Instant};
 
 use api_client_core::{
-    HttpRequest, HttpResponse, KeyValueEntry, RequestError, RequestErrorKind, TlsSettings,
+    AuthConfig, HttpRequest, HttpResponse, KeyValueEntry, RequestError, RequestErrorKind,
+    TlsSettings,
 };
 use api_client_variables::VariableSet;
 
@@ -111,12 +113,11 @@ impl HttpEngine {
         let timeout_ms = request.timeout_ms.unwrap_or(self.config.default_timeout_ms);
         let started = Instant::now();
 
-        let prepared = build::prepare(&self.client, &request)?;
-        let warnings = prepared.warnings;
+        let send = self.send(&request, started, timeout_ms, &cancellation);
 
-        let send = self.run(prepared.builder, started, timeout_ms, &cancellation);
-
-        let response = if timeout_ms == 0 {
+        // The timeout covers the whole exchange, including a digest retry: two
+        // round trips the user did not ask for should not buy twice the wait.
+        if timeout_ms == 0 {
             send.await
         } else {
             tokio::select! {
@@ -126,12 +127,50 @@ impl HttpEngine {
                 }
                 result = send => result,
             }
+        }
+    }
+
+    /// One request, or two when the server answers a digest challenge.
+    async fn send(
+        &self,
+        request: &HttpRequest,
+        started: Instant,
+        timeout_ms: u64,
+        cancellation: &CancellationHandle,
+    ) -> Result<HttpResponse, RequestError> {
+        let prepared = build::prepare(&self.client, request)?;
+        let warnings = prepared.warnings;
+
+        let mut response = self
+            .run(prepared.builder, started, timeout_ms, cancellation)
+            .await?;
+        response.warnings = warnings.clone();
+
+        let AuthConfig::Digest { username, password } = &request.auth else {
+            return Ok(response);
         };
 
-        response.map(|mut response| {
-            response.warnings = warnings;
-            response
-        })
+        // 401 is the only status that carries a challenge, and a header the
+        // user typed has already won.
+        if response.status != 401 || request.find_header("authorization").is_some() {
+            return Ok(response);
+        }
+
+        match digest::answer(request, &response, username, password) {
+            Ok(header) => {
+                let retry = build::prepare(&self.client, request)?;
+                let builder = retry.builder.header(reqwest::header::AUTHORIZATION, header);
+                let mut answered = self.run(builder, started, timeout_ms, cancellation).await?;
+                answered.warnings = warnings;
+                Ok(answered)
+            }
+            // The 401 is the honest answer; the note says why there was no
+            // second attempt.
+            Err(why) => {
+                response.warnings.push(why);
+                Ok(response)
+            }
+        }
     }
 
     /// Convenience wrapper: resolve `{{variables}}` and then send.

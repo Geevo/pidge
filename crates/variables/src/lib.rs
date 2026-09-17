@@ -147,6 +147,10 @@ pub fn resolve_request(
             username: resolve(username),
             password: resolve(password),
         },
+        AuthConfig::Digest { username, password } => AuthConfig::Digest {
+            username: resolve(username),
+            password: resolve(password),
+        },
         AuthConfig::ApiKey {
             key,
             value,

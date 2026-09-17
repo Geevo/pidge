@@ -4,4 +4,4 @@ import type { ApiKeyPlacement } from "./ApiKeyPlacement";
 /**
  * Auth helper configuration. Anything more exotic can be typed as a header.
  */
-export type AuthConfig = { "type": "none" } | { "type": "bearer", token: string, } | { "type": "basic", username: string, password: string, } | { "type": "apiKey", key: string, value: string, placement: ApiKeyPlacement, };
+export type AuthConfig = { "type": "none" } | { "type": "bearer", token: string, } | { "type": "basic", username: string, password: string, } | { "type": "digest", username: string, password: string, } | { "type": "apiKey", key: string, value: string, placement: ApiKeyPlacement, };
