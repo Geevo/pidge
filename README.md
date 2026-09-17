@@ -178,6 +178,20 @@ beside it. It opens the certificate the server presented: subject, issuer, the
 names it is valid for, its dates, serial and SHA-256 fingerprint. An expired or
 self-signed certificate says so.
 
+## Auth
+
+None, bearer, basic, digest, an API key in a header or the query string,
+OAuth 1 request signing, and the OAuth 2 grants that are a request to a token
+endpoint — client credentials, password and refresh token.
+
+Digest costs a round trip, because the response can only be computed once the
+server has sent a challenge. OAuth 2 fetches a token first and keeps it until it
+expires. Neither the OAuth 2 browser flows nor NTLM are here; `docs/architecture.md`
+says why.
+
+Anything else is a header you type yourself, and a header you typed always wins
+over the Auth tab.
+
 ## Themes
 
 System, light and dark, plus a warm variant of each: the same palette with the
