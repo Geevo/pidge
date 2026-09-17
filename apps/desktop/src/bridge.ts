@@ -10,6 +10,7 @@ import type {
   ResizeEdge,
   SaveRequestInput,
   SendOutcome,
+  WindowButtonStyle,
   WindowControls,
 } from "@api-client/ui";
 
@@ -32,14 +33,36 @@ function attempt<T>(action: () => Promise<T>): Promise<T> {
 /**
  * The window is undecorated, because GTK draws a header far taller than the
  * platform's own, so the app supplies the title bar and resize edges itself.
+ *
+ * Which buttons those are is the host's to say: only the Rust side can see the
+ * operating system and the desktop session behind it.
  */
-const windowControls: WindowControls = {
-  minimize: () => attempt(() => getCurrentWindow().minimize()),
-  toggleMaximize: () => attempt(() => getCurrentWindow().toggleMaximize()),
-  close: () => attempt(() => getCurrentWindow().close()),
-  isMaximized: () => attempt(() => getCurrentWindow().isMaximized()),
-  startResizing: (edge: ResizeEdge) => attempt(() => getCurrentWindow().startResizeDragging(edge)),
-};
+function windowControls(buttons: WindowButtonStyle): WindowControls {
+  return {
+    buttons,
+    minimize: () => attempt(() => getCurrentWindow().minimize()),
+    toggleMaximize: () => attempt(() => getCurrentWindow().toggleMaximize()),
+    close: () => attempt(() => getCurrentWindow().close()),
+    isMaximized: () => attempt(() => getCurrentWindow().isMaximized()),
+    startResizing: (edge: ResizeEdge) => attempt(() => getCurrentWindow().startResizeDragging(edge)),
+  };
+}
+
+/**
+ * Asks which title-bar buttons to draw, before anything is drawn.
+ *
+ * Swapping them after the first paint would be visible, and this is one
+ * `invoke` behind the boot screen. Outside Tauri — `vite dev` in a browser —
+ * there is no host to ask and no window to control either, so the answer only
+ * has to be harmless.
+ */
+async function buttonStyle(): Promise<WindowButtonStyle> {
+  try {
+    return await invoke<WindowButtonStyle>("window_buttons");
+  } catch {
+    return "windows";
+  }
+}
 
 /**
  * The desktop bridge.
@@ -47,9 +70,8 @@ const windowControls: WindowControls = {
  * Every method is one `invoke` and nothing else. All the behaviour lives in
  * `api-client-session`, which the VS Code sidecar drives through the same API.
  */
-export const tauriBridge: PlatformBridge = {
+const tauriBridge = {
   platform: "desktop",
-  window: windowControls,
 
   async pickFile(request: FilePickRequest): Promise<string | null> {
     const chosen = await open({
@@ -97,3 +119,8 @@ export const tauriBridge: PlatformBridge = {
     return invoke<AppState>("clear_history");
   },
 };
+
+/** The bridge, once the host has said which desktop it is running on. */
+export async function createBridge(): Promise<PlatformBridge> {
+  return { ...tauriBridge, window: windowControls(await buttonStyle()) };
+}

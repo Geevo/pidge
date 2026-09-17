@@ -190,6 +190,20 @@ one row of chrome rather than two.
 undecorated window has no resize edges at all. `ResizeEdges` supplies eight
 invisible strips that call `startResizeDragging`.
 
+Drawing the buttons means drawing the right ones. A single set looks foreign
+everywhere except where it came from, so `window_buttons` reports which desktop
+the app is running on — Windows, KDE or anything else, read from
+`XDG_CURRENT_DESKTOP` — and `WindowChrome` keeps all three sets. Breeze draws
+chevrons and, once the window is maximised, a diamond in place of the maximise
+chevron; Adwaita a low bar and two rings; Windows a line and a square. The
+button behind the glyph differs as well: Windows fills a tall rectangle, Breeze
+lights a circle under the pointer, Adwaita keeps a faint circle there all the
+time. The sizes and the 24px spacing were measured off real title bars on a
+Plasma desktop rather than guessed.
+
+The answer arrives before the first render, because swapping the buttons
+afterwards would be visible. It costs one `invoke` behind the boot screen.
+
 All of this hangs off `PlatformBridge.window`, which is optional and absent in
 VS Code, where the editor owns the frame. Every call through it is caught:
 `getCurrentWindow()` throws outright when the Tauri internals are missing, and
