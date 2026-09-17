@@ -73,6 +73,36 @@ describe("url encoding of params", () => {
   it("would otherwise encode an already-encoded value twice", () => {
     expect(paramsChanged("https://x/s", [row("pre", "%2F")]).url).toBe("https://x/s?pre=%252F");
   });
+
+  /*
+   * Pasting an encoded URL with the switch off and then turning it on is the
+   * case that would double-encode if the table held raw text. It does not: the
+   * URL is decoded on the way into the table, so what goes back out is the same
+   * escape rather than an escaped escape.
+   */
+  it("survives pasting an encoded URL and then switching encoding on", () => {
+    const pasted = urlChanged("https://x/lookup?postcode=SW1A%201AA", []);
+    expect(pasted.queryParams[0]?.value).toBe("SW1A 1AA");
+    expect(paramsChanged(pasted.url, pasted.queryParams, true).url).toBe(
+      "https://x/lookup?postcode=SW1A%201AA",
+    );
+  });
+
+  it("escapes only what was left unescaped in a half-encoded URL", () => {
+    const pasted = urlChanged("https://x/s?a=x%20y&b=p q", []);
+    expect(paramsChanged(pasted.url, pasted.queryParams, true).url).toBe(
+      "https://x/s?a=x%20y&b=p%20q",
+    );
+  });
+
+  it("returns to where it started when the switch is flipped twice", () => {
+    const pasted = urlChanged("https://x/lookup?postcode=SW1A%201AA", []);
+    const off = paramsChanged(pasted.url, pasted.queryParams, false);
+    expect(off.url).toBe("https://x/lookup?postcode=SW1A 1AA");
+    expect(paramsChanged(off.url, urlChanged(off.url, off.queryParams).queryParams, true).url).toBe(
+      "https://x/lookup?postcode=SW1A%201AA",
+    );
+  });
 });
 
 describe("syntax from the content type", () => {
