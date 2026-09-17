@@ -67,11 +67,13 @@ storage goes through `crates/storage`.
 
 ## The icon
 
-`apps/desktop/src-tauri/app-icon.svg` is the source. Everything in `icons/` is
-generated from it:
+`packages/ui/src/assets/app-icon.svg` is the source. Everything in
+`apps/desktop/src-tauri/icons/` is generated from it, and Settings shows the
+same file in About, so the artwork exists once:
 
 ```bash
-pnpm --filter @api-client/desktop exec tauri icon src-tauri/app-icon.svg
+cd apps/desktop
+pnpm exec tauri icon ../../packages/ui/src/assets/app-icon.svg
 ```
 
 That writes Android, iOS and Windows Store sizes too, which this project has no
