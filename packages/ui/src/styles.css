@@ -1323,13 +1323,25 @@ input[type="checkbox"]:hover {
   flex-direction: column;
   width: 260px;
   min-width: 200px;
+  /* Without this the list grows the drawer, the drawer grows the window, and
+     the whole page scrolls instead of the list. */
+  min-height: 0;
   max-width: 40%;
+  overflow: hidden;
   border-right: 1px solid var(--ac-border);
   background: var(--ac-bg-subtle);
 }
 
+/* The list is the part that scrolls; the header stays where it is. */
+.ac-drawer .ac-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .ac-drawer__header {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
