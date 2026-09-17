@@ -72,7 +72,7 @@ export function SettingsDialog({
   return (
     <div className="ac-dialog-backdrop" role="presentation" onClick={onClose}>
       <div
-        className="ac-dialog"
+        className="ac-dialog ac-dialog--settings"
         role="dialog"
         aria-modal="true"
         aria-label="Settings"

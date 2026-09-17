@@ -1372,6 +1372,17 @@ input[type="checkbox"]:hover {
  * is the only way to create the thing the dialog is about.
  */
 /*
+ * A fixed height, because the sections are not the same length: General needs
+ * about 220px of body and Certs about 430px, and a dialog that jumps a quarter
+ * of its height when you press a tab is disorienting. Sized to the tallest, so
+ * the shorter sections have room to spare and nothing moves. Content past that
+ * — a handful of CA files — scrolls rather than growing the dialog.
+ */
+.ac-dialog--settings {
+  height: min(544px, 80%);
+}
+
+/*
  * Narrower than the settings dialog, but wide enough that the suggested name —
  * usually a URL — is readable without scrolling through it.
  */
