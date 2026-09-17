@@ -349,6 +349,18 @@ A token that cannot be got is an error rather than a response, with its own
 send would be a lie. The endpoint's own `error` field is quoted, since
 `invalid_client` says more than 401 does.
 
+OAuth 1 is neither: it is arithmetic. Every request carries a signature over its
+own method, URL and parameters, so `crates/http-engine/src/oauth1.rs` signs at
+build time and there is nothing to fetch or cache. The awkward part is the
+signature base string — percent-encoding applied twice, parameters sorted after
+encoding, a form-encoded body signed along with the query — and getting it wrong
+produces a rejection with no explanation. So the base string is tested against
+the worked example in RFC 5849 §3.4.1.1, character for character.
+
+The integration tests check the header's shape rather than recomputing the
+signature in the test server. A second implementation written by the same hand
+would agree with the first one's mistakes; the RFC's own vector will not.
+
 The test server issues a challenge and then recomputes the digest itself, so the
 test fails if the client's answer is merely well-formed rather than correct.
 

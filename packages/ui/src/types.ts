@@ -17,6 +17,8 @@ export type { KeyValueEntry } from "./generated/KeyValueEntry";
 export type { MultipartEntry } from "./generated/MultipartEntry";
 export type { PaneLayout } from "./generated/PaneLayout";
 export type { MultipartValue } from "./generated/MultipartValue";
+export type { OAuth1Settings } from "./generated/OAuth1Settings";
+export type { OAuth1Signature } from "./generated/OAuth1Signature";
 export type { OAuth2ClientAuth } from "./generated/OAuth2ClientAuth";
 export type { OAuth2Grant } from "./generated/OAuth2Grant";
 export type { OAuth2Settings } from "./generated/OAuth2Settings";

@@ -8,6 +8,7 @@ mod build;
 mod cancel;
 mod digest;
 mod error;
+mod oauth1;
 mod oauth2;
 mod peer_cert;
 mod tls;

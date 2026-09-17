@@ -2,6 +2,7 @@ import type {
   ApiKeyPlacement,
   AuthConfig,
   HttpRequest,
+  OAuth1Signature,
   OAuth2ClientAuth,
   OAuth2Grant,
 } from "../types";
@@ -20,7 +21,14 @@ const AUTH_KINDS = [
   { value: "basic", label: "Basic" },
   { value: "digest", label: "Digest" },
   { value: "apiKey", label: "API key" },
+  { value: "oauth1", label: "OAuth 1" },
   { value: "oauth2", label: "OAuth 2" },
+];
+
+const SIGNATURES = [
+  { value: "hmacSha1", label: "HMAC-SHA1" },
+  { value: "hmacSha256", label: "HMAC-SHA256" },
+  { value: "plaintext", label: "PLAINTEXT" },
 ];
 
 const GRANTS = [
@@ -50,6 +58,16 @@ function blank(kind: AuthKind): AuthConfig {
       return { type: "digest", username: "", password: "" };
     case "apiKey":
       return { type: "apiKey", key: "", value: "", placement: "header" };
+    case "oauth1":
+      return {
+        type: "oauth1",
+        consumerKey: "",
+        consumerSecret: "",
+        token: "",
+        tokenSecret: "",
+        signatureMethod: "hmacSha1",
+        realm: "",
+      };
     case "oauth2":
       return {
         type: "oauth2",
@@ -176,6 +194,83 @@ export function AuthEditor({ request, onChange }: Props) {
               safer where the API accepts one.
             </p>
           ) : null}
+        </>
+      ) : null}
+
+      {auth.type === "oauth1" ? (
+        <>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-consumer-key">Consumer key</label>
+            <input
+              id="ac-auth-consumer-key"
+              type="text"
+              spellCheck={false}
+              value={auth.consumerKey}
+              onChange={(event) => setAuth({ ...auth, consumerKey: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-consumer-secret">Consumer secret</label>
+            <input
+              id="ac-auth-consumer-secret"
+              type="password"
+              value={auth.consumerSecret}
+              onChange={(event) => setAuth({ ...auth, consumerSecret: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-oauth-token">Token</label>
+            <input
+              id="ac-auth-oauth-token"
+              type="text"
+              spellCheck={false}
+              placeholder="Optional, for two-legged requests"
+              value={auth.token}
+              onChange={(event) => setAuth({ ...auth, token: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-token-secret">Token secret</label>
+            <input
+              id="ac-auth-token-secret"
+              type="password"
+              value={auth.tokenSecret}
+              onChange={(event) => setAuth({ ...auth, tokenSecret: event.target.value })}
+            />
+          </div>
+          <div className="ac-field">
+            <label id="ac-auth-signature-label" htmlFor="ac-auth-signature">
+              Signature
+            </label>
+            <Select
+              id="ac-auth-signature"
+              labelledBy="ac-auth-signature-label"
+              value={auth.signatureMethod}
+              options={SIGNATURES}
+              onChange={(value) => setAuth({ ...auth, signatureMethod: value as OAuth1Signature })}
+            />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-auth-realm">Realm</label>
+            <input
+              id="ac-auth-realm"
+              type="text"
+              spellCheck={false}
+              placeholder="Optional"
+              value={auth.realm}
+              onChange={(event) => setAuth({ ...auth, realm: event.target.value })}
+            />
+          </div>
+          {auth.signatureMethod === "plaintext" ? (
+            <p className="ac-hint">
+              PLAINTEXT sends both secrets as the signature. Only over HTTPS.
+            </p>
+          ) : (
+            <p className="ac-hint">
+              Each request is signed over its own method, URL and parameters, including a
+              form-encoded body.
+            </p>
+          )}
         </>
       ) : null}
 
