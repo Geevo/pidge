@@ -45,7 +45,8 @@ function windowControls(buttons: WindowButtonStyle): WindowControls {
     close: () => attempt(() => getCurrentWindow().close()),
     isMaximized: () => attempt(() => getCurrentWindow().isMaximized()),
     onResized: (listener) => attempt(() => getCurrentWindow().onResized(() => listener())),
-    startResizing: (edge: ResizeEdge) => attempt(() => getCurrentWindow().startResizeDragging(edge)),
+    startResizing: (edge: ResizeEdge) =>
+      attempt(() => getCurrentWindow().startResizeDragging(edge)),
   };
 }
 
