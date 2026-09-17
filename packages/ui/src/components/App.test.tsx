@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { FilePickRequest } from "../bridge";
 import { FakeBridge, defaultState, failure, historyEntry, ok, response } from "../test/fakeBridge";
 import { App } from "./App";
 
@@ -496,7 +497,7 @@ describe("settings", () => {
 
     const dialog = await openSettings(user, "Certs");
 
-    await user.click(within(dialog).getByRole("button", { name: "Add CA file" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add" }));
     await user.type(
       within(dialog).getByRole("textbox", { name: "CA file 1" }),
       "/etc/ssl/internal-ca.pem",
@@ -1202,7 +1203,7 @@ describe("the settings sections", () => {
     const { bridge, user } = setup();
     const dialog = await openSettings(user, "Certs");
 
-    await user.click(within(dialog).getByRole("button", { name: "Add CA file" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add" }));
     await user.type(within(dialog).getByRole("textbox", { name: "CA file 1" }), "/ca.pem");
 
     // The draft is one object behind all three sections, not one per tab.
@@ -1215,5 +1216,81 @@ describe("the settings sections", () => {
       expect(saved?.tls.extraCaFiles).toEqual(["/ca.pem"]);
       expect(saved?.followRedirects).toBe(false);
     });
+  });
+});
+
+describe("browsing for a certificate", () => {
+  it("puts the chosen path in the field and saves it", async () => {
+    const bridge = new FakeBridge();
+    const asked: FilePickRequest[] = [];
+    bridge.pickFile = (request: FilePickRequest) => {
+      asked.push(request);
+      return Promise.resolve("/home/me/client.p12");
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const dialog = await openSettings(user, "Certs");
+    await user.click(within(dialog).getAllByRole("button", { name: "Browse…" })[0]!);
+
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText("File")).toHaveValue("/home/me/client.p12");
+    });
+
+    // The chooser is told what it is for and which extensions to offer.
+    expect(asked[0]?.title).toBe("Client certificate");
+    expect(asked[0]?.filters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ extensions: expect.arrayContaining(["p12", "pfx"]) }),
+      ]),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.tls.clientIdentity?.path).toBe("/home/me/client.p12");
+    });
+  });
+
+  it("fills a CA row from the chooser", async () => {
+    const bridge = new FakeBridge();
+    bridge.pickFile = () => Promise.resolve("/etc/ssl/internal-ca.pem");
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const dialog = await openSettings(user, "Certs");
+    await user.click(within(dialog).getByRole("button", { name: "Add" }));
+    await user.click(within(dialog).getAllByRole("button", { name: "Browse…" })[0]!);
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("textbox", { name: "CA file 1" })).toHaveValue(
+        "/etc/ssl/internal-ca.pem",
+      );
+    });
+  });
+
+  it("leaves the field alone when the chooser is dismissed", async () => {
+    const bridge = new FakeBridge();
+    bridge.pickFile = () => Promise.resolve(null);
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const dialog = await openSettings(user, "Certs");
+    await user.type(within(dialog).getByLabelText("File"), "/typed/by/hand.pem");
+    await user.click(within(dialog).getAllByRole("button", { name: "Browse…" })[0]!);
+
+    expect(within(dialog).getByLabelText("File")).toHaveValue("/typed/by/hand.pem");
+  });
+
+  it("offers no Browse button on a host without a file chooser", async () => {
+    const { user } = setup();
+    await ready();
+
+    // The fake bridge has no pickFile, as a webview without a host would not.
+    const dialog = await openSettings(user, "Certs");
+    expect(within(dialog).queryByRole("button", { name: "Browse…" })).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText("File")).toBeInTheDocument();
   });
 });

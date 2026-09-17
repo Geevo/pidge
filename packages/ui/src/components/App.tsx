@@ -307,6 +307,7 @@ export function App({ bridge }: Props) {
           settings={state.app.settings}
           storagePath={state.storagePath}
           version={state.version}
+          onBrowse={bridge.pickFile?.bind(bridge)}
           onPreviewTheme={setPreviewTheme}
           onSave={client.setSettings}
           onClose={() => {

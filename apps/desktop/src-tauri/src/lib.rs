@@ -22,6 +22,8 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        // The only plugin: a native file chooser for picking certificates.
+        .plugin(tauri_plugin_dialog::init())
         .manage(session)
         .invoke_handler(tauri::generate_handler![
             commands::send_http_request,

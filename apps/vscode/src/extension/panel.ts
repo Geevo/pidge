@@ -111,6 +111,22 @@ export class ApiClientPanel {
         };
       }
 
+      case "pickFile": {
+        const request = params as {
+          title: string;
+          filters?: { name: string; extensions: string[] }[];
+        };
+        const chosen = await vscode.window.showOpenDialog({
+          title: request.title,
+          canSelectMany: false,
+          openLabel: "Select",
+          filters: Object.fromEntries(
+            (request.filters ?? []).map((filter) => [filter.name, filter.extensions]),
+          ),
+        });
+        return chosen?.[0]?.fsPath ?? null;
+      }
+
       case "saveState": {
         const { state } = params as { state: AppState };
         return this.saved(await this.sidecar.call({ type: "saveState", state }));

@@ -280,6 +280,17 @@ about 430px — and a dialog that jumps a quarter of its height when a tab is
 pressed is disorienting. It is sized to the tallest, still capped at 80% of the
 window, and anything past that scrolls.
 
+Certs groups the three decisions it holds — what to trust, what to present, and
+what to skip checking — because as a flat stack of fields they ran together.
+Turning verification off is boxed and tinted rather than sitting in line with
+the rest, since it is not a preference among preferences.
+
+Each path field has a Browse button when `PlatformBridge.pickFile` is present:
+the desktop supplies it through Tauri's dialog plugin, VS Code through
+`showOpenDialog` on the extension host. It is optional like `window`, and the
+buttons are absent on a host without one — typing the path still works, which is
+what the field did before.
+
 About shows the host's own version, which travels with the state: `LoadedState`
 already carried the storage path, and the version goes the same way rather than
 being baked into the frontend at build time, where it could drift from the

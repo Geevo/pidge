@@ -1,4 +1,5 @@
 import type {
+  FilePickRequest,
   LoadedState,
   PlatformBridge,
   SaveRequestInput,
@@ -29,6 +30,8 @@ export class FakeBridge implements PlatformBridge {
   recovery: string | null = null;
   /** Set by tests that need the app to draw its own title bar. */
   window?: WindowControls;
+  /** Set by tests that need a host with a file chooser. */
+  pickFile?: (request: FilePickRequest) => Promise<string | null>;
 
   readonly sent: HttpRequest[] = [];
   readonly cancelled: string[] = [];

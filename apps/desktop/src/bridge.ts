@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppState,
+  FilePickRequest,
   HttpRequest,
   LoadedState,
   PlatformBridge,
@@ -48,6 +50,20 @@ const windowControls: WindowControls = {
 export const tauriBridge: PlatformBridge = {
   platform: "desktop",
   window: windowControls,
+
+  async pickFile(request: FilePickRequest): Promise<string | null> {
+    const chosen = await open({
+      title: request.title,
+      multiple: false,
+      directory: false,
+      filters: request.filters?.map((filter) => ({
+        name: filter.name,
+        extensions: [...filter.extensions],
+      })),
+    });
+    // The plugin resolves with the path, or null when it is dismissed.
+    return typeof chosen === "string" ? chosen : null;
+  },
 
   sendRequest(request: HttpRequest): Promise<SendOutcome> {
     return invoke<SendOutcome>("send_http_request", { request });
