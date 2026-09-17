@@ -719,6 +719,7 @@ describe("window chrome", () => {
         return Promise.resolve();
       },
       isMaximized: () => Promise.resolve(false),
+      onResized: () => Promise.resolve(() => undefined),
       startResizing: (edge: string) => {
         calls.push(`resize:${edge}`);
         return Promise.resolve();
@@ -741,6 +742,43 @@ describe("window chrome", () => {
     expect(calls).toContain("minimize");
   });
 
+  /*
+   * A compositor maximises when it is ready, so asking straight after the click
+   * returns the old answer and the glyph ends up a step behind. It follows the
+   * window's own resize instead — which is also how it keeps up with a double
+   * click on the title bar or a keyboard shortcut.
+   */
+  it("follows the window rather than its own click", async () => {
+    const bridge = new FakeBridge();
+    let maximized = false;
+    let resized: (() => void) | undefined;
+    bridge.window = {
+      buttons: "kde" as const,
+      minimize: () => Promise.resolve(),
+      toggleMaximize: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+      isMaximized: () => Promise.resolve(maximized),
+      onResized: (listener: () => void) => {
+        resized = listener;
+        return Promise.resolve(() => undefined);
+      },
+      startResizing: () => Promise.resolve(),
+    };
+    render(<App bridge={bridge} />);
+    await ready();
+
+    expect(screen.getByRole("button", { name: "Maximise" })).toBeInTheDocument();
+
+    // The window maximises without the app being told directly.
+    maximized = true;
+    act(() => resized?.());
+    expect(await screen.findByRole("button", { name: "Restore" })).toBeInTheDocument();
+
+    maximized = false;
+    act(() => resized?.());
+    expect(await screen.findByRole("button", { name: "Maximise" })).toBeInTheDocument();
+  });
+
   it("survives a host whose window controls fail", async () => {
     const bridge = new FakeBridge();
     const controls = {
@@ -750,6 +788,7 @@ describe("window chrome", () => {
       close: () => Promise.reject(new Error("no window")),
       // Rejecting here used to unmount the whole app from inside an effect.
       isMaximized: () => Promise.reject(new Error("no window")),
+      onResized: () => Promise.reject(new Error("no window")),
       startResizing: () => Promise.reject(new Error("no window")),
     };
     bridge.window = controls;

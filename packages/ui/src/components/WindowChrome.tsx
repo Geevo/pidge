@@ -117,28 +117,41 @@ export function WindowButtons({ controls }: { controls: WindowControls }) {
   const glyphs = GLYPHS[controls.buttons];
 
   /*
-   * Every call is caught. These buttons are chrome: if the host cannot answer,
-   * the icon is merely wrong, which is a great deal better than an unhandled
-   * rejection inside an effect taking the whole application down.
+   * The glyph follows the window, not the click. Every call is caught as well:
+   * these buttons are chrome, and if the host cannot answer, the icon is merely
+   * wrong, which is a great deal better than an unhandled rejection inside an
+   * effect taking the whole application down.
    */
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    const sync = () => {
+      controls
+        .isMaximized()
+        .then((value) => {
+          if (!cancelled) setMaximized(value);
+        })
+        .catch(() => undefined);
+    };
+
+    sync();
     controls
-      .isMaximized()
-      .then((value) => {
-        if (!cancelled) setMaximized(value);
+      .onResized(sync)
+      .then((stop) => {
+        if (cancelled) stop();
+        else unsubscribe = stop;
       })
       .catch(() => undefined);
+
     return () => {
       cancelled = true;
+      unsubscribe?.();
     };
   }, [controls]);
 
   const run = (action: () => Promise<unknown>) => {
-    action()
-      .then(() => controls.isMaximized())
-      .then(setMaximized)
-      .catch(() => undefined);
+    action().catch(() => undefined);
   };
 
   return (
