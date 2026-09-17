@@ -315,6 +315,25 @@ builder. Two decisions worth knowing:
 - **A `Content-Type` you set is never replaced.** The body type supplies one
   only when you have not.
 
+## Auth that needs a round trip
+
+Bearer, basic and an API key are headers, so they are applied in
+`build.rs` where the request is assembled. Digest is not: RFC 7616 is a
+conversation, and the response can only be computed once the server has sent a
+nonce. `HttpEngine::send` therefore sends, and on a 401 carrying a
+`WWW-Authenticate: Digest` challenge, answers it and sends again.
+
+Both attempts live inside the one timeout. Two round trips the user did not ask
+for should not buy twice the wait.
+
+A challenge that cannot be answered — a different scheme, a malformed header,
+`auth-int` with no body — is not an error. The 401 is the honest answer to what
+was asked, so it is returned with a warning saying why there was no second
+attempt.
+
+The test server issues a challenge and then recomputes the digest itself, so the
+test fails if the client's answer is merely well-formed rather than correct.
+
 ## Cancellation
 
 `CancellationHandle` wraps a `CancellationToken`. `HttpEngine::execute` selects

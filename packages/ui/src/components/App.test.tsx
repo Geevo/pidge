@@ -1349,3 +1349,29 @@ describe("API key auth", () => {
     expect(screen.getByLabelText("Value")).toHaveValue("");
   });
 });
+
+describe("digest auth", () => {
+  it("offers it and sends the credentials to the host", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "Digest");
+
+    // It says what it will do, since nothing goes out on the first request.
+    expect(screen.getByText(/comes back 401 with a challenge/)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Username"), "ada");
+    await user.type(screen.getByLabelText("Password"), "lovelace");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.auth).toEqual({
+      type: "digest",
+      username: "ada",
+      password: "lovelace",
+    });
+  });
+});

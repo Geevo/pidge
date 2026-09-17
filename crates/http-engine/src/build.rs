@@ -130,12 +130,16 @@ fn apply_auth(
     match &request.auth {
         AuthConfig::None => builder,
 
-        AuthConfig::Bearer { .. } | AuthConfig::Basic { .. } if occupied("authorization") => {
+        AuthConfig::Bearer { .. } | AuthConfig::Basic { .. } | AuthConfig::Digest { .. }
+            if occupied("authorization") =>
+        {
             warnings.push(
                 "An explicit Authorization header is set, so the Auth tab was ignored.".to_string(),
             );
             builder
         }
+        // Nothing to send yet: the engine answers the challenge and retries.
+        AuthConfig::Digest { .. } => builder,
         AuthConfig::Bearer { token } => builder.bearer_auth(token),
         AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
 

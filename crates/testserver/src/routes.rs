@@ -105,12 +105,99 @@ async fn route(request: &Request, segments: &[&str]) -> Response {
                 .body(vec![b'x'; size])
         }
 
+        // Digest, properly: challenge, then verify the client's arithmetic.
+        ["digest"] => digest_route(request),
+
         ["auth"] => Response::ok().json(&json!({
             "authorization": request.header("authorization").unwrap_or_default(),
         })),
 
         _ => Response::new(404, "Not Found").json(&json!({ "error": "not found" })),
     }
+}
+
+/// The fixed nonce this server challenges with. A real one would be random and
+/// time-limited; a constant makes the test's arithmetic checkable by hand.
+const DIGEST_NONCE: &str = "dcd98b7102dd2f0e8b11d0f600bfb0c093";
+const DIGEST_REALM: &str = "testserver";
+const DIGEST_USER: &str = "ada";
+const DIGEST_PASSWORD: &str = "lovelace";
+
+/// 401 with a challenge until the client answers it correctly, then 200.
+///
+/// The response is recomputed here rather than pattern-matched, so the test
+/// fails if the client's digest is merely well-formed.
+fn digest_route(request: &Request) -> Response {
+    let Some(header) = request.header("authorization") else {
+        return challenge();
+    };
+
+    let parts = digest_parts(header);
+    let get = |key: &str| parts.get(key).cloned().unwrap_or_default();
+
+    if get("nonce") != DIGEST_NONCE || get("username") != DIGEST_USER {
+        return challenge();
+    }
+
+    let ha1 = md5_hex(&format!("{DIGEST_USER}:{DIGEST_REALM}:{DIGEST_PASSWORD}"));
+    let ha2 = md5_hex(&format!("{}:{}", request.method, get("uri")));
+    let expected = if get("qop").is_empty() {
+        md5_hex(&format!("{ha1}:{}:{ha2}", DIGEST_NONCE))
+    } else {
+        md5_hex(&format!(
+            "{ha1}:{}:{}:{}:{}:{ha2}",
+            DIGEST_NONCE,
+            get("nc"),
+            get("cnonce"),
+            get("qop")
+        ))
+    };
+
+    if get("response") == expected {
+        Response::ok().json(&json!({ "authenticated": true, "uri": get("uri") }))
+    } else {
+        challenge()
+    }
+}
+
+fn challenge() -> Response {
+    Response::new(401, "Unauthorized")
+        .header(
+            "WWW-Authenticate",
+            format!(
+                "Digest realm=\"{DIGEST_REALM}\", qop=\"auth\", algorithm=MD5, nonce=\"{DIGEST_NONCE}\""
+            ),
+        )
+        .json(&json!({ "error": "unauthorized" }))
+}
+
+/// `Digest username="ada", realm="...", response="..."` into a map.
+fn digest_parts(header: &str) -> std::collections::HashMap<String, String> {
+    header
+        .trim()
+        .strip_prefix("Digest ")
+        .unwrap_or("")
+        .split(',')
+        .filter_map(|part| part.trim().split_once('='))
+        .map(|(key, value)| {
+            (
+                key.trim().to_ascii_lowercase(),
+                value.trim().trim_matches('"').to_string(),
+            )
+        })
+        .collect()
+}
+
+fn md5_hex(input: &str) -> String {
+    use md5::{Digest, Md5};
+
+    let mut hasher = Md5::new();
+    hasher.update(input.as_bytes());
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// Sends the head immediately, then dribbles out chunks. Used to test

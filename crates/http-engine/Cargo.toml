@@ -11,6 +11,7 @@ repository.workspace = true
 api-client-core.workspace = true
 api-client-variables.workspace = true
 base64.workspace = true
+digest_auth.workspace = true
 p12-keystore = "0.3"
 reqwest.workspace = true
 serde.workspace = true
