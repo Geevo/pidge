@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import type { FilePickRequest } from "../bridge";
 import type { ClientIdentitySettings, Settings, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
 import { Select } from "./Select";
@@ -10,6 +11,11 @@ interface Props {
   storagePath: string;
   /** The host's version, for the About section. */
   version: string;
+  /**
+   * The host's file chooser, when it has one. Absent on a host that cannot show
+   * one, and the Browse buttons go with it.
+   */
+  onBrowse?: (request: FilePickRequest) => Promise<string | null>;
   /**
    * Called as the theme is picked, so the palette changes under the dialog
    * before it is saved. The preview is owned by the caller rather than written
@@ -44,10 +50,22 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "about", label: "About" },
 ];
 
+/* The extensions each platform's chooser will offer. */
+const CA_FILTERS = [
+  { name: "Certificates", extensions: ["pem", "crt", "cer", "der"] },
+  { name: "All files", extensions: ["*"] },
+];
+
+const IDENTITY_FILTERS = [
+  { name: "Certificates and bundles", extensions: ["p12", "pfx", "pem"] },
+  { name: "All files", extensions: ["*"] },
+];
+
 export function SettingsDialog({
   settings,
   storagePath,
   version,
+  onBrowse,
   onPreviewTheme,
   onSave,
   onClose,
@@ -63,6 +81,23 @@ export function SettingsDialog({
     setDraft((current) => ({ ...current, tls: { ...current.tls, ...change } }));
 
   const identity: ClientIdentitySettings | null = draft.tls.clientIdentity;
+
+  const setIdentityPath = (value: string) =>
+    patchTls({
+      clientIdentity:
+        value.trim() === "" ? null : { path: value, password: identity?.password ?? null },
+    });
+
+  /** Nothing happens when the chooser is dismissed, or when it fails. */
+  const browseFor = async (
+    title: string,
+    filters: FilePickRequest["filters"],
+    apply: (path: string) => void,
+  ) => {
+    if (!onBrowse) return;
+    const chosen = await onBrowse({ title, filters }).catch(() => null);
+    if (chosen) apply(chosen);
+  };
 
   const setCaFile = (index: number, value: string) => {
     const next = [...draft.tls.extraCaFiles];
@@ -177,71 +212,88 @@ export function SettingsDialog({
 
           {section === "certs" ? (
             <>
-              <label className="ac-field ac-field--toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.tls.useSystemRoots}
-                  onChange={(event) => patchTls({ useSystemRoots: event.target.checked })}
-                />
-                <span>
-                  Trust the system certificate store
-                  <small>Windows, macOS Keychain, or the system CA bundle on Linux.</small>
-                </span>
-              </label>
+              <div className="ac-group">
+                <h3 className="ac-group__title">Trusted roots</h3>
 
-              <div className="ac-section__body">
-                <div className="ac-section__label">Additional trusted CAs</div>
-                {draft.tls.extraCaFiles.length === 0 ? (
-                  <p className="ac-hint">None. Add a PEM or DER file to trust an internal CA.</p>
-                ) : null}
+                <label className="ac-field ac-field--toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.tls.useSystemRoots}
+                    onChange={(event) => patchTls({ useSystemRoots: event.target.checked })}
+                  />
+                  <span>
+                    The system certificate store
+                    <small>Windows, macOS Keychain, or the system CA bundle on Linux.</small>
+                  </span>
+                </label>
 
-                {draft.tls.extraCaFiles.map((file, index) => (
-                  <div className="ac-field" key={index}>
-                    <input
-                      type="text"
-                      aria-label={`CA file ${index + 1}`}
-                      placeholder="/path/to/internal-ca.pem"
-                      spellCheck={false}
-                      value={file}
-                      onChange={(event) => setCaFile(index, event.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="ac-icon-button"
-                      aria-label={`Remove CA file ${index + 1}`}
-                      onClick={() =>
-                        patchTls({
-                          extraCaFiles: draft.tls.extraCaFiles.filter(
-                            (_, position) => position !== index,
-                          ),
-                        })
-                      }
-                    >
-                      <CloseIcon size={12} />
-                    </button>
-                  </div>
-                ))}
-
-                <div className="ac-field">
+                <div className="ac-group__row">
+                  <span className="ac-group__label">Additional CAs</span>
                   <button
                     type="button"
-                    className="ac-button ac-button--icon"
+                    className="ac-button ac-button--quiet ac-button--icon"
                     onClick={() => patchTls({ extraCaFiles: [...draft.tls.extraCaFiles, ""] })}
                   >
                     <PlusIcon size={13} />
-                    Add CA file
+                    Add
                   </button>
                 </div>
+
+                {draft.tls.extraCaFiles.length === 0 ? (
+                  <p className="ac-hint">
+                    None. Add a PEM or DER file to trust an internal CA as well as the store above.
+                  </p>
+                ) : (
+                  draft.tls.extraCaFiles.map((file, index) => (
+                    <div className="ac-field ac-field--path" key={index}>
+                      <input
+                        type="text"
+                        aria-label={`CA file ${index + 1}`}
+                        placeholder="/path/to/internal-ca.pem"
+                        spellCheck={false}
+                        value={file}
+                        onChange={(event) => setCaFile(index, event.target.value)}
+                      />
+                      {onBrowse ? (
+                        <button
+                          type="button"
+                          className="ac-button ac-button--quiet"
+                          onClick={() =>
+                            void browseFor(`CA file ${index + 1}`, CA_FILTERS, (path) =>
+                              setCaFile(index, path),
+                            )
+                          }
+                        >
+                          Browse…
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="ac-icon-button"
+                        aria-label={`Remove CA file ${index + 1}`}
+                        onClick={() =>
+                          patchTls({
+                            extraCaFiles: draft.tls.extraCaFiles.filter(
+                              (_, position) => position !== index,
+                            ),
+                          })
+                        }
+                      >
+                        <CloseIcon size={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
 
-              <div className="ac-section__body">
-                <div className="ac-section__label">Client certificate</div>
+              <div className="ac-group">
+                <h3 className="ac-group__title">Client certificate</h3>
                 <p className="ac-hint">
                   Sent when a server asks for one. A PEM holding the certificate and key, or a
                   PKCS#12 <code>.p12</code>/<code>.pfx</code> bundle, which is unpacked for you.
                 </p>
 
-                <div className="ac-field">
+                <div className="ac-field ac-field--path">
                   <label htmlFor="ac-client-cert">File</label>
                   <input
                     id="ac-client-cert"
@@ -249,15 +301,19 @@ export function SettingsDialog({
                     placeholder="/path/to/client.p12"
                     spellCheck={false}
                     value={identity?.path ?? ""}
-                    onChange={(event) =>
-                      patchTls({
-                        clientIdentity:
-                          event.target.value.trim() === ""
-                            ? null
-                            : { path: event.target.value, password: identity?.password ?? null },
-                      })
-                    }
+                    onChange={(event) => setIdentityPath(event.target.value)}
                   />
+                  {onBrowse ? (
+                    <button
+                      type="button"
+                      className="ac-button ac-button--quiet"
+                      onClick={() =>
+                        void browseFor("Client certificate", IDENTITY_FILTERS, setIdentityPath)
+                      }
+                    >
+                      Browse…
+                    </button>
+                  ) : null}
                 </div>
 
                 {identity ? (
@@ -278,7 +334,7 @@ export function SettingsDialog({
                 ) : null}
               </div>
 
-              <label className="ac-field ac-field--toggle ac-field--danger">
+              <label className="ac-field ac-field--toggle ac-field--danger ac-danger-box">
                 <input
                   type="checkbox"
                   checked={draft.tls.acceptInvalidCerts}

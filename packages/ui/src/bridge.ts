@@ -21,6 +21,12 @@ export interface PlatformBridge {
   deleteSavedRequest(savedRequestId: string): Promise<AppState>;
   clearHistory(): Promise<AppState>;
   /**
+   * Optional: opens the platform's own file chooser and resolves with the path,
+   * or `null` if it was dismissed. Absent on a host that cannot show one, and
+   * the Browse buttons are absent with it — typing the path still works.
+   */
+  pickFile?(request: FilePickRequest): Promise<string | null>;
+  /**
    * Optional: commands the host initiates, such as a Command Palette entry.
    * Returns an unsubscribe function. Hosts with no such commands omit it.
    */
@@ -29,6 +35,18 @@ export interface PlatformBridge {
   readonly window?: WindowControls;
   /** Name shown in diagnostics, e.g. "desktop" or "vscode". */
   readonly platform: string;
+}
+
+/** What to put in the title bar of the chooser, and what to show in it. */
+export interface FilePickRequest {
+  readonly title: string;
+  readonly filters?: readonly FilePickFilter[];
+}
+
+export interface FilePickFilter {
+  readonly name: string;
+  /** Without the dot, as both hosts expect. */
+  readonly extensions: readonly string[];
 }
 
 /** Commands a host can push into the UI. */

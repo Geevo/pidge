@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The window needs to talk to the commands in this app, and to move, resize and close itself because it draws its own title bar.",
+  "description": "The window needs to talk to the commands in this app, to move, resize and close itself because it draws its own title bar, and to open a file chooser for picking certificate files.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -11,6 +11,7 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-internal-toggle-maximize",
     "core:window:allow-is-maximized",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "dialog:allow-open"
   ]
 }

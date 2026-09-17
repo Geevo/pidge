@@ -974,6 +974,11 @@ input[type="checkbox"]:hover {
   font-size: var(--ac-font-size-small);
 }
 
+/* A file extension is one token; breaking `.pfx` across lines reads as noise. */
+.ac-hint code {
+  white-space: nowrap;
+}
+
 /* ---------- editor ---------- */
 
 .ac-editor {
@@ -1532,6 +1537,66 @@ input[type="checkbox"]:hover {
 }
 
 /* ---------- settings ---------- */
+
+/*
+ * A titled group of settings. The certificates section is three unrelated
+ * decisions — what to trust, what to present, and what to skip checking — and
+ * as a flat stack of fields they ran into one another.
+ */
+.ac-group {
+  margin: 6px 8px 8px;
+  padding: 2px 0 4px;
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius);
+  background: var(--ac-bg-subtle);
+}
+
+.ac-group__title {
+  margin: 0;
+  padding: 7px 10px 1px;
+  font-size: var(--ac-font-size);
+  font-weight: 600;
+}
+
+/* A label with an action opposite it, e.g. "Additional CAs" and Add. */
+.ac-group__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 2px;
+}
+
+.ac-group__label {
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+}
+
+/* A path and the buttons that act on it: the field takes what is left. */
+.ac-field--path input[type="text"] {
+  min-width: 0;
+}
+
+/* Fields inside a group sit a little tighter than a lone row does. */
+.ac-group .ac-field {
+  padding: 5px 8px;
+}
+
+.ac-group .ac-hint {
+  padding: 4px 10px 6px;
+}
+
+/*
+ * Turning verification off is not a preference among preferences, so it does
+ * not sit in the stack looking like one.
+ */
+.ac-danger-box {
+  margin: 2px 8px 6px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--ac-danger) 35%, transparent);
+  border-radius: var(--ac-radius);
+  background: color-mix(in srgb, var(--ac-danger) 7%, transparent);
+}
 
 .ac-section {
   margin: 14px 0 2px;

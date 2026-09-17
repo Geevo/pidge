@@ -9,6 +9,8 @@
 export { App } from "./components/App";
 
 export type {
+  FilePickFilter,
+  FilePickRequest,
   HostCommand,
   LoadedState,
   PlatformBridge,
