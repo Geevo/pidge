@@ -107,6 +107,7 @@ export class ApiClientPanel {
           state: reply.state,
           recovery: reply.recovery,
           storagePath: reply.storagePath,
+          version: reply.version,
         };
       }
 

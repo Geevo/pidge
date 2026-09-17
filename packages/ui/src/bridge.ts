@@ -71,6 +71,8 @@ export interface LoadedState {
   /** Set when the state file could not be read and defaults were used. */
   readonly recovery: string | null;
   readonly storagePath: string;
+  /** The host's version, shown in Settings. */
+  readonly version: string;
 }
 
 export interface SaveRequestInput {

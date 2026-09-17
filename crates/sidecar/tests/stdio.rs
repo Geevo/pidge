@@ -268,9 +268,12 @@ fn state_can_be_loaded_saved_and_cleared() {
             state,
             storage_path,
             recovery,
+            version,
         } => {
             assert!(recovery.is_none());
             assert!(storage_path.ends_with("state.json"));
+            // Whatever this build is, the UI has something to show in About.
+            assert!(!version.is_empty());
             assert_eq!(state.tabs.len(), 1);
             state
         }

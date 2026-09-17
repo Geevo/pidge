@@ -41,6 +41,7 @@ function initialState(): UiState {
     runtime: {},
     drawer: null,
     storagePath: "",
+    version: "",
     notice: null,
     loaded: false,
   };
@@ -93,6 +94,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
           type: "hydrate",
           app: loaded.state,
           storagePath: loaded.storagePath,
+          version: loaded.version,
           notice: loaded.recovery,
         });
       })
@@ -102,6 +104,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
           type: "hydrate",
           app: stateRef.current.app,
           storagePath: "",
+          version: "",
           notice: `Could not load your saved data: ${toRequestError(error).message}`,
         });
       });

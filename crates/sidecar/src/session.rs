@@ -168,6 +168,7 @@ pub async fn run(store: Store) -> io::Result<()> {
                             state: session.snapshot(),
                             recovery: session.recovery().map(|r| r.message.clone()),
                             storage_path: session.storage_path(),
+                            version: env!("CARGO_PKG_VERSION").to_string(),
                         },
                     ),
                 );

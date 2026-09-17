@@ -75,6 +75,7 @@ export class FakeBridge implements PlatformBridge {
       state: this.state,
       recovery: this.recovery,
       storagePath: "/tmp/state.json",
+      version: "0.1.0",
     });
   }
 

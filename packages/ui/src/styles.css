@@ -1410,6 +1410,27 @@ input[type="checkbox"]:hover {
   contain: paint;
 }
 
+/* ---------- about ---------- */
+
+.ac-about {
+  padding: 4px 8px;
+}
+
+.ac-about__name {
+  margin: 4px 0 2px;
+  font-weight: 600;
+}
+
+.ac-about__version {
+  color: var(--ac-text-muted);
+  font-family: var(--ac-font-mono);
+  font-weight: 400;
+}
+
+.ac-about .ac-hint {
+  padding: 4px 0;
+}
+
 .ac-dialog__message {
   margin: 0;
   padding: 10px 8px;

@@ -13,4 +13,8 @@ historyEntry: HistoryEntry | null, } | { "type": "requestError", error: RequestE
 /**
  * Present when the state file had to be recovered; safe to show.
  */
-recovery: string | null, storagePath: string, } | { "type": "stateSaved", state: AppState, } | { "type": "storageError", message: string, } | { "type": "protocolError", message: string, };
+recovery: string | null, storagePath: string, 
+/**
+ * The host's own version, for the About tab.
+ */
+version: string, } | { "type": "stateSaved", state: AppState, } | { "type": "storageError", message: string, } | { "type": "protocolError", message: string, };
