@@ -258,6 +258,24 @@ Two details worth knowing:
 - The new size is handed up only on release. Committing on every frame would be
   a hundred state updates and a hundred debounced writes to disk for one drag.
 
+### Why the URL field is not a controlled input
+
+Ctrl+Z in the URL bar did nothing, and the reason is not in our code. React
+writes `defaultValue` on every commit of a controlled input, which sets the
+value attribute, and setting that attribute makes the browser throw away the
+undo history it had been building. Typing twenty-five characters wiped the stack
+twenty-five times.
+
+So the field keeps its own text. It renders with a `defaultValue` captured on
+the first render, and an effect writes into the node only when the `url` in
+state differs from what the field is showing — switching tabs, the params table
+rewriting the query, a session restored at startup. Those replace what is in the
+field anyway, so losing undo history with them is the right outcome; typing no
+longer touches it at all.
+
+A test pins this by counting writes to `value` and `defaultValue` while typing.
+It fails, loudly, if anyone makes the field controlled again.
+
 ## Response bodies
 
 A body is rendered in the same CodeMirror the request body uses, in read-only

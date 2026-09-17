@@ -258,6 +258,50 @@ describe("keyboard shortcuts", () => {
     expect(await screen.findByText("200 OK")).toBeInTheDocument();
   });
 
+  /*
+   * Undo itself is the browser's and cannot be exercised here, but the thing
+   * that used to break it can: React writes `defaultValue` on every commit of a
+   * controlled input, that sets the value attribute, and setting the attribute
+   * throws the undo history away. The field is uncontrolled for exactly this
+   * reason, so nothing should touch either property while someone types.
+   */
+  it("leaves the URL field's own value alone while typing, so undo survives", async () => {
+    const { user } = setup();
+    await ready();
+
+    const field = screen.getByRole<HTMLInputElement>("textbox", { name: "URL" });
+    const writes: string[] = [];
+    for (const property of ["value", "defaultValue"] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, property)!;
+      /* The accessors are only ever invoked with `.call(this)` below, never
+         detached from the element. */
+      /* eslint-disable @typescript-eslint/unbound-method */
+      const read = descriptor.get as (this: HTMLInputElement) => string;
+      const write = descriptor.set as (this: HTMLInputElement, next: string) => void;
+      /* eslint-enable @typescript-eslint/unbound-method */
+      Object.defineProperty(field, property, {
+        configurable: true,
+        get(this: HTMLInputElement) {
+          return read.call(this);
+        },
+        set(this: HTMLInputElement, next: string) {
+          writes.push(`${property}=${next}`);
+          write.call(this, next);
+        },
+      });
+    }
+
+    await user.type(field, "https://example.com/users");
+
+    expect(field.value).toBe("https://example.com/users");
+    expect(writes).toEqual([]);
+
+    // Hand the element back as it was, so later tests see a plain input.
+    for (const property of ["value", "defaultValue"] as const) {
+      delete (field as unknown as Record<string, unknown>)[property];
+    }
+  });
+
   it("sends on Enter inside the URL field", async () => {
     const { bridge, user } = setup();
     await ready();
