@@ -444,3 +444,21 @@ reporting the error would have nothing left to correct.
 
 Proxies and client-certificate selection per host are not wired up. The reqwest
 client builder in `HttpEngine::new` is the one place either would go.
+
+### NTLM
+
+Asked for and not built, because it cannot be built honestly on this engine.
+
+NTLM authenticates a _connection_, not a request: 401, then a negotiate message,
+then the server's challenge, then the authenticate message — all three on the
+same TCP connection. reqwest pools connections by authority and offers no way to
+pin one to a sequence of requests, so an implementation here would work whenever
+the pool happened to hand back the same socket and fail when it did not. An auth
+scheme that works most of the time is worse than one that is absent.
+
+Doing it properly means a second HTTP path for NTLM hosts that owns its socket,
+or SSPI on Windows to authenticate as the logged-in user. Either is a
+substantial piece of work rather than another variant of `AuthConfig`.
+
+Until then, `cntlm` or a similar local proxy holds the NTLM connection and
+speaks plain HTTP to this client, which works today and needs nothing here.
