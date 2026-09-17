@@ -58,6 +58,17 @@ function systemPrefersDark(dark: boolean) {
   };
 }
 
+/** Settings is tabbed; the certificate fields live behind the Certs tab. */
+async function openSettings(
+  user: ReturnType<typeof userEvent.setup>,
+  section?: "General" | "Certs" | "About",
+) {
+  await user.click(screen.getByRole("button", { name: "Settings" }));
+  const dialog = await screen.findByRole("dialog", { name: "Settings" });
+  if (section) await user.click(within(dialog).getByRole("tab", { name: section }));
+  return dialog;
+}
+
 /** Saving asks for a name in a dialog of the app's own. */
 async function saveAs(user: ReturnType<typeof userEvent.setup>, name: string) {
   const dialog = await screen.findByRole("dialog", { name: "Save request" });
@@ -483,8 +494,7 @@ describe("settings", () => {
     const { bridge, user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const dialog = await openSettings(user, "Certs");
 
     await user.click(within(dialog).getByRole("button", { name: "Add CA file" }));
     await user.type(
@@ -527,8 +537,7 @@ describe("settings", () => {
     render(<App bridge={bridge} />);
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const dialog = await openSettings(user, "Certs");
 
     await user.clear(within(dialog).getByLabelText("File"));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
@@ -542,8 +551,7 @@ describe("settings", () => {
     const { user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const dialog = await openSettings(user, "Certs");
 
     expect(within(dialog).queryByLabelText("Password")).not.toBeInTheDocument();
     await user.type(within(dialog).getByLabelText("File"), "/home/me/client.p12");
@@ -1155,5 +1163,57 @@ describe("the padlock", () => {
     const dialog = await screen.findByRole("dialog", { name: "Certificate" });
 
     expect(within(dialog).getByText(/could not be read/)).toBeInTheDocument();
+  });
+});
+
+describe("the settings sections", () => {
+  it("opens on General, with the certificates out of the way", async () => {
+    const { user } = setup();
+    const dialog = await openSettings(user);
+
+    expect(within(dialog).getByLabelText("Theme")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("File")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "General" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("shows the certificates under Certs, and the general fields under General", async () => {
+    const { user } = setup();
+    const dialog = await openSettings(user, "Certs");
+
+    expect(within(dialog).getByLabelText("File")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Theme")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("tab", { name: "General" }));
+    expect(within(dialog).getByLabelText("Theme")).toBeInTheDocument();
+  });
+
+  it("shows the host's version and where the state is kept under About", async () => {
+    const { user } = setup();
+    const dialog = await openSettings(user, "About");
+
+    expect(within(dialog).getByText(/0\.1\.0/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/\/tmp\/state\.json/)).toBeInTheDocument();
+  });
+
+  it("keeps an edit made in one section when another is saved", async () => {
+    const { bridge, user } = setup();
+    const dialog = await openSettings(user, "Certs");
+
+    await user.click(within(dialog).getByRole("button", { name: "Add CA file" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "CA file 1" }), "/ca.pem");
+
+    // The draft is one object behind all three sections, not one per tab.
+    await user.click(within(dialog).getByRole("tab", { name: "General" }));
+    await user.click(within(dialog).getByLabelText("Follow redirects"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saved = bridge.saved.at(-1)?.settings;
+      expect(saved?.tls.extraCaFiles).toEqual(["/ca.pem"]);
+      expect(saved?.followRedirects).toBe(false);
+    });
   });
 });

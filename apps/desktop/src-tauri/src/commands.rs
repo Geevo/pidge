@@ -14,6 +14,8 @@ pub struct LoadedState {
     /// Present when the state file had to be recovered.
     pub recovery: Option<String>,
     pub storage_path: String,
+    /// The app's own version, for the About tab.
+    pub version: String,
 }
 
 #[tauri::command]
@@ -41,6 +43,7 @@ pub fn load_state(session: State<'_, Session>) -> LoadedState {
         state: session.snapshot(),
         recovery: session.recovery().map(|recovery| recovery.message.clone()),
         storage_path: session.storage_path(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
     }
 }
 

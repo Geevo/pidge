@@ -268,6 +268,17 @@ Above 2 MB the body falls back to a plain `<pre>` with a note. Highlighting and
 folding a document that size costs more than it is worth, and the fallback still
 shows everything.
 
+## Settings
+
+Three sections — General, Certs, About — behind one draft. The draft is a single
+`Settings` object shared by all three rather than one per section, so an edit
+made under Certs is still there when Save is pressed from General.
+
+About shows the host's own version, which travels with the state: `LoadedState`
+already carried the storage path, and the version goes the same way rather than
+being baked into the frontend at build time, where it could drift from the
+binary actually running.
+
 ## Errors
 
 `RequestError` has a `kind` the UI can switch on, a `message` written for a

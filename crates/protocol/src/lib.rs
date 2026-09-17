@@ -136,6 +136,8 @@ pub enum ServerMessage {
         /// Present when the state file had to be recovered; safe to show.
         recovery: Option<String>,
         storage_path: String,
+        /// The host's own version, for the About tab.
+        version: String,
     },
     /// Acknowledges any state-mutating message, carrying the new state.
     #[serde(rename_all = "camelCase")]

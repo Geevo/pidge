@@ -32,6 +32,8 @@ export interface UiState {
   /** `null` means the drawer is closed; the editor is the point of the app. */
   readonly drawer: DrawerPanel | null;
   readonly storagePath: string;
+  /** The host's version, for Settings. Empty until the state has loaded. */
+  readonly version: string;
   /** A one-off message, e.g. a recovered state file. */
   readonly notice: string | null;
   readonly loaded: boolean;
@@ -44,7 +46,13 @@ const defaultRuntime: TabRuntime = {
 };
 
 export type Action =
-  | { type: "hydrate"; app: AppState; storagePath: string; notice: string | null }
+  | {
+      type: "hydrate";
+      app: AppState;
+      storagePath: string;
+      version: string;
+      notice: string | null;
+    }
   | { type: "dismissNotice" }
   | { type: "setRequest"; tabId: string; request: HttpRequest }
   | { type: "newTab"; request?: HttpRequest; name?: string; savedRequestId?: string }
@@ -79,6 +87,7 @@ export function reducer(state: UiState, action: Action): UiState {
         app,
         runtime: Object.fromEntries(app.tabs.map((tab) => [tab.id, defaultRuntime])),
         storagePath: action.storagePath,
+        version: action.version,
         notice: action.notice,
         loaded: true,
       };

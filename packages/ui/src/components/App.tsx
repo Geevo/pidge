@@ -306,6 +306,7 @@ export function App({ bridge }: Props) {
         <SettingsDialog
           settings={state.app.settings}
           storagePath={state.storagePath}
+          version={state.version}
           onPreviewTheme={setPreviewTheme}
           onSave={client.setSettings}
           onClose={() => {

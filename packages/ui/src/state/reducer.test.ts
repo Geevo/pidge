@@ -11,6 +11,7 @@ function hydrated(): UiState {
     runtime: {},
     drawer: null,
     storagePath: "",
+    version: "",
     notice: null,
     loaded: false,
   };
@@ -18,6 +19,7 @@ function hydrated(): UiState {
     type: "hydrate",
     app: defaultState(),
     storagePath: "/tmp/state.json",
+    version: "0.1.0",
     notice: null,
   });
 }
@@ -179,6 +181,7 @@ describe("panels and environments", () => {
       type: "hydrate",
       app: broken,
       storagePath: "",
+      version: "0.1.0",
       notice: null,
     });
     expect(state.app.activeTabId).toBe(state.app.tabs[0]!.id);
