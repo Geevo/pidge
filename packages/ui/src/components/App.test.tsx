@@ -302,6 +302,31 @@ describe("keyboard shortcuts", () => {
     }
   });
 
+  /*
+   * WebKitGTK delivers the keystroke and then does nothing with it: the command
+   * works, the binding does not exist. The app runs the edit itself, on every
+   * platform, so there is one behaviour rather than two.
+   */
+  it("runs undo and redo in the URL field itself", async () => {
+    const { user } = setup();
+    await ready();
+
+    const commands: string[] = [];
+    const execCommand = vi.fn((command: string) => {
+      commands.push(command);
+      return true;
+    });
+    Object.defineProperty(document, "execCommand", { configurable: true, value: execCommand });
+
+    const field = screen.getByRole("textbox", { name: "URL" });
+    await user.click(field);
+    await user.keyboard("{Control>}z{/Control}");
+    await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+    await user.keyboard("{Control>}y{/Control}");
+
+    expect(commands).toEqual(["undo", "redo", "redo"]);
+  });
+
   it("sends on Enter inside the URL field", async () => {
     const { bridge, user } = setup();
     await ready();

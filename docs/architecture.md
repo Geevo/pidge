@@ -276,6 +276,19 @@ longer touches it at all.
 A test pins this by counting writes to `value` and `defaultValue` while typing.
 It fails, loudly, if anyone makes the field controlled again.
 
+That was half the problem. The other half is that **WebKitGTK does not bind
+Ctrl+Z at all**: the keystroke arrives at the page unprevented, nothing happens,
+and `document.execCommand("undo")` performs the edit perfectly well when called.
+It leaves the binding to the embedding application. Chromium binds it, which is
+why Windows had undo and Linux had neither — and why Windows lost only redo to
+the attribute writes above, since Chromium keeps the history behind the cursor
+and discards what is ahead of it.
+
+So the field handles Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y and runs the command
+itself, on every platform rather than only where it is missing. The edit fires
+an input event like any other, so the params table and the rest of the state
+follow the field back and forth.
+
 ## Response bodies
 
 A body is rendered in the same CodeMirror the request body uses, in read-only
