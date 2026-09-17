@@ -4,6 +4,7 @@
  * struct and regenerate, so the two sides cannot drift.
  */
 export type { AppState } from "./generated/AppState";
+export type { ApiKeyPlacement } from "./generated/ApiKeyPlacement";
 export type { AuthConfig } from "./generated/AuthConfig";
 export type { ClientEnvelope } from "./generated/ClientEnvelope";
 export type { ClientMessage } from "./generated/ClientMessage";

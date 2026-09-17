@@ -1,8 +1,8 @@
 //! Engine tests against a local server. Nothing here touches the internet.
 
 use api_client_core::{
-    AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry, RequestBody,
-    RequestErrorKind,
+    ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, KeyValueEntry, MultipartEntry,
+    RequestBody, RequestErrorKind,
 };
 use api_client_http_engine::{CancellationHandle, EngineConfig, HttpEngine, normalize_url};
 use api_client_testserver::TestServer;
@@ -652,4 +652,104 @@ async fn timing_is_recorded() {
         .unwrap();
 
     assert!(response.duration_ms >= 60, "got {}", response.duration_ms);
+}
+
+#[tokio::test]
+async fn puts_an_api_key_in_the_header_it_names() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/headers"));
+    request.auth = AuthConfig::ApiKey {
+        key: "X-API-Key".to_string(),
+        value: "secret-key".to_string(),
+        placement: ApiKeyPlacement::Header,
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    let headers = body_json(&response.body)["headers"].clone();
+    let sent = headers
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|pair| pair[0] == "x-api-key" && pair[1] == "secret-key");
+    assert!(sent, "header not sent: {headers}");
+    assert!(response.warnings.is_empty());
+}
+
+#[tokio::test]
+async fn puts_an_api_key_in_the_query_string_when_asked() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/echo?existing=kept"));
+    request.auth = AuthConfig::ApiKey {
+        key: "api_key".to_string(),
+        value: "secret key/with symbols".to_string(),
+        placement: ApiKeyPlacement::Query,
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    // Escaped like any other param, and beside what was already there.
+    let query = body_json(&response.body)["query"].clone();
+    assert_eq!(query["existing"], "kept");
+    assert_eq!(query["api_key"], "secret key/with symbols");
+}
+
+#[tokio::test]
+async fn an_api_key_header_typed_by_hand_wins_and_warns() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/headers"));
+    request.headers = vec![KeyValueEntry::new("X-API-Key", "typed-by-hand")];
+    request.auth = AuthConfig::ApiKey {
+        key: "X-API-Key".to_string(),
+        value: "from-the-auth-tab".to_string(),
+        placement: ApiKeyPlacement::Header,
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    let headers = body_json(&response.body)["headers"].clone();
+    let sent: Vec<_> = headers
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|pair| pair[0] == "x-api-key")
+        .cloned()
+        .collect();
+    assert_eq!(sent.len(), 1, "both were sent: {headers}");
+    assert_eq!(sent[0][1], "typed-by-hand");
+    assert_eq!(response.warnings.len(), 1);
+    assert!(response.warnings[0].contains("X-API-Key"));
+}
+
+#[tokio::test]
+async fn an_api_key_with_no_name_is_ignored() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/echo"));
+    request.auth = AuthConfig::ApiKey {
+        key: "  ".to_string(),
+        value: "orphan".to_string(),
+        placement: ApiKeyPlacement::Query,
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .unwrap();
+
+    assert_eq!(
+        body_json(&response.body)["query"]
+            .as_object()
+            .unwrap()
+            .len(),
+        0
+    );
 }

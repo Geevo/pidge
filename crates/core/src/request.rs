@@ -92,6 +92,24 @@ pub enum AuthConfig {
     Bearer { token: String },
     #[serde(rename_all = "camelCase")]
     Basic { username: String, password: String },
+    /// A key in a header or the query string, which is most "API key" auth.
+    #[serde(rename_all = "camelCase")]
+    ApiKey {
+        key: String,
+        value: String,
+        #[serde(default)]
+        placement: ApiKeyPlacement,
+    },
+}
+
+/// Where an API key goes. A header by default: a query string ends up in logs.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ApiKeyPlacement {
+    #[default]
+    Header,
+    Query,
 }
 
 /// A single part of a multipart/form-data body.
