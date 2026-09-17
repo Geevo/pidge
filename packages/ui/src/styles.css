@@ -1473,25 +1473,35 @@ input[type="checkbox"]:hover {
   color: var(--ac-text-muted);
 }
 
-.ac-about__footnotes {
-  width: 100%;
-  margin-top: 24px;
-  padding-top: 14px;
-  border-top: 1px solid var(--ac-border);
-  color: var(--ac-text-faint);
+/*
+ * Where this install keeps its data — a fact about the machine, and the one
+ * line here anybody might want to act on.
+ */
+.ac-about__storage {
+  max-width: 100%;
+  margin: 26px 0 0;
+  color: var(--ac-text-muted);
   font-size: var(--ac-font-size-small);
 }
 
-.ac-about__footnotes p {
-  margin: 0 0 4px;
-}
-
-.ac-about__footnotes p:last-child {
-  margin-bottom: 0;
-}
-
-.ac-about__footnotes code {
+.ac-about__storage code {
+  font-family: var(--ac-font-mono);
   overflow-wrap: anywhere;
+}
+
+/*
+ * The licences, below the rule, fainter and smaller: boilerplate rather than
+ * something to read now. Running it on from the line above made the two look
+ * like one sentence.
+ */
+.ac-about__licence {
+  width: 100%;
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ac-border);
+  color: var(--ac-text-faint);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .ac-dialog__message {
