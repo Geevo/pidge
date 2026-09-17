@@ -284,10 +284,22 @@ why Windows had undo and Linux had neither — and why Windows lost only redo to
 the attribute writes above, since Chromium keeps the history behind the cursor
 and discards what is ahead of it.
 
-So the field handles Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y and runs the command
-itself, on every platform rather than only where it is missing. The edit fires
-an input event like any other, so the params table and the rest of the state
-follow the field back and forth.
+Running `document.execCommand("undo")` on the key fixes that, but it buys a
+history that is no use: a whole run of typing is one step, so a single press
+empties the field instead of taking back the last thing written.
+
+So the field keeps its own history, in `lib/textHistory.ts`. Snapshots coalesce
+while someone types and a step ends where a person would expect to stop — after
+a pause of 600 ms, and at the punctuation that separates the parts of a URL
+(`/ ? & = # :` and whitespace). Typing `example.com/users?a=1` and pressing undo
+walks back through `example.com/users?a`, `example.com/users`, `example.com`.
+Undoing does not extend the step it lands on, a new edit discards the redo
+future, and the history starts again whenever something other than typing
+replaces the field — switching tabs, or the params table rewriting the query —
+so undo cannot walk into another request's URL.
+
+Each step calls the same `onUrlChange` as typing, so the params table and the
+rest of the state follow the field back and forth.
 
 ## Response bodies
 
