@@ -204,6 +204,13 @@ Plasma desktop rather than guessed.
 The answer arrives before the first render, because swapping the buttons
 afterwards would be visible. It costs one `invoke` behind the boot screen.
 
+Which of the two middle glyphs is drawn follows the window itself, through
+`onResized`, rather than the click that asked for it. A compositor maximises
+when it is ready, so `isMaximized()` straight after `toggleMaximize()` still
+reports the old state and the glyph ends up a step behind; the event also
+covers the ways a window is maximised without the button, such as a double
+click on the title bar or a keyboard shortcut.
+
 All of this hangs off `PlatformBridge.window`, which is optional and absent in
 VS Code, where the editor owns the frame. Every call through it is caught:
 `getCurrentWindow()` throws outright when the Tauri internals are missing, and

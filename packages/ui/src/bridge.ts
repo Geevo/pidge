@@ -80,6 +80,17 @@ export interface WindowControls {
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
   isMaximized(): Promise<boolean>;
+  /**
+   * Calls back whenever the window is resized, which includes being maximised
+   * and restored. Resolves with an unsubscribe.
+   *
+   * Asking after a toggle is not enough: a compositor applies the new state
+   * when it is ready, so the answer that comes back is the old one, and the
+   * maximise glyph ends up a step behind. It also says nothing about the ways
+   * a window is maximised without the button — a double click on the title
+   * bar, a keyboard shortcut, a tiling drag.
+   */
+  onResized(listener: () => void): Promise<() => void>;
   /** Undecorated windows get no resize edges for free; these supply them. */
   startResizing(edge: ResizeEdge): Promise<void>;
 }
