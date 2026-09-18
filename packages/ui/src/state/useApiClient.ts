@@ -16,6 +16,7 @@ function initialState(): UiState {
       version: 1,
       settings: {
         theme: "system",
+        syntaxTheme: "app",
         timeoutMs: 30000,
         followRedirects: true,
         maxHistory: 500,

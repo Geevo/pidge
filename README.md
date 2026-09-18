@@ -46,8 +46,8 @@ No macOS build. It ought to build there; nobody has tried.
   server actually presented, and says so when it is expired or self-signed.
 - Your system's certificate store by default, plus extra CAs and client
   certificates for a network that needs them.
-- Tabs, local history, saved requests, light and dark themes, and a keyboard
-  that does what you expect.
+- Tabs, local history, saved requests, light and dark themes, syntax colours
+  that can borrow VS Code's or One's, and a keyboard that does what you expect.
 
 What it will not do: accounts, sync, sharing, dashboards, telemetry, update
 pings, or anything that asks you to sign in.

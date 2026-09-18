@@ -59,10 +59,10 @@ function systemPrefersDark(dark: boolean) {
   };
 }
 
-/** Settings is tabbed; the certificate fields live behind the Certs tab. */
+/** Settings is tabbed; the palettes and the certificate fields have their own. */
 async function openSettings(
   user: ReturnType<typeof userEvent.setup>,
-  section?: "General" | "Certs" | "About",
+  section?: "General" | "Themes" | "Certs" | "About",
 ) {
   await user.click(screen.getByRole("button", { name: "Settings" }));
   const dialog = await screen.findByRole("dialog", { name: "Settings" });
@@ -1203,23 +1203,23 @@ describe("themes", () => {
     const { user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const dialog = await openSettings(user, "Themes");
 
-    // The list is drawn into the body, so it is read from the screen.
-    await user.click(within(dialog).getByLabelText("Theme"));
-    const options = screen.getAllByRole("option").map((option) => option.textContent);
+    const group = within(dialog).getByRole("radiogroup", { name: "Theme" });
+    const offered = within(group)
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("value"));
 
-    expect(options).toEqual(["Follow the system", "Light", "Dark", "Warm dark", "Warm light"]);
+    expect(offered).toEqual(["system", "light", "dark", "warmDark", "warmLight"]);
+    expect(within(group).getByRole("radio", { name: "System" })).toBeChecked();
   });
 
   it("previews the palette as it is picked, before anything is saved", async () => {
     const { bridge, user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
 
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
@@ -1231,9 +1231,8 @@ describe("themes", () => {
     const { bridge, user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
     });
@@ -1246,19 +1245,17 @@ describe("themes", () => {
     expect(bridge.saved.at(-1)?.settings.theme ?? "system").toBe("system");
 
     // The draft goes with it: reopening starts from the saved theme again.
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const again = await screen.findByRole("dialog", { name: "Settings" });
-    expect(within(again).getByLabelText("Theme")).toHaveTextContent("Follow the system");
+    const again = await openSettings(user, "Themes");
+    expect(within(again).getByRole("radio", { name: "System" })).toBeChecked();
   });
 
   it("applies the chosen palette to the document", async () => {
     const { bridge, user } = setup();
     await ready();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
+    const dialog = await openSettings(user, "Themes");
 
-    await choose(user, within(dialog).getByLabelText("Theme"), "Warm dark");
+    await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -1279,17 +1276,15 @@ describe("themes", () => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     });
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Settings" });
-    await choose(user, within(dialog).getByLabelText("Theme"), "Light");
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "Light" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "light");
     });
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    const again = await screen.findByRole("dialog", { name: "Settings" });
-    await choose(user, within(again).getByLabelText("Theme"), "Follow the system");
+    const again = await openSettings(user, "Themes");
+    await user.click(within(again).getByRole("radio", { name: "System" }));
     await user.click(within(again).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -1311,6 +1306,72 @@ describe("themes", () => {
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     });
+  });
+});
+
+describe("syntax colours", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("data-syntax");
+  });
+
+  it("offers the app's own colours and the two borrowed schemes", async () => {
+    const { user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Themes");
+
+    const group = within(dialog).getByRole("radiogroup", { name: "Syntax colours" });
+    // The sample is `aria-hidden`, so the radio is named by its caption alone.
+    const names = within(group)
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("value"));
+
+    expect(names).toEqual(["app", "vsCode", "one"]);
+    expect(within(group).getByRole("radio", { name: "Match the app" })).toBeChecked();
+  });
+
+  it("recolours the editors as a scheme is picked, before anything is saved", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "VS Code" }));
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-syntax", "vsCode");
+    });
+    expect(bridge.saved.at(-1)?.settings.syntaxTheme ?? "app").toBe("app");
+  });
+
+  it("puts the saved scheme back when the dialog is cancelled", async () => {
+    const { user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "One" }));
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-syntax", "one");
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(document.documentElement).toHaveAttribute("data-syntax", "app");
+    });
+  });
+
+  it("keeps the chosen scheme", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Themes");
+    await user.click(within(dialog).getByRole("radio", { name: "VS Code" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.syntaxTheme).toBe("vsCode");
+    });
+    expect(document.documentElement).toHaveAttribute("data-syntax", "vsCode");
   });
 });
 
@@ -1568,7 +1629,7 @@ describe("the settings sections", () => {
     const { user } = setup();
     const dialog = await openSettings(user);
 
-    expect(within(dialog).getByLabelText("Theme")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Timeout")).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("File")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("tab", { name: "General" })).toHaveAttribute(
       "aria-selected",
@@ -1581,10 +1642,15 @@ describe("the settings sections", () => {
     const dialog = await openSettings(user, "Certs");
 
     expect(within(dialog).getByLabelText("File")).toBeInTheDocument();
-    expect(within(dialog).queryByLabelText("Theme")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Timeout")).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("tab", { name: "General" }));
-    expect(within(dialog).getByLabelText("Theme")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Timeout")).toBeInTheDocument();
+
+    // The palettes are a section of their own, and not in either of those.
+    await user.click(within(dialog).getByRole("tab", { name: "Themes" }));
+    expect(within(dialog).getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Timeout")).not.toBeInTheDocument();
   });
 
   it("shows the host's version and where the state is kept under About", async () => {
@@ -1593,6 +1659,13 @@ describe("the settings sections", () => {
 
     expect(within(dialog).getByText(/0\.1\.0/)).toBeInTheDocument();
     expect(within(dialog).getByText(/\/tmp\/state\.json/)).toBeInTheDocument();
+  });
+
+  it("does not let the icon be dragged out of the window", async () => {
+    const { user } = setup();
+    await openSettings(user, "About");
+
+    expect(document.querySelector(".ac-about__logo")).toHaveAttribute("draggable", "false");
   });
 
   it("keeps an edit made in one section when another is saved", async () => {

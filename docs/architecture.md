@@ -125,6 +125,16 @@ The base tokens on `:root` are the light palette, so a theme only restates what
 differs from it. That is why the warm light block is a third the size of the
 warm dark one rather than a copy.
 
+Each block is matched by attribute as well as on the root — `[data-theme="dark"]`
+beside `:root[data-theme="dark"]` — because Settings draws a sample of every
+theme at once, and a sample is not the document. Inheritance is what makes this
+need spelling out: a warm light sample inside a dark window would otherwise take
+the window's accent, since the warm blocks restate only the greys. So the two
+light themes are listed on the base block and the two dark ones on the dark
+block, and each warm block overrides from there. The root keeps the higher
+specificity, which is what lets a chosen theme beat the VS Code mapping in the
+extension.
+
 `color-scheme` is set per theme as well as the colours, so the browser's own
 furniture — scrollbars, the caret, the right-click menu — follows.
 
@@ -165,14 +175,47 @@ window was tried and removed: on Linux it sets
 Breeze nor what `prefers-color-scheme` reports, so it was machinery that did
 nothing.
 
-A palette cannot be judged from its name, so Settings applies one as soon as it
-is picked and `App` holds that choice separately from the saved settings.
-Cancelling drops it and the saved theme comes back. The preview lives in `App`
-rather than in the dialog because `App` is what writes `data-theme`; two writers
-of the same attribute would make the result depend on the order of effects.
+A palette cannot be judged from its name, so the theme is picked from samples
+rather than from a list: the app in miniature — window, tab, URL bar, Send, two
+lines of text — drawn five times over in five palettes. "System" is both
+palettes at once, split corner to corner, since drawing whichever the desktop
+prefers today would make it a copy of Light or Dark with nothing to say it
+follows anything.
+
+Picking one still applies it immediately, and `App` holds that choice separately
+from the saved settings. Cancelling drops it and the saved theme comes back. The
+preview lives in `App` rather than in the dialog because `App` is what writes
+`data-theme`; two writers of the same attribute would make the result depend on
+the order of effects.
 
 Method colours are deliberately not themed. They are Swagger's palette because
 they carry meaning, and a POST should be the same green wherever it is read.
+
+### Syntax colours
+
+The colours a body is highlighted in are a second choice, kept apart from the
+theme: `data-syntax` on the document element, beside `data-theme`. Every
+combination of the two is legal, so they cannot be one setting.
+
+Each scheme is a block of `--ac-syntax-*` tokens, and CodeMirror's highlight
+style names those tokens rather than any colour. The style is therefore built
+once and never rebuilt: picking a scheme repaints the editors instead of
+reconfiguring them, and nothing loses its cursor or its folds.
+
+The default scheme, `app`, points the tokens back at the palette above — the
+accent for names, the status colours for values — which is what the editors
+were wearing before there was a choice. The two borrowed schemes, VS Code's
+defaults and One, are literal colours, and each has a light and a dark form
+selected by the theme: the background under the code is the app's, and a scheme
+drawn for the other one is unreadable on it. Only the tokens change; the editor
+keeps the app's background, gutter and caret whichever scheme is chosen.
+
+`[data-syntax]` is matched as a plain attribute for the same reason the theme
+blocks are: Settings draws a sample of each scheme at once, and every sample has
+to carry its own colours while the document keeps the chosen ones. Both pickers
+are built the same way — the sample is the control, with a real radio inside it,
+hidden, so the group keeps the arrow keys and the checked state the platform
+already implements.
 
 ## The window
 
@@ -407,20 +450,28 @@ locked down; the one directive we deliberately opened stays open.
 
 ## Settings
 
-Three sections — General, Certs, About — behind one draft. The draft is a single
-`Settings` object shared by all three rather than one per section, so an edit
-made under Certs is still there when Save is pressed from General.
+Four sections — General, Themes, Certs, About — behind one draft. The draft is a
+single `Settings` object shared by all four rather than one per section, so an
+edit made under Certs is still there when Save is pressed from General.
 
 The dialog has a fixed height rather than one that fits its contents. The
-sections are not the same length — General needs about 220px of body and Certs
-about 430px — and a dialog that jumps a quarter of its height when a tab is
-pressed is disorienting. It is sized to the tallest, still capped at 80% of the
-window, and anything past that scrolls.
+sections are not the same length — General and Themes need about 290px of body,
+Certs 390 and About 410 — and a dialog that jumps a quarter of its height when a
+tab is pressed is disorienting. It is sized to the tallest, still capped at 80%
+of the window, and anything past that scrolls.
 
-Certs groups the three decisions it holds — what to trust, what to present, and
-what to skip checking — because as a flat stack of fields they ran together.
-Turning verification off is boxed and tinted rather than sitting in line with
-the rest, since it is not a preference among preferences.
+Every section is boxed groups rather than a flat stack, because a stack of
+unrelated rows reads as one long list of equals. Certs holds three decisions —
+what to trust, what to present, and what to skip checking. General holds three
+more: how a request is sent, what is kept between runs, and how a response is
+shown. Turning verification off is boxed and tinted rather than sitting in line
+with the rest, since it is not a preference among preferences.
+
+Themes is its own section because its two settings are not fields: they are five
+palettes and three sets of syntax colours, each drawn as a sample wide enough to
+judge, which needs the width of the dialog rather than the half of it a field
+leaves. The group's heading names the radio group, so the samples carry no
+second label.
 
 Each path field has a Browse button when `PlatformBridge.pickFile` is present:
 the desktop supplies it through Tauri's dialog plugin, VS Code through

@@ -7,7 +7,7 @@ import { isSelectAll, matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
 import { useApiClient } from "../state/useApiClient";
-import type { HttpMethod, HttpRequest, ScratchTab, Theme } from "../types";
+import type { HttpMethod, HttpRequest, ScratchTab, SyntaxTheme, Theme } from "../types";
 import { EnvironmentSelector } from "./EnvironmentSelector";
 import { EnvironmentsDialog } from "./EnvironmentsDialog";
 import { HistoryPanel } from "./HistoryPanel";
@@ -51,8 +51,11 @@ export function App({ bridge }: Props) {
    * the dialog without saving drops this and the saved theme comes back.
    */
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
+  /** The same, for the syntax colours: they are picked by looking at them. */
+  const [previewSyntax, setPreviewSyntax] = useState<SyntaxTheme | null>(null);
 
   useTheme(previewTheme ?? state.app.settings.theme);
+  useSyntaxTheme(previewSyntax ?? state.app.settings.syntaxTheme);
 
   // The host can ask for things too, e.g. the VS Code Command Palette.
   useEffect(
@@ -344,9 +347,11 @@ export function App({ bridge }: Props) {
           version={state.version}
           onBrowse={bridge.pickFile?.bind(bridge)}
           onPreviewTheme={setPreviewTheme}
+          onPreviewSyntax={setPreviewSyntax}
           onSave={client.setSettings}
           onClose={() => {
             setPreviewTheme(null);
+            setPreviewSyntax(null);
             setSettingsOpen(false);
           }}
         />
@@ -398,4 +403,16 @@ function useTheme(theme: Theme) {
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
   }, [theme]);
+}
+
+/**
+ * Applies a set of syntax colours to the document, the same way.
+ *
+ * A separate attribute rather than more values in `data-theme`: the two are
+ * chosen separately, and every combination of them is legal.
+ */
+function useSyntaxTheme(syntaxTheme: SyntaxTheme) {
+  useEffect(() => {
+    document.documentElement.setAttribute("data-syntax", syntaxTheme);
+  }, [syntaxTheme]);
 }

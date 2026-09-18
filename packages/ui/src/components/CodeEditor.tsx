@@ -39,24 +39,36 @@ import type { SyntaxLanguage } from "../lib/mime";
  */
 
 /*
- * One style across every language, built from the palette the rest of the app
- * already uses: names in the accent colour, text in green, numbers amber,
- * keywords orange, and anything the parser could not make sense of in red.
+ * One style across every language, and one that never changes: each rule names
+ * a `--ac-syntax-*` token, and the scheme picked in Settings is the document
+ * attribute those tokens are defined against. Switching schemes is then a
+ * repaint rather than a new highlight style, a reconfigured editor, and a lost
+ * cursor. The tokens are documented in `styles.css`.
+ *
+ * A link is the exception: the underline makes it a piece of the interface
+ * rather than a token, so it stays in the accent colour whatever the code
+ * around it is wearing.
  */
 const highlightStyle = HighlightStyle.define([
-  { tag: [tags.propertyName, tags.attributeName, tags.tagName], color: "var(--ac-accent)" },
-  { tag: [tags.string, tags.attributeValue], color: "var(--ac-status-ok)" },
-  { tag: tags.number, color: "var(--ac-status-redirect)" },
-  { tag: [tags.bool, tags.null, tags.atom, tags.keyword], color: "var(--ac-status-client)" },
-  { tag: [tags.comment, tags.meta, tags.processingInstruction], color: "var(--ac-text-faint)" },
-  { tag: [tags.operator, tags.punctuation, tags.separator], color: "var(--ac-text-muted)" },
-  { tag: [tags.typeName, tags.className], color: "var(--ac-method-head-text)" },
+  { tag: [tags.propertyName, tags.attributeName, tags.tagName], color: "var(--ac-syntax-key)" },
+  { tag: [tags.string, tags.attributeValue], color: "var(--ac-syntax-string)" },
+  { tag: tags.number, color: "var(--ac-syntax-number)" },
+  { tag: [tags.bool, tags.null, tags.atom, tags.keyword], color: "var(--ac-syntax-keyword)" },
+  {
+    tag: [tags.comment, tags.meta, tags.processingInstruction],
+    color: "var(--ac-syntax-comment)",
+  },
+  {
+    tag: [tags.operator, tags.punctuation, tags.separator],
+    color: "var(--ac-syntax-punctuation)",
+  },
+  { tag: [tags.typeName, tags.className], color: "var(--ac-syntax-type)" },
   {
     tag: [tags.function(tags.variableName), tags.definition(tags.variableName)],
-    color: "var(--ac-method-patch-text)",
+    color: "var(--ac-syntax-function)",
   },
   { tag: tags.link, color: "var(--ac-accent)", textDecoration: "underline" },
-  { tag: tags.invalid, color: "var(--ac-danger)" },
+  { tag: tags.invalid, color: "var(--ac-syntax-invalid)" },
 ]);
 
 /*

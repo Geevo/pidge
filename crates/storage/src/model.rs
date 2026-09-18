@@ -43,11 +43,31 @@ pub enum Theme {
     WarmLight,
 }
 
+/// Which colours the editors highlight with.
+///
+/// Separate from [`Theme`] because the two answer different questions: the
+/// theme is the application's own furniture, and this is the code inside it.
+/// Each of the borrowed palettes has a light and a dark form, and the one
+/// used follows whichever the theme above resolves to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SyntaxTheme {
+    /// The application's own palette, the one the status codes are drawn in.
+    #[default]
+    App,
+    /// Visual Studio Code's defaults, Dark+ and Light+.
+    VsCode,
+    /// One Dark and One Light, from Atom.
+    One,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 #[ts(export)]
 pub struct Settings {
     pub theme: Theme,
+    pub syntax_theme: SyntaxTheme,
     #[ts(type = "number")]
     pub timeout_ms: u64,
     pub follow_redirects: bool,
@@ -71,6 +91,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: Theme::System,
+            syntax_theme: SyntaxTheme::App,
             timeout_ms: 30_000,
             follow_redirects: true,
             max_history: 500,
