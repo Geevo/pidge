@@ -19,6 +19,7 @@ import {
   syntaxForMime,
   type SyntaxLanguage,
 } from "../lib/mime";
+import { selectContents } from "../lib/selection";
 import { isSelectAll } from "../lib/shortcuts";
 import { CodeEditor, isFoldable } from "./CodeEditor";
 import { ResponseHeaders } from "./ResponseHeaders";
@@ -271,14 +272,9 @@ function ResponseBody({
  */
 function selectAllWithin(event: ReactKeyboardEvent<HTMLElement>) {
   if (!isSelectAll(event)) return;
-  const selection = window.getSelection();
-  if (!selection) return;
 
   event.preventDefault();
-  const range = document.createRange();
-  range.selectNodeContents(event.currentTarget);
-  selection.removeAllRanges();
-  selection.addRange(range);
+  selectContents(event.currentTarget);
 }
 
 type RenderedBody =
