@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PlatformBridge } from "../bridge";
 import { installFieldHistory } from "../lib/fieldHistory";
+import { selectContents } from "../lib/selection";
 import { isSelectAll, matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
@@ -96,10 +97,19 @@ export function App({ bridge }: Props) {
        * Select all belongs to whatever holds focus, and a field, an editor or
        * the response body has already answered by the time this runs. Focus on
        * a button or nowhere at all is the case worth catching: the browser
-       * would take the whole window, so the key is dropped instead.
+       * would take the whole window, so the key never reaches it.
+       *
+       * An open dialog is the whole of what is on screen, and is what the key
+       * means there — the version and the path under About are why anyone
+       * reaches for it. The last one is the one on top.
        */
       if (isSelectAll(event)) {
-        if (!event.defaultPrevented && !isTextEntry(event.target)) event.preventDefault();
+        if (event.defaultPrevented || isTextEntry(event.target)) return;
+        event.preventDefault();
+
+        const dialogs = document.querySelectorAll(".ac-dialog");
+        const dialog = dialogs[dialogs.length - 1];
+        if (dialog) selectContents(dialog);
         return;
       }
 

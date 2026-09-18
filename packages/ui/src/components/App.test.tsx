@@ -948,6 +948,36 @@ describe("selecting all", () => {
     expect(selectAll(url).defaultPrevented).toBe(false);
   });
 
+  /* A dialog is the whole of what is on screen, so the key means all of it. */
+  it("selects a dialog's own text while one is open", async () => {
+    const { user } = setup();
+    await ready();
+    const dialog = await openSettings(user, "About");
+
+    expect(selectAll(document.body).defaultPrevented).toBe(true);
+
+    /*
+     * The range is the dialog; which text inside it a selection actually takes
+     * is `user-select`, which jsdom has no layout to apply. That half is
+     * measured in a real webview instead.
+     */
+    const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
+    expect(dialog.contains(range?.commonAncestorContainer ?? null)).toBe(true);
+    expect(selection?.toString()).toContain("state.json");
+  });
+
+  /* A field inside a dialog still answers for itself. */
+  it("leaves a dialog's fields alone", async () => {
+    const { user } = setup();
+    await ready();
+    const dialog = await openSettings(user);
+
+    const field = within(dialog).getByLabelText(/Timeout/i);
+    field.focus();
+    expect(selectAll(field).defaultPrevented).toBe(false);
+  });
+
   it("keeps the key inside the plain-text fallback", async () => {
     const { bridge, user } = setup();
     await ready();

@@ -449,9 +449,17 @@ input[type="checkbox"]:hover {
   -webkit-user-select: none;
 }
 
-/* A response and its headers, what a dialog reports, and anything typed. */
+/*
+ * A response and its headers, what a dialog reports, and anything typed.
+ *
+ * A dialog opts in line by line rather than whole. Almost all of its prose is
+ * there to be read once — a version, a tagline, a licence, an explanation of a
+ * field — and none of it is worth carrying anywhere. What is worth carrying is
+ * an identifier: where the state file lives, and what a certificate says it is.
+ */
 .ac-pane--response,
-.ac-dialog,
+.ac-about__storage,
+.ac-cert,
 .ac-notice,
 .ac-error,
 input,
