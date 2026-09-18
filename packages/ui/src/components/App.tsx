@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PlatformBridge } from "../bridge";
 import { installFieldHistory } from "../lib/fieldHistory";
-import { matchShortcut, shortcutHint } from "../lib/shortcuts";
+import { isSelectAll, matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
 import { useApiClient } from "../state/useApiClient";
@@ -92,6 +92,17 @@ export function App({ bridge }: Props) {
   // work from the body editor and the headers table too.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      /*
+       * Select all belongs to whatever holds focus, and a field, an editor or
+       * the response body has already answered by the time this runs. Focus on
+       * a button or nowhere at all is the case worth catching: the browser
+       * would take the whole window, so the key is dropped instead.
+       */
+      if (isSelectAll(event)) {
+        if (!event.defaultPrevented && !isTextEntry(event.target)) event.preventDefault();
+        return;
+      }
+
       const shortcut = matchShortcut(event);
       if (!shortcut) return;
       event.preventDefault();
@@ -340,6 +351,15 @@ export function App({ bridge }: Props) {
         />
       ) : null}
     </div>
+  );
+}
+
+/** Somewhere text is typed, which selects its own contents and needs no help. */
+function isTextEntry(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
   );
 }
 

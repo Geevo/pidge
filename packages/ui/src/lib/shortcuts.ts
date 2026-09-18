@@ -54,6 +54,23 @@ export function matchEditingCommand(event: {
   return null;
 }
 
+/**
+ * Select all, which a read-only pane has to answer for itself.
+ *
+ * An element that cannot take focus never sees the keystroke, and the browser's
+ * own select all then takes the whole window — every button and label with it.
+ */
+export function isSelectAll(event: {
+  key: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}): boolean {
+  const primary = isMac() ? event.metaKey : event.ctrlKey;
+  return primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "a";
+}
+
 /** Shown in tooltips so the shortcut is discoverable without a menu. */
 export function shortcutHint(name: ShortcutName): string {
   const modifier = isMac() ? "⌘" : "Ctrl+";

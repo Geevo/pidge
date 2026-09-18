@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { foldAll, unfoldAll } from "@codemirror/language";
 import type { EditorView } from "@codemirror/view";
 
@@ -13,6 +19,7 @@ import {
   syntaxForMime,
   type SyntaxLanguage,
 } from "../lib/mime";
+import { isSelectAll } from "../lib/shortcuts";
 import { CodeEditor, isFoldable } from "./CodeEditor";
 import { ResponseHeaders } from "./ResponseHeaders";
 
@@ -185,7 +192,12 @@ function ResponseBody({
         <p className="ac-hint">
           {formatBytes(response.sizeBytes)} is too large to highlight; showing plain text.
         </p>
-        <pre className={`ac-response-body${wrapLines ? " ac-response-body--wrap" : ""}`}>
+        <pre
+          className={`ac-response-body${wrapLines ? " ac-response-body--wrap" : ""}`}
+          tabIndex={0}
+          aria-label="Response body"
+          onKeyDown={selectAllWithin}
+        >
           {rendered.text}
         </pre>
       </>
@@ -248,6 +260,25 @@ function ResponseBody({
       />
     </div>
   );
+}
+
+/**
+ * Ctrl/Cmd+A over the plain-text body.
+ *
+ * The editor answers this key itself; a `pre` has no such thing, and left to
+ * the browser the shortcut selects the entire window rather than the body under
+ * the pointer. Answering it here keeps the selection to the text being read.
+ */
+function selectAllWithin(event: ReactKeyboardEvent<HTMLElement>) {
+  if (!isSelectAll(event)) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  event.preventDefault();
+  const range = document.createRange();
+  range.selectNodeContents(event.currentTarget);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 type RenderedBody =

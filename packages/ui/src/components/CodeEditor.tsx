@@ -159,7 +159,17 @@ export function CodeEditor({
               handlers.current.onChange?.(update.state.doc.toString());
             }
           }),
-          EditorView.contentAttributes.of({ "aria-label": ariaLabel }),
+          /*
+           * A read-only editor is not `contenteditable`, so nothing in it can
+           * take focus, and every keystroke falls through to the document: the
+           * keymap above never runs, and Ctrl/Cmd+A selects the whole window
+           * instead of the body being read. A tab stop fixes both — CodeMirror
+           * focuses the content on mousedown, and from there its own select
+           * all, copy and cursor keys apply.
+           */
+          EditorView.contentAttributes.of(
+            readOnly ? { "aria-label": ariaLabel, tabindex: "0" } : { "aria-label": ariaLabel },
+          ),
         ],
       }),
     });
