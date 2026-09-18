@@ -886,6 +886,88 @@ describe("response bodies", () => {
   });
 });
 
+/*
+ * Ctrl/Cmd+A used to reach the document and select the whole window — tab
+ * strip, buttons and all — because nothing in the response pane could hold
+ * focus. The editor and the plain-text fallback now take the key themselves,
+ * and the app drops it when whatever holds focus has no use for it.
+ */
+describe("selecting all", () => {
+  const selectAll = (target: Element) => {
+    const event = new KeyboardEvent("keydown", {
+      key: "a",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  async function send(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+  }
+
+  it("keeps the key inside the editor", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa('{"a":1,"b":2}'), mimeType: "application/json" }));
+    await send(user);
+
+    const body = await screen.findByLabelText("Response body");
+    expect(body).toHaveAttribute("tabindex", "0");
+
+    body.focus();
+    expect(document.activeElement).toBe(body);
+    // Answered by CodeMirror, so the browser never selects the window instead.
+    expect(selectAll(body).defaultPrevented).toBe(true);
+  });
+
+  it("drops the key when focus is on furniture", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+    await send(user);
+
+    // A button holds focus after a click, and the browser would answer Ctrl+A
+    // there by selecting the window.
+    const button = screen.getByRole("button", { name: "Send" });
+    button.focus();
+    expect(selectAll(button).defaultPrevented).toBe(true);
+  });
+
+  it("leaves the key alone in a field", async () => {
+    const { user } = setup();
+    await ready();
+
+    const url = screen.getByRole("textbox", { name: "URL" });
+    await user.type(url, "localhost:3000");
+    // The field selects its own contents; the app must not take the key away.
+    expect(selectAll(url).defaultPrevented).toBe(false);
+  });
+
+  it("keeps the key inside the plain-text fallback", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    const big = `{"pad":"${"x".repeat(2 * 1024 * 1024)}"}`;
+    bridge.queue(ok({ body: btoa(big), sizeBytes: big.length }));
+    await send(user);
+
+    await screen.findByText(/too large to highlight/);
+    const body = await screen.findByLabelText("Response body");
+    expect(body).toHaveAttribute("tabindex", "0");
+
+    body.focus();
+    expect(selectAll(body).defaultPrevented).toBe(true);
+
+    const selection = window.getSelection();
+    expect(selection?.rangeCount).toBe(1);
+    expect(body.contains(selection?.getRangeAt(0).commonAncestorContainer ?? null)).toBe(true);
+  });
+});
+
 describe("dragging the divider", () => {
   it("suppresses text selection for the duration of the drag", async () => {
     setup();

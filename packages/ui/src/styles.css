@@ -383,6 +383,7 @@ input[type="checkbox"]:hover {
   font-size: var(--ac-font-size-small);
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .ac-switch:hover {
@@ -432,6 +433,48 @@ input[type="checkbox"]:hover {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  /*
+   * The chrome is furniture rather than text. Dragging across a tab strip and
+   * highlighting half of it is a web page's habit, not an application's, and
+   * that selection is never the one anyone wanted. What is worth copying opts
+   * back in below.
+   *
+   * Both spellings, every time: WebKitGTK 2.52 still answers
+   * `CSS.supports("user-select", "none")` with false and throws the unprefixed
+   * declaration away. A release build is prefixed on the way out and hides
+   * this, so a rule written once works in the bundle and does nothing under
+   * `tauri dev`.
+   */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* A response and its headers, what a dialog reports, and anything typed. */
+.ac-pane--response,
+.ac-dialog,
+.ac-notice,
+.ac-error,
+input,
+textarea,
+pre,
+code,
+.cm-content {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/*
+ * A control's own label is furniture too, wherever it ends up — including the
+ * line numbers and fold arrows beside a body, which a drag through the text
+ * would otherwise collect and paste back as a column of digits.
+ */
+button,
+label,
+th,
+[role="tab"],
+.cm-gutters {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .ac-body {
@@ -1982,6 +2025,7 @@ input[type="checkbox"]:hover {
   touch-action: none;
   /* The divider itself is never selectable, drag or no drag. */
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .ac-split--rows > .ac-split__divider {

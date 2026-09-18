@@ -5,7 +5,7 @@ import { formatBytes, formatDuration, requestLabel, statusClass } from "./format
 import { baseMimeType, isJsonMime, isTextMime, prettyJson, syntaxForMime } from "./mime";
 import { paramsChanged, parseQueryParams, urlChanged } from "./url";
 import { shortenUrl } from "./format";
-import { matchEditingCommand } from "./shortcuts";
+import { isSelectAll, matchEditingCommand } from "./shortcuts";
 import { createHistory, record, redo, undo } from "./textHistory";
 import { installFieldHistory } from "./fieldHistory";
 
@@ -221,6 +221,32 @@ describe("undo and redo keys", () => {
         shiftKey: false,
       }),
     ).toBeNull();
+  });
+});
+
+describe("the select all key", () => {
+  const press = (key: string, extra: Partial<Record<"shiftKey" | "altKey", boolean>> = {}) => ({
+    key,
+    ctrlKey: true,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...extra,
+  });
+
+  it("recognises the combination a read-only pane has to answer", () => {
+    expect(isSelectAll(press("a"))).toBe(true);
+    expect(isSelectAll(press("A"))).toBe(true);
+  });
+
+  /* Ctrl+Shift+A and Ctrl+Alt+A belong to whoever else wants them. */
+  it("ignores everything else", () => {
+    expect(isSelectAll(press("a", { shiftKey: true }))).toBe(false);
+    expect(isSelectAll(press("a", { altKey: true }))).toBe(false);
+    expect(isSelectAll(press("s"))).toBe(false);
+    expect(
+      isSelectAll({ key: "a", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false }),
+    ).toBe(false);
   });
 });
 
