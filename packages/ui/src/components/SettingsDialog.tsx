@@ -1,9 +1,8 @@
 import { useState } from "react";
 
 import type { FilePickRequest } from "../bridge";
-import type { ClientIdentitySettings, Settings, Theme } from "../types";
+import type { ClientIdentitySettings, Settings, SyntaxTheme, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
-import { Select } from "./Select";
 import logo from "../assets/app-icon.svg";
 
 interface Props {
@@ -23,6 +22,8 @@ interface Props {
    * two writers of `data-theme` would make "which one wins" a matter of order.
    */
   onPreviewTheme: (theme: Theme) => void;
+  /** The same, for the syntax colours. */
+  onPreviewSyntax: (syntaxTheme: SyntaxTheme) => void;
   onSave: (settings: Settings) => void;
   onClose: () => void;
 }
@@ -34,18 +35,78 @@ interface Props {
  * trusts whatever the operating system trusts, and this is for the two cases
  * the OS store cannot cover — an internal CA, and a client certificate.
  */
-const THEMES = [
-  { value: "system", label: "Follow the system" },
+const THEMES: { value: Theme; label: string }[] = [
+  { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
   { value: "warmDark", label: "Warm dark" },
   { value: "warmLight", label: "Warm light" },
 ];
 
-type Section = "general" | "certs" | "about";
+/**
+ * The app in miniature: the window, a tab, the URL bar with Send, and two
+ * lines of text. A palette cannot be judged from its name, and it cannot be
+ * judged from a row of coloured squares either — what matters is how the
+ * surfaces sit on one another, so the sample is the screen in small.
+ */
+function ThemeSample({ theme }: { theme: Theme }) {
+  return (
+    <span className="ac-mini" data-theme={theme}>
+      <span className="ac-mini__chrome">
+        <span className="ac-mini__tab" />
+      </span>
+      <span className="ac-mini__bar">
+        <span className="ac-mini__field" />
+        <span className="ac-mini__send" />
+      </span>
+      <span className="ac-mini__text" />
+      <span className="ac-mini__text ac-mini__text--short" />
+    </span>
+  );
+}
+
+const SYNTAX_THEMES: { value: SyntaxTheme; label: string }[] = [
+  { value: "app", label: "Match the app" },
+  { value: "vsCode", label: "VS Code" },
+  { value: "one", label: "One" },
+];
+
+/*
+ * A scheme is chosen by looking at it, so the swatch is the control: a few
+ * lines of JSON in each scheme's own colours, on the background the editor
+ * actually uses, because that background does not change with the scheme.
+ *
+ * Keys, a string, a number and a boolean cover every colour a response body
+ * spends most of its time in. The rest — comments, types, function names —
+ * belong to the other languages, and are not worth a wider sample here.
+ */
+const SAMPLE: { role: string; text: string }[][] = [
+  [{ role: "punctuation", text: "{" }],
+  [
+    { role: "key", text: '  "name"' },
+    { role: "punctuation", text: ": " },
+    { role: "string", text: '"demo"' },
+    { role: "punctuation", text: "," },
+  ],
+  [
+    { role: "key", text: '  "port"' },
+    { role: "punctuation", text: ": " },
+    { role: "number", text: "8080" },
+    { role: "punctuation", text: "," },
+  ],
+  [
+    { role: "key", text: '  "live"' },
+    { role: "punctuation", text: ": " },
+    { role: "keyword", text: "true" },
+  ],
+  [{ role: "punctuation", text: "}" }],
+];
+
+type Section = "general" | "themes" | "certs" | "about";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "general", label: "General" },
+  { id: "themes", label: "Themes" },
   { id: "certs", label: "Certs" },
   { id: "about", label: "About" },
 ];
@@ -67,6 +128,7 @@ export function SettingsDialog({
   version,
   onBrowse,
   onPreviewTheme,
+  onPreviewSyntax,
   onSave,
   onClose,
 }: Props) {
@@ -136,77 +198,157 @@ export function SettingsDialog({
         <div className="ac-dialog__body">
           {section === "general" ? (
             <>
-              <div className="ac-field">
-                <label id="ac-theme-label" htmlFor="ac-theme">
-                  Theme
+              <div className="ac-group">
+                <h3 className="ac-group__title">Requests</h3>
+
+                <div className="ac-field">
+                  <label htmlFor="ac-timeout">Timeout</label>
+                  <input
+                    id="ac-timeout"
+                    type="text"
+                    inputMode="numeric"
+                    value={String(draft.timeoutMs)}
+                    onChange={(event) =>
+                      patch({ timeoutMs: Number(event.target.value.replace(/\D/g, "")) || 0 })
+                    }
+                  />
+                  <span className="ac-field__suffix">ms</span>
+                </div>
+
+                <label className="ac-field ac-field--toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.followRedirects}
+                    onChange={(event) => patch({ followRedirects: event.target.checked })}
+                  />
+                  <span>Follow redirects</span>
                 </label>
-                <Select
-                  id="ac-theme"
-                  labelledBy="ac-theme-label"
-                  value={draft.theme}
-                  options={THEMES}
-                  onChange={(value) => {
-                    const theme = value as Theme;
-                    patch({ theme });
-                    onPreviewTheme(theme);
-                  }}
-                />
               </div>
 
-              <div className="ac-field">
-                <label htmlFor="ac-timeout">Timeout</label>
-                <input
-                  id="ac-timeout"
-                  type="text"
-                  inputMode="numeric"
-                  value={String(draft.timeoutMs)}
-                  onChange={(event) =>
-                    patch({ timeoutMs: Number(event.target.value.replace(/\D/g, "")) || 0 })
-                  }
-                />
-                <span className="ac-field__suffix">ms</span>
+              <div className="ac-group">
+                <h3 className="ac-group__title">What is kept</h3>
+
+                <div className="ac-field">
+                  <label htmlFor="ac-max-history">Keep history</label>
+                  <input
+                    id="ac-max-history"
+                    type="text"
+                    inputMode="numeric"
+                    value={String(draft.maxHistory)}
+                    onChange={(event) =>
+                      patch({ maxHistory: Number(event.target.value.replace(/\D/g, "")) || 0 })
+                    }
+                  />
+                  <span className="ac-field__suffix">entries</span>
+                </div>
+
+                <label className="ac-field ac-field--toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.restoreTabs}
+                    onChange={(event) => patch({ restoreTabs: event.target.checked })}
+                  />
+                  <span>Reopen tabs on restart</span>
+                </label>
               </div>
 
-              <div className="ac-field">
-                <label htmlFor="ac-max-history">Keep history</label>
-                <input
-                  id="ac-max-history"
-                  type="text"
-                  inputMode="numeric"
-                  value={String(draft.maxHistory)}
-                  onChange={(event) =>
-                    patch({ maxHistory: Number(event.target.value.replace(/\D/g, "")) || 0 })
-                  }
-                />
-                <span className="ac-field__suffix">entries</span>
+              <div className="ac-group">
+                <h3 className="ac-group__title">Responses</h3>
+
+                <label className="ac-field ac-field--toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.wrapResponseLines}
+                    onChange={(event) => patch({ wrapResponseLines: event.target.checked })}
+                  />
+                  <span>Wrap long response lines</span>
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          {section === "themes" ? (
+            <>
+              <div className="ac-group">
+                <h3 className="ac-group__title" id="ac-theme-label">
+                  Theme
+                </h3>
+
+                <div className="ac-swatches" role="radiogroup" aria-labelledby="ac-theme-label">
+                  {THEMES.map((entry) => (
+                    <label className="ac-swatch" key={entry.value}>
+                      <input
+                        className="ac-visually-hidden"
+                        type="radio"
+                        name="ac-theme"
+                        value={entry.value}
+                        checked={draft.theme === entry.value}
+                        onChange={() => {
+                          patch({ theme: entry.value });
+                          onPreviewTheme(entry.value);
+                        }}
+                      />
+                      <span className="ac-swatch__sample ac-swatch__sample--mini" aria-hidden>
+                        {/*
+                         * "System" is both palettes, so it is drawn as both,
+                         * split corner to corner. Showing whichever the desktop
+                         * prefers today would make it a duplicate of Light or
+                         * Dark, with nothing to say it will follow.
+                         */}
+                        {entry.value === "system" ? (
+                          <>
+                            <span className="ac-mini-half">
+                              <ThemeSample theme="light" />
+                            </span>
+                            <span className="ac-mini-half ac-mini-half--far">
+                              <ThemeSample theme="dark" />
+                            </span>
+                          </>
+                        ) : (
+                          <ThemeSample theme={entry.value} />
+                        )}
+                      </span>
+                      <span className="ac-swatch__name">{entry.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <label className="ac-field ac-field--toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.followRedirects}
-                  onChange={(event) => patch({ followRedirects: event.target.checked })}
-                />
-                <span>Follow redirects</span>
-              </label>
+              <div className="ac-group">
+                <h3 className="ac-group__title" id="ac-syntax-label">
+                  Syntax colours
+                </h3>
 
-              <label className="ac-field ac-field--toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.restoreTabs}
-                  onChange={(event) => patch({ restoreTabs: event.target.checked })}
-                />
-                <span>Reopen tabs on restart</span>
-              </label>
-
-              <label className="ac-field ac-field--toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.wrapResponseLines}
-                  onChange={(event) => patch({ wrapResponseLines: event.target.checked })}
-                />
-                <span>Wrap long response lines</span>
-              </label>
+                <div className="ac-swatches" role="radiogroup" aria-labelledby="ac-syntax-label">
+                  {SYNTAX_THEMES.map((entry) => (
+                    <label className="ac-swatch" key={entry.value}>
+                      <input
+                        className="ac-visually-hidden"
+                        type="radio"
+                        name="ac-syntax"
+                        value={entry.value}
+                        checked={draft.syntaxTheme === entry.value}
+                        onChange={() => {
+                          patch({ syntaxTheme: entry.value });
+                          onPreviewSyntax(entry.value);
+                        }}
+                      />
+                      <span className="ac-swatch__sample" data-syntax={entry.value} aria-hidden>
+                        {SAMPLE.map((line, index) => (
+                          <span className="ac-swatch__line" key={index}>
+                            {line.map((token, position) => (
+                              <span className={`ac-tok-${token.role}`} key={position}>
+                                {token.text}
+                              </span>
+                            ))}
+                          </span>
+                        ))}
+                      </span>
+                      <span className="ac-swatch__name">{entry.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </>
           ) : null}
 
@@ -353,7 +495,14 @@ export function SettingsDialog({
 
           {section === "about" ? (
             <div className="ac-about">
-              <img className="ac-about__logo" src={logo} alt="" width="96" height="96" />
+              <img
+                className="ac-about__logo"
+                src={logo}
+                alt=""
+                width="96"
+                height="96"
+                draggable={false}
+              />
 
               <h3 className="ac-about__name">API Client</h3>
               <p className="ac-about__version">{version || "unknown version"}</p>

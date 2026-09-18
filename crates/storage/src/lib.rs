@@ -14,7 +14,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 pub use migrate::{SCHEMA_VERSION, migrate};
-pub use model::{AppState, HistoryEntry, SavedRequest, ScratchTab, Settings, Theme, now_ms};
+pub use model::{
+    AppState, HistoryEntry, SavedRequest, ScratchTab, Settings, SyntaxTheme, Theme, now_ms,
+};
 pub use paths::default_data_dir;
 
 pub const STATE_FILE_NAME: &str = "state.json";

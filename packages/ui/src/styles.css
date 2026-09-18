@@ -48,7 +48,16 @@
   src: url("./fonts/ibm-plex-mono-latin-700.woff2") format("woff2");
 }
 
-:root {
+/*
+ * The light palette, and the tokens no theme changes. `:root` alone would be
+ * enough for the document, but Settings draws a sample of each theme at once,
+ * and a sample is not the root: it has to match by attribute. The two light
+ * themes are listed here rather than inheriting, because a warm light sample
+ * inside a dark window would otherwise inherit the window's accent.
+ */
+:root,
+[data-theme="light"],
+[data-theme="warmLight"] {
   --ac-bg: #ffffff;
   --ac-bg-subtle: #f4f6f8;
   --ac-bg-raised: #ffffff;
@@ -135,7 +144,10 @@
   --ac-control-height: 32px;
 }
 
-:root[data-theme="dark"] {
+/* The dark palette, and the base the warm dark one is a variation on. */
+:root[data-theme="dark"],
+[data-theme="dark"],
+[data-theme="warmDark"] {
   --ac-bg: #141619;
   --ac-bg-subtle: #1a1d23;
   --ac-bg-raised: #22262e;
@@ -220,7 +232,8 @@
  * app reads as ink on paper rather than slate. Only the neutrals change — the
  * accent, the status colours and the method palette carry meaning and stay put.
  */
-:root[data-theme="warmDark"] {
+:root[data-theme="warmDark"],
+[data-theme="warmDark"] {
   --ac-bg: #1f1e1d;
   --ac-bg-subtle: #262624;
   --ac-bg-raised: #30302e;
@@ -259,7 +272,8 @@
  * the accent, the status colours and `color-scheme: light` are already right,
  * so only the greys are restated.
  */
-:root[data-theme="warmLight"] {
+:root[data-theme="warmLight"],
+[data-theme="warmLight"] {
   --ac-bg: #faf9f5;
   --ac-bg-subtle: #f0eee6;
   --ac-bg-raised: #ffffff;
@@ -271,6 +285,92 @@
   --ac-text-faint: #8c8a80;
 
   --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235e5d57' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/*
+ * Syntax colours, one set of tokens the editor's highlight style reads through
+ * so that a body recolours the moment the choice changes, with no editor to
+ * rebuild.
+ *
+ * The base set is the app's own palette: the accent for names, the status
+ * colours for values, and so it follows the theme above for free. The borrowed
+ * palettes are literal, and come in a light and a dark form because a scheme
+ * drawn for one background is unreadable on the other. Which form applies
+ * follows the theme, since the theme is what the body is drawn on.
+ *
+ * `[data-syntax]` matches an element rather than the document alone: Settings
+ * draws a sample of each scheme, and each sample has to carry its own colours
+ * while the document keeps the chosen ones.
+ */
+:root,
+[data-syntax="app"] {
+  --ac-syntax-key: var(--ac-accent);
+  --ac-syntax-string: var(--ac-status-ok);
+  --ac-syntax-number: var(--ac-status-redirect);
+  --ac-syntax-keyword: var(--ac-status-client);
+  --ac-syntax-comment: var(--ac-text-faint);
+  --ac-syntax-punctuation: var(--ac-text-muted);
+  --ac-syntax-type: var(--ac-method-head-text);
+  --ac-syntax-function: var(--ac-method-patch-text);
+  --ac-syntax-invalid: var(--ac-danger);
+}
+
+/* Visual Studio Code, Light+. */
+[data-syntax="vsCode"] {
+  --ac-syntax-key: #0451a5;
+  --ac-syntax-string: #a31515;
+  --ac-syntax-number: #098658;
+  --ac-syntax-keyword: #0000ff;
+  --ac-syntax-comment: #008000;
+  --ac-syntax-punctuation: #1f1f1f;
+  --ac-syntax-type: #267f99;
+  --ac-syntax-function: #795e26;
+  --ac-syntax-invalid: #cd3131;
+}
+
+/* Visual Studio Code, Dark+. */
+:root[data-theme="dark"][data-syntax="vsCode"],
+:root[data-theme="dark"] [data-syntax="vsCode"],
+:root[data-theme="warmDark"][data-syntax="vsCode"],
+:root[data-theme="warmDark"] [data-syntax="vsCode"] {
+  --ac-syntax-key: #9cdcfe;
+  --ac-syntax-string: #ce9178;
+  --ac-syntax-number: #b5cea8;
+  --ac-syntax-keyword: #569cd6;
+  --ac-syntax-comment: #6a9955;
+  --ac-syntax-punctuation: #d4d4d4;
+  --ac-syntax-type: #4ec9b0;
+  --ac-syntax-function: #dcdcaa;
+  --ac-syntax-invalid: #f44747;
+}
+
+/* One Light. */
+[data-syntax="one"] {
+  --ac-syntax-key: #e45649;
+  --ac-syntax-string: #50a14f;
+  --ac-syntax-number: #986801;
+  --ac-syntax-keyword: #a626a4;
+  --ac-syntax-comment: #a0a1a7;
+  --ac-syntax-punctuation: #383a42;
+  --ac-syntax-type: #c18401;
+  --ac-syntax-function: #4078f2;
+  --ac-syntax-invalid: #ca1243;
+}
+
+/* One Dark. */
+:root[data-theme="dark"][data-syntax="one"],
+:root[data-theme="dark"] [data-syntax="one"],
+:root[data-theme="warmDark"][data-syntax="one"],
+:root[data-theme="warmDark"] [data-syntax="one"] {
+  --ac-syntax-key: #e06c75;
+  --ac-syntax-string: #98c379;
+  --ac-syntax-number: #d19a66;
+  --ac-syntax-keyword: #c678dd;
+  --ac-syntax-comment: #7f848e;
+  --ac-syntax-punctuation: #abb2bf;
+  --ac-syntax-type: #e5c07b;
+  --ac-syntax-function: #61afef;
+  --ac-syntax-invalid: #be5046;
 }
 
 * {
@@ -1709,11 +1809,12 @@ th,
  * is the only way to create the thing the dialog is about.
  */
 /*
- * A fixed height, because the sections are not the same length: General needs
- * about 220px of body and Certs about 430px, and a dialog that jumps a quarter
- * of its height when you press a tab is disorienting. Sized to the tallest, so
- * the shorter sections have room to spare and nothing moves. Content past that
- * — a handful of CA files — scrolls rather than growing the dialog.
+ * A fixed height, because the sections are not the same length: General and
+ * Themes need about 290px of body, Certs 390 and About 410, and a dialog that
+ * jumps a quarter of its height when you press a tab is disorienting. Sized to
+ * the tallest, so the shorter sections have room to spare and nothing moves.
+ * Content past that — a handful of CA files — scrolls rather than growing the
+ * dialog.
  */
 .ac-dialog--settings {
   height: min(544px, 80%);
@@ -1775,10 +1876,17 @@ th,
   text-align: center;
 }
 
+/*
+ * The icon is decoration, and an application's decoration does not come away
+ * in your hand: dragging it in a webview picks the file up and drops it into
+ * whatever is behind the window. `draggable="false"` on the element covers the
+ * HTML drag; this covers WebKit's own image dragging, which ignores it.
+ */
 .ac-about__logo {
   flex: none;
   border-radius: 20px;
   box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+  -webkit-user-drag: none;
 }
 
 .ac-about__name {
@@ -1916,6 +2024,179 @@ th,
 
 .ac-group .ac-hint {
   padding: 4px 10px 6px;
+}
+
+/*
+ * A theme is picked by looking at it, not by reading its name, so the sample
+ * is the control: five palettes, or three sets of syntax colours, side by side
+ * under the group's own heading — which is also what names the radio group, so
+ * there is no second label for the same thing.
+ *
+ * The radio inside each sample is hidden rather than replaced, so the group
+ * keeps the arrow keys, the roving tab stop and the checked state the platform
+ * already gives it.
+ */
+.ac-swatches {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px 8px;
+}
+
+.ac-swatch {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+/*
+ * The background is the editor's, not the scheme's: what the choice changes is
+ * the colour of the tokens, and a sample drawn on a background the app will
+ * not use would be promising something else.
+ */
+.ac-swatch__sample {
+  display: block;
+  overflow: hidden;
+  padding: 6px 7px;
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-sm);
+  background: var(--ac-bg-input);
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+  line-height: 1.4;
+  white-space: pre;
+}
+
+.ac-swatch__line {
+  display: block;
+}
+
+.ac-swatch__name {
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+  text-align: center;
+}
+
+.ac-swatch:hover .ac-swatch__sample {
+  border-color: var(--ac-border-strong);
+}
+
+.ac-swatch input:checked ~ .ac-swatch__sample {
+  border-color: var(--ac-accent);
+  box-shadow: 0 0 0 1px var(--ac-accent);
+}
+
+.ac-swatch input:checked ~ .ac-swatch__name {
+  color: var(--ac-text);
+}
+
+.ac-swatch input:focus-visible ~ .ac-swatch__sample {
+  box-shadow: var(--ac-ring);
+}
+
+/*
+ * The theme sample: the app in small, drawn from the palette it is showing.
+ * Absolute rather than a plain stack, so that the two halves of the system
+ * sample can lie on top of one another.
+ */
+.ac-swatch__sample--mini {
+  position: relative;
+  height: 58px;
+  padding: 0;
+  background: var(--ac-bg);
+}
+
+.ac-mini {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  background: var(--ac-bg);
+}
+
+.ac-mini__chrome {
+  display: flex;
+  align-items: center;
+  height: 9px;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--ac-bg-subtle);
+}
+
+.ac-mini__tab {
+  width: 40%;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--ac-accent);
+}
+
+.ac-mini__bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+
+.ac-mini__field {
+  flex: 1;
+  border: 1px solid var(--ac-border);
+  border-radius: 2px;
+  background: var(--ac-bg-input);
+}
+
+.ac-mini__send {
+  width: 16px;
+  border-radius: 2px;
+  background: var(--ac-accent);
+}
+
+.ac-mini__text {
+  height: 3px;
+  width: 70%;
+  border-radius: 1px;
+  background: var(--ac-text-muted);
+}
+
+.ac-mini__text--short {
+  width: 45%;
+  background: var(--ac-text-faint);
+}
+
+/*
+ * The system sample is both palettes at once: the light one whole, the dark
+ * one laid over it and cut from corner to corner.
+ */
+.ac-mini-half {
+  position: absolute;
+  inset: 0;
+}
+
+.ac-mini-half--far {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* The sample's own tokens, the same names the editor highlights by. */
+.ac-tok-key {
+  color: var(--ac-syntax-key);
+}
+
+.ac-tok-string {
+  color: var(--ac-syntax-string);
+}
+
+.ac-tok-number {
+  color: var(--ac-syntax-number);
+}
+
+.ac-tok-keyword {
+  color: var(--ac-syntax-keyword);
+}
+
+.ac-tok-punctuation {
+  color: var(--ac-syntax-punctuation);
 }
 
 /*
