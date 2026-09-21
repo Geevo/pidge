@@ -3,4 +3,4 @@
 /**
  * The languages a request can be written in.
  */
-export type CodeTarget = "curl" | "powershell" | "python" | "csharp";
+export type CodeTarget = "curl" | "powershell" | "python" | "csharp" | "node";

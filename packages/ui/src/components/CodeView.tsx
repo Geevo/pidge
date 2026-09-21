@@ -15,6 +15,7 @@ const TARGETS: { value: CodeTarget; label: string; language: EditorLanguage }[] 
   { value: "powershell", label: "PowerShell", language: "powershell" },
   { value: "python", label: "Python", language: "python" },
   { value: "csharp", label: "C#", language: "csharp" },
+  { value: "node", label: "Node.js", language: "javascript" },
 ];
 
 /**

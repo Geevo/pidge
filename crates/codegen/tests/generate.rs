@@ -1,4 +1,4 @@
-//! What the four generators have to agree about.
+//! What the five generators have to agree about.
 //!
 //! These are deliberately about behaviour rather than layout: a test that
 //! pinned every line of output would fail on a reflowed comment and say
@@ -101,6 +101,7 @@ fn basic_auth_is_written_in_each_language_rather_than_as_a_blob() {
         (CodeTarget::PowerShell, "'ada:lovelace'"),
         (CodeTarget::Python, r#"auth=("ada", "lovelace")"#),
         (CodeTarget::CSharp, r#""ada:lovelace""#),
+        (CodeTarget::Node, r#"Buffer.from("ada:lovelace")"#),
     ];
 
     for (target, fragment) in expected {
@@ -173,6 +174,21 @@ fn a_challenge_scheme_uses_the_client_that_can_answer_it() {
     }
 }
 
+/// fetch answers no challenge, and a snippet that looked as if it would log in
+/// would be the silent omission this crate exists not to make.
+#[test]
+fn node_says_it_cannot_answer_a_challenge() {
+    let digest = HttpRequest {
+        auth: AuthConfig::Digest {
+            username: "ada".to_string(),
+            password: "lovelace".to_string(),
+        },
+        ..get("https://example.com/")
+    };
+    let code = code(&digest, CodeTarget::Node);
+    assert!(code.contains("cannot answer a Digest challenge"), "{code}");
+}
+
 /// The body is the text in the editor, character for character. Re-encoding it
 /// through a parser would reorder keys and reformat numbers, and send something
 /// nobody wrote.
@@ -219,8 +235,13 @@ fn a_form_body_is_encoded_the_way_the_engine_encodes_it() {
     }
 
     // Python hands `requests` the pairs and lets it encode them, which is the
-    // same encoding; the other three write the bytes out.
-    for target in [CodeTarget::Curl, CodeTarget::PowerShell, CodeTarget::CSharp] {
+    // same encoding; the others write the bytes out.
+    for target in [
+        CodeTarget::Curl,
+        CodeTarget::PowerShell,
+        CodeTarget::CSharp,
+        CodeTarget::Node,
+    ] {
         let code = code(&request, target);
         assert!(
             code.contains("full+name=Ada+Lovelace"),
@@ -332,6 +353,14 @@ fn the_client_settings_are_written_into_the_snippet() {
             CodeTarget::CSharp,
             vec!["AllowAutoRedirect = false", "DangerousAccept"],
         ),
+        (
+            CodeTarget::Node,
+            vec![
+                "rejectUnauthorized: false",
+                r#"redirect: "manual""#,
+                "AbortSignal.timeout(5000)",
+            ],
+        ),
     ];
 
     for (target, fragments) in expected {
@@ -407,7 +436,12 @@ fn a_file_part_keeps_the_name_it_was_given() {
         ..get("https://example.com/upload")
     };
 
-    for target in [CodeTarget::Curl, CodeTarget::Python, CodeTarget::CSharp] {
+    for target in [
+        CodeTarget::Curl,
+        CodeTarget::Python,
+        CodeTarget::CSharp,
+        CodeTarget::Node,
+    ] {
         let code = code(&request, target);
         assert!(
             code.contains("cat.png") && code.contains("image/png"),
@@ -461,6 +495,13 @@ fn a_client_certificate_is_presented_in_each_language() {
                 "\"hunter2\"",
             ],
         ),
+        (
+            CodeTarget::Node,
+            vec![
+                r#"pfx: readFileSync("/home/ada/client.p12")"#,
+                r#"passphrase: "hunter2""#,
+            ],
+        ),
     ];
 
     for (target, fragments) in expected {
@@ -495,6 +536,7 @@ fn a_pem_certificate_is_loaded_as_a_pem() {
         (CodeTarget::PowerShell, "CreateFromPemFile"),
         (CodeTarget::CSharp, "CreateFromPemFile"),
         (CodeTarget::Python, r#"cert="/home/ada/client.pem""#),
+        (CodeTarget::Node, r#"key: readFileSync("/home/ada/client.pem"#),
     ] {
         let code = generate(&get("https://example.com/"), &options, target).expect("ok");
         assert!(code.contains(fragment), "{target:?}:\n{code}");
@@ -596,6 +638,34 @@ fn replacing_the_system_roots_rather_than_adding_to_them_is_called_out() {
     }
 }
 
+/// Node takes a list of CAs, and can put its own roots at the front of it —
+/// which is as close as it comes to adding to the system store, as the app does.
+#[test]
+fn node_keeps_its_own_roots_when_the_app_would() {
+    fn cas(use_system_roots: bool) -> ClientOptions {
+        with_tls(TlsSettings {
+            extra_ca_files: vec![
+                "/home/ada/corp-ca.pem".to_string(),
+                "/home/ada/lab-ca.pem".to_string(),
+            ],
+            use_system_roots,
+            ..TlsSettings::default()
+        })
+    }
+    let files = r#"readFileSync("/home/ada/corp-ca.pem"), readFileSync("/home/ada/lab-ca.pem")"#;
+
+    let merged = generate(&get("https://example.com/"), &cas(true), CodeTarget::Node).expect("ok");
+    assert!(
+        merged.contains(&format!("ca: [...rootCertificates, {files}]")),
+        "{merged}"
+    );
+    assert!(merged.contains("from \"undici\""), "{merged}");
+
+    let only = generate(&get("https://example.com/"), &cas(false), CodeTarget::Node).expect("ok");
+    assert!(only.contains(&format!("ca: [{files}]")), "{only}");
+    assert!(!only.contains("rootCertificates"), "{only}");
+}
+
 /// Verification off leaves nothing for a CA file to do, and `verify` is one
 /// argument that cannot say both.
 #[test]
@@ -631,6 +701,7 @@ fn a_blank_certificate_path_is_not_a_certificate() {
             "CreateFromPemFile",
             "--cacert",
             "verify=",
+            "readFileSync",
         ] {
             assert!(
                 !code.contains(fragment),

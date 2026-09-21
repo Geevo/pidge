@@ -1,4 +1,4 @@
-//! Shared spelling: the pieces every generator needs, so four languages cannot
+//! Shared spelling: the pieces every generator needs, so five languages cannot
 //! disagree about what the same request is.
 
 use api_client_core::KeyValueEntry;

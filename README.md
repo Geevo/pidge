@@ -42,12 +42,12 @@ No macOS build. It ought to build there; nobody has tried.
   OAuth 1 and OAuth 2. A header you typed yourself always wins over the tab.
 - `{{variables}}` from flat environments, so one request runs against staging
   and production.
-- The same request as curl, PowerShell, Python or C#, highlighted, in a tab
-  beside the others. It is generated from what would be sent — variables
-  resolved, query folded into the URL, your timeout, redirect and certificate
-  settings written in — so what you paste elsewhere behaves like what you just
-  sent. What a snippet cannot reproduce it says in a comment rather than
-  quietly leaving out.
+- The same request as curl, PowerShell, Python, C# or Node.js `fetch`,
+  highlighted, in a tab beside the others. It is generated from what would be
+  sent — variables resolved, query folded into the URL, your timeout, redirect
+  and certificate settings written in — so what you paste elsewhere behaves
+  like what you just sent. What a snippet cannot reproduce it says in a comment
+  rather than quietly leaving out.
 - HTTPS you can look at: a padlock on the response opens the certificate the
   server actually presented, and says so when it is expired or self-signed.
 - Your system's certificate store by default, plus extra CAs and client
@@ -152,3 +152,7 @@ friends — are never written to a log.
 
 MIT; see [LICENSE](LICENSE). The bundled IBM Plex fonts are SIL Open Font
 License 1.1; see [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+
+## Credits
+
+Co-created by [MJQ7](https://github.com/MJQ7).
