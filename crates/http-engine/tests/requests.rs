@@ -155,6 +155,41 @@ async fn posts_a_json_body_with_a_content_type() {
 }
 
 #[tokio::test]
+async fn an_invalid_json_body_is_refused_before_sending() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/echo"));
+    request.method = HttpMethod::Post;
+    request.body = RequestBody::Json {
+        text: "{\n  \"name\": \"ada\",\n}".to_string(),
+    };
+
+    let error = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .expect_err("invalid JSON should not be sent");
+
+    assert_eq!(error.kind, RequestErrorKind::BodySerialization);
+    assert!(error.message.contains("line 3"), "{}", error.message);
+    assert_eq!(server.connection_count(), 0);
+}
+
+#[tokio::test]
+async fn a_blank_json_body_is_still_sent() {
+    let server = TestServer::start().await.unwrap();
+    let mut request = HttpRequest::get(server.url("/echo"));
+    request.method = HttpMethod::Post;
+    request.body = RequestBody::Json {
+        text: "  \n".to_string(),
+    };
+
+    let response = engine()
+        .execute(request, CancellationHandle::new())
+        .await
+        .expect("a blank body is not a JSON error");
+    assert_eq!(response.status, 200);
+}
+
+#[tokio::test]
 async fn an_explicit_content_type_is_not_overwritten() {
     let server = TestServer::start().await.unwrap();
     let mut request = HttpRequest::get(server.url("/echo"));

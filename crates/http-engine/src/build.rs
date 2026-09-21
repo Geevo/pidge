@@ -371,7 +371,10 @@ fn apply_body(
     Ok(match &request.body {
         RequestBody::None => builder,
 
-        RequestBody::Json { text } => builder.body(text.clone()),
+        RequestBody::Json { text } => {
+            check_json(text)?;
+            builder.body(text.clone())
+        }
 
         RequestBody::Text { text, .. } => builder.body(text.clone()),
 
@@ -425,6 +428,30 @@ fn apply_body(
             builder.multipart(form)
         }
     })
+}
+
+/// Refuses a JSON body that does not parse, so a typo is caught here rather
+/// than sent as `application/json` for the server to reject.
+///
+/// The text is sent as typed, not re-serialized: parsing only checks it. A
+/// blank body is let through, as it is for every other body type.
+fn check_json(text: &str) -> Result<(), RequestError> {
+    if text.trim().is_empty() {
+        return Ok(());
+    }
+    serde_json::from_str::<serde::de::IgnoredAny>(text)
+        .map(|_| ())
+        .map_err(|err| {
+            RequestError::new(
+                RequestErrorKind::BodySerialization,
+                format!(
+                    "The JSON body is not valid JSON (line {}, column {}).",
+                    err.line(),
+                    err.column()
+                ),
+            )
+            .with_detail(err.to_string())
+        })
 }
 
 /// The Content-Type the engine will send for a body.
