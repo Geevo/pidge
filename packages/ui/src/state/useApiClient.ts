@@ -23,6 +23,7 @@ function initialState(): UiState {
         maxResponseBytes: 50 * 1024 * 1024,
         restoreTabs: true,
         wrapResponseLines: false,
+        fontScale: 100,
         paneLayout: "rows",
         splitPercent: 42,
         tls: {

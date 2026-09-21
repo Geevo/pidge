@@ -256,6 +256,32 @@ fn each_tab_keeps_its_own_split_position() {
 }
 
 #[test]
+fn settings_saved_before_the_text_size_existed_load_at_the_design() {
+    let value = serde_json::json!({
+        "version": SCHEMA_VERSION,
+        "settings": { "theme": "dark", "timeoutMs": 5_000 },
+        "tabs": [],
+        "activeTabId": null
+    });
+
+    let state = migrate(value).expect("settings without a text size should still load");
+    assert_eq!(state.settings.font_scale, 100);
+    // The fields that were there are not disturbed by the one that was not.
+    assert_eq!(state.settings.timeout_ms, 5_000);
+}
+
+#[test]
+fn the_text_size_survives_a_restart() {
+    let (_dir, store) = temp_store();
+
+    let mut state = AppState::default();
+    state.settings.font_scale = 150;
+    store.save(&state).unwrap();
+
+    assert_eq!(store.load().state.settings.font_scale, 150);
+}
+
+#[test]
 fn a_tab_saved_before_split_positions_existed_still_loads() {
     let value = serde_json::json!({
         "version": SCHEMA_VERSION,

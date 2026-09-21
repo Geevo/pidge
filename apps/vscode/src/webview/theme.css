@@ -42,7 +42,7 @@
    * request should look the same wherever it is opened, so the bundled faces
    * from styles.css are left in place.
    */
-  --ac-font-size: var(--vscode-font-size, 13px);
+  --ac-font-size: calc(var(--vscode-font-size, 13px) * var(--ac-font-scale));
 }
 
 body {

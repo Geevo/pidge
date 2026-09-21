@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PlatformBridge } from "../bridge";
 import { installFieldHistory } from "../lib/fieldHistory";
+import { DEFAULT_FONT_SCALE, clampFontScale, stepFontScale } from "../lib/fontScale";
 import { selectContents } from "../lib/selection";
 import { isSelectAll, matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
@@ -53,9 +54,9 @@ export function App({ bridge }: Props) {
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   /** The same, for the syntax colours: they are picked by looking at them. */
   const [previewSyntax, setPreviewSyntax] = useState<SyntaxTheme | null>(null);
-
   useTheme(previewTheme ?? state.app.settings.theme);
   useSyntaxTheme(previewSyntax ?? state.app.settings.syntaxTheme);
+  useFontScale(state.app.settings.fontScale);
 
   // The host can ask for things too, e.g. the VS Code Command Palette.
   useEffect(
@@ -97,6 +98,20 @@ export function App({ bridge }: Props) {
   );
 
   const save = useCallback(() => setSaveOpen(true), []);
+
+  /*
+   * The text size, kept as it changes rather than on leaving a dialog, unlike
+   * the palettes: the keyboard reaches it from anywhere, and somebody holding
+   * Ctrl and + until the screen reads has no dialog to leave.
+   */
+  const settings = state.app.settings;
+  const setFontScale = useCallback(
+    (percent: number) => {
+      const fontScale = clampFontScale(percent);
+      if (fontScale !== settings.fontScale) client.setSettings({ ...settings, fontScale });
+    },
+    [client, settings],
+  );
 
   /*
    * Undo and redo for every text field, wired once here rather than in each of
@@ -149,12 +164,21 @@ export function App({ bridge }: Props) {
         case "save":
           save();
           break;
+        case "textBigger":
+          setFontScale(stepFontScale(settings.fontScale, 1));
+          break;
+        case "textSmaller":
+          setFontScale(stepFontScale(settings.fontScale, -1));
+          break;
+        case "textReset":
+          setFontScale(DEFAULT_FONT_SCALE);
+          break;
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [askCloseTab, client, save, send, sending, tab.id]);
+  }, [askCloseTab, client, save, send, sending, setFontScale, settings.fontScale, tab.id]);
 
   return (
     <div className="ac-app">
@@ -365,6 +389,7 @@ export function App({ bridge }: Props) {
           onBrowse={bridge.pickFile?.bind(bridge)}
           onPreviewTheme={setPreviewTheme}
           onPreviewSyntax={setPreviewSyntax}
+          onFontScale={setFontScale}
           onSave={client.setSettings}
           onClose={() => {
             setPreviewTheme(null);
@@ -432,4 +457,19 @@ function useSyntaxTheme(syntaxTheme: SyntaxTheme) {
   useEffect(() => {
     document.documentElement.setAttribute("data-syntax", syntaxTheme);
   }, [syntaxTheme]);
+}
+
+/**
+ * Applies the text size to the document.
+ *
+ * A property rather than an attribute, because unlike a palette this is a
+ * number: one multiplier on the root that every size token in `styles.css` is
+ * written in terms of, so the whole interface grows at once and no component
+ * has to know its own size.
+ */
+function useFontScale(fontScale: number) {
+  useEffect(() => {
+    const scale = clampFontScale(fontScale) / 100;
+    document.documentElement.style.setProperty("--ac-font-scale", String(scale));
+  }, [fontScale]);
 }

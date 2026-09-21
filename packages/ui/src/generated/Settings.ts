@@ -8,7 +8,13 @@ export type Settings = { theme: Theme, syntaxTheme: SyntaxTheme, timeoutMs: numb
 /**
  * Reopen the scratch tabs that were open last time.
  */
-restoreTabs: boolean, wrapResponseLines: boolean, paneLayout: PaneLayout, 
+restoreTabs: boolean, wrapResponseLines: boolean, 
+/**
+ * Every size in the interface, as a percentage of its designed size.
+ * 100 is the design; the UI clamps what it applies, so a hand-edited
+ * state file cannot leave the text unreadably small or off the screen.
+ */
+fontScale: number, paneLayout: PaneLayout, 
 /**
  * The request pane's share of the split, as a percentage. Clamped when
  * applied, so a hand-edited state file cannot collapse a pane entirely.

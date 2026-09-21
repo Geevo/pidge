@@ -137,11 +137,40 @@
   --ac-font-mono:
     "IBM Plex Mono", "Cascadia Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 
-  --ac-font-size: 13px;
-  --ac-font-size-small: 12px;
-  --ac-row-height: 28px;
+  /*
+   * The type ladder, and the metrics that have to keep step with it: a row of
+   * text in a box that did not grow is a row of clipped text. Every one of
+   * them is the designed size times `--ac-font-scale`, so Settings changes one
+   * number and the interface grows or shrinks as a piece.
+   *
+   * What is *not* here is deliberate. Padding, gaps, icons and the window
+   * buttons stay put: it is the text somebody cannot read, and holding the
+   * chrome still means the app still fits the window at the largest size.
+   */
+  --ac-font-size: calc(13px * var(--ac-font-scale));
+  --ac-font-size-small: calc(12px * var(--ac-font-scale));
+  /* Table headings, list metadata, the licence note. */
+  --ac-font-size-tiny: calc(11px * var(--ac-font-scale));
+  /* Method badges, which are three bold letters in a pill. */
+  --ac-font-size-micro: calc(10px * var(--ac-font-scale));
+  /* The app's name on the About screen, the one heading that is a heading. */
+  --ac-font-size-large: calc(17px * var(--ac-font-scale));
+
+  --ac-row-height: calc(28px * var(--ac-font-scale));
   /* Buttons, selects and the URL bar all sit on this, so a toolbar lines up. */
-  --ac-control-height: 32px;
+  --ac-control-height: calc(32px * var(--ac-font-scale));
+}
+
+/*
+ * How much larger than the design the interface is drawn, as a multiplier.
+ *
+ * Its own block, on `:root` alone: the palettes above are also matched by the
+ * theme samples in Settings, which are ordinary elements carrying a
+ * `data-theme`, and a scale re-declared there would reset itself inside every
+ * sample. This is a property of the window, set once by the app.
+ */
+:root {
+  --ac-font-scale: 1;
 }
 
 /* The dark palette, and the base the warm dark one is a variation on. */
@@ -412,8 +441,13 @@ input[type="checkbox"] {
   appearance: none;
   display: inline-grid;
   place-content: center;
-  width: 14px;
-  height: 14px;
+  /*
+   * Scaled with the text, unlike the icons. A larger icon is only a larger
+   * picture; a checkbox is something to hit, and the person who turned the
+   * text up is the last one who should be aiming at a 14px square.
+   */
+  width: calc(14px * var(--ac-font-scale));
+  height: calc(14px * var(--ac-font-scale));
   margin: 0;
   border: 1px solid var(--ac-border-strong);
   border-radius: 3px;
@@ -426,8 +460,8 @@ input[type="checkbox"] {
 
 input[type="checkbox"]::before {
   content: "";
-  width: 9px;
-  height: 9px;
+  width: calc(9px * var(--ac-font-scale));
+  height: calc(9px * var(--ac-font-scale));
   background: var(--ac-accent-text);
   /* A tick, rather than a font glyph that would differ per platform. */
   clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
@@ -490,12 +524,16 @@ input[type="checkbox"]:hover {
   color: var(--ac-text);
 }
 
-/* Specific enough to beat the checkbox rules near the top of this file. */
+/*
+ * Specific enough to beat the checkbox rules near the top of this file, and
+ * scaled the same way they are: track, knob and the distance the knob travels
+ * all in the same units, or the knob leaves the track at the larger sizes.
+ */
 .ac-switch input[type="checkbox"] {
   position: relative;
   display: block;
-  width: 26px;
-  height: 15px;
+  width: calc(26px * var(--ac-font-scale));
+  height: calc(15px * var(--ac-font-scale));
   border-radius: 999px;
 }
 
@@ -503,10 +541,10 @@ input[type="checkbox"]:hover {
 .ac-switch input[type="checkbox"]::before {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 9px;
-  height: 9px;
+  top: calc(2px * var(--ac-font-scale));
+  left: calc(2px * var(--ac-font-scale));
+  width: calc(9px * var(--ac-font-scale));
+  height: calc(9px * var(--ac-font-scale));
   border-radius: 50%;
   background: var(--ac-text-faint);
   clip-path: none;
@@ -517,7 +555,7 @@ input[type="checkbox"]:hover {
 }
 
 .ac-switch input[type="checkbox"]:checked::before {
-  transform: translateX(11px);
+  transform: translateX(calc(11px * var(--ac-font-scale)));
   background: var(--ac-accent-text);
 }
 
@@ -834,7 +872,7 @@ th,
    * in its UI font too.
    */
   font-family: var(--ac-font);
-  font-size: 10px;
+  font-size: var(--ac-font-size-micro);
   font-weight: 700;
   font-variant-numeric: normal;
   letter-spacing: 0.04em;
@@ -871,7 +909,7 @@ th,
 .ac-method-badge--small {
   min-width: 42px;
   padding: 1px 4px;
-  font-size: 10px;
+  font-size: var(--ac-font-size-micro);
 }
 
 /* ---------- buttons ---------- */
@@ -995,7 +1033,7 @@ th,
 .ac-tabbar {
   display: flex;
   align-items: stretch;
-  min-height: 34px;
+  min-height: calc(34px * var(--ac-font-scale));
   background: var(--ac-bg-subtle);
 }
 
@@ -1095,7 +1133,7 @@ th,
   align-items: center;
   gap: 7px;
   min-width: 0;
-  height: 33px;
+  height: calc(33px * var(--ac-font-scale));
   padding: 0 4px 0 9px;
   border: 0;
   background: transparent;
@@ -1173,8 +1211,14 @@ th,
   color: var(--ac-accent);
 }
 
+/*
+ * Wrapping, because the five tabs at the largest text size are wider than the
+ * request pane leaves them in the narrowest window with a drawer open. It
+ * costs nothing everywhere else: a flex row only wraps once it has to.
+ */
 .ac-subtabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   padding: 6px 8px;
@@ -1210,7 +1254,7 @@ th,
   border-radius: var(--ac-radius-pill);
   background: color-mix(in srgb, var(--ac-text) 10%, transparent);
   color: var(--ac-text-faint);
-  font-size: 11px;
+  font-size: var(--ac-font-size-tiny);
 }
 
 /* ---------- key/value tables ---------- */
@@ -1223,7 +1267,7 @@ th,
 .ac-kv th {
   padding: 4px 9px;
   color: var(--ac-text-faint);
-  font-size: 11px;
+  font-size: var(--ac-font-size-tiny);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-align: left;
@@ -1263,7 +1307,7 @@ th,
 
 .ac-kv input[type="text"] {
   width: 100%;
-  height: 26px;
+  height: calc(26px * var(--ac-font-scale));
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: var(--ac-radius-sm);
@@ -1714,7 +1758,7 @@ th,
   align-items: center;
   gap: 6px;
   color: var(--ac-text-faint);
-  font-size: 11px;
+  font-size: var(--ac-font-size-tiny);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1891,7 +1935,7 @@ th,
 
 .ac-about__name {
   margin: 18px 0 0;
-  font-size: 17px;
+  font-size: var(--ac-font-size-large);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -1945,7 +1989,7 @@ th,
   padding-top: 16px;
   border-top: 1px solid var(--ac-border);
   color: var(--ac-text-faint);
-  font-size: 11px;
+  font-size: var(--ac-font-size-tiny);
   line-height: 1.5;
 }
 
@@ -2024,6 +2068,54 @@ th,
 
 .ac-group .ac-hint {
   padding: 4px 10px 6px;
+}
+
+/*
+ * The text sizes: one rung per size, in a row that wraps rather than shrinks,
+ * so the rungs stay the same width as each other at every size.
+ *
+ * The radio is hidden rather than replaced, as in the swatches below, so the
+ * group keeps the arrow keys and the roving tab stop the platform gives it.
+ */
+.ac-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px 8px;
+}
+
+.ac-size {
+  cursor: pointer;
+}
+
+.ac-size__name {
+  display: block;
+  padding: 4px 10px;
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-sm);
+  background: var(--ac-bg-input);
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-size:hover .ac-size__name {
+  border-color: var(--ac-border-strong);
+  color: var(--ac-text);
+}
+
+.ac-size input:checked ~ .ac-size__name {
+  border-color: var(--ac-accent);
+  background: var(--ac-accent);
+  color: var(--ac-accent-text);
+}
+
+.ac-size input:focus-visible ~ .ac-size__name {
+  box-shadow: var(--ac-ring);
 }
 
 /*
@@ -2720,7 +2812,7 @@ body.ac-dragging--columns * {
   display: flex;
   flex: none;
   align-items: center;
-  min-height: 26px;
+  min-height: calc(26px * var(--ac-font-scale));
   padding: 0 10px;
   background: var(--ac-bg-subtle);
   font-family: var(--ac-font-mono);

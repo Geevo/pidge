@@ -55,19 +55,24 @@ No macOS build. It ought to build there; nobody has tried.
   certificates for a network that needs them.
 - Tabs, local history, saved requests, light and dark themes, syntax colours
   that can borrow VS Code's or One's, and a keyboard that does what you expect.
+- Text you can read: five sizes from 90% to 150%, on the keyboard or under
+  Settings, and the whole window grows with it rather than the labels alone.
 
 What it will not do: accounts, sync, sharing, dashboards, telemetry, update
 pings, or anything that asks you to sign in.
 
 ## Keyboard
 
-| Shortcut                             | Action           |
-| ------------------------------------ | ---------------- |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>Enter</kbd> | Send             |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>L</kbd>     | Focus the URL    |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd>     | New request      |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>W</kbd>     | Close the tab    |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>S</kbd>     | Save the request |
+| Shortcut                             | Action            |
+| ------------------------------------ | ----------------- |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Enter</kbd> | Send              |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>L</kbd>     | Focus the URL     |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd>     | New request       |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>W</kbd>     | Close the tab     |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>S</kbd>     | Save the request  |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>+</kbd>     | Larger text       |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>-</kbd>     | Smaller text      |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>0</kbd>     | Text back to 100% |
 
 <kbd>Enter</kbd> in the URL field sends too.
 

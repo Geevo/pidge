@@ -62,7 +62,7 @@ function systemPrefersDark(dark: boolean) {
 /** Settings is tabbed; the palettes and the certificate fields have their own. */
 async function openSettings(
   user: ReturnType<typeof userEvent.setup>,
-  section?: "General" | "Themes" | "Certs" | "About",
+  section?: "General" | "Appearance" | "Certs" | "About",
 ) {
   await user.click(screen.getByRole("button", { name: "Settings" }));
   const dialog = await screen.findByRole("dialog", { name: "Settings" });
@@ -1208,7 +1208,7 @@ describe("themes", () => {
     const { user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
 
     const group = within(dialog).getByRole("radiogroup", { name: "Theme" });
     const offered = within(group)
@@ -1223,7 +1223,7 @@ describe("themes", () => {
     const { bridge, user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
 
     await waitFor(() => {
@@ -1236,7 +1236,7 @@ describe("themes", () => {
     const { bridge, user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "warmDark");
@@ -1250,7 +1250,7 @@ describe("themes", () => {
     expect(bridge.saved.at(-1)?.settings.theme ?? "system").toBe("system");
 
     // The draft goes with it: reopening starts from the saved theme again.
-    const again = await openSettings(user, "Themes");
+    const again = await openSettings(user, "Appearance");
     expect(within(again).getByRole("radio", { name: "System" })).toBeChecked();
   });
 
@@ -1258,7 +1258,7 @@ describe("themes", () => {
     const { bridge, user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
 
     await user.click(within(dialog).getByRole("radio", { name: "Warm dark" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
@@ -1281,14 +1281,14 @@ describe("themes", () => {
       expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     });
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "Light" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-theme", "light");
     });
 
-    const again = await openSettings(user, "Themes");
+    const again = await openSettings(user, "Appearance");
     await user.click(within(again).getByRole("radio", { name: "System" }));
     await user.click(within(again).getByRole("button", { name: "Save" }));
 
@@ -1314,6 +1314,172 @@ describe("themes", () => {
   });
 });
 
+describe("text size", () => {
+  afterEach(() => {
+    document.documentElement.style.removeProperty("--ac-font-scale");
+  });
+
+  /** What the stylesheet multiplies every size by; 100% is `1`. */
+  const appliedScale = () => document.documentElement.style.getPropertyValue("--ac-font-scale");
+
+  it("starts at the designed size", async () => {
+    const { user } = setup();
+    await ready();
+
+    expect(appliedScale()).toBe("1");
+
+    const dialog = await openSettings(user, "Appearance");
+    const group = within(dialog).getByRole("radiogroup", { name: "Text size" });
+    expect(within(group).getByRole("radio", { name: "100%" })).toBeChecked();
+  });
+
+  it("grows the whole window as a size is picked", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    await user.click(within(dialog).getByRole("radio", { name: "150%" }));
+
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.5");
+    });
+    // Unlike the palettes, it is kept there and then rather than on Save.
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.fontScale).toBe(150);
+    });
+  });
+
+  it("survives cancelling the dialog, unlike a previewed palette", async () => {
+    const { user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    await user.click(within(dialog).getByRole("radio", { name: "150%" }));
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.5");
+    });
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(appliedScale()).toBe("1.5");
+
+    const again = await openSettings(user, "Appearance");
+    expect(within(again).getByRole("radio", { name: "150%" })).toBeChecked();
+  });
+
+  it("does not let Save undo the size, or the size undo the rest of Save", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    await user.click(within(dialog).getByRole("radio", { name: "125%" }));
+
+    // A draft change in another section still saves with the size intact.
+    await user.click(within(dialog).getByRole("tab", { name: "General" }));
+    await user.click(within(dialog).getByRole("checkbox", { name: "Follow redirects" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.followRedirects).toBe(false);
+    });
+    expect(bridge.saved.at(-1)?.settings.fontScale).toBe(125);
+    expect(appliedScale()).toBe("1.25");
+  });
+
+  /*
+   * The keyboard is the point of the feature: somebody who cannot read the
+   * window cannot read the Settings button on it either.
+   */
+  it("steps up and down from the keyboard, and back to the design", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.keyboard("{Control>}={/Control}");
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.1");
+    });
+
+    await user.keyboard("{Control>}={/Control}");
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.25");
+    });
+
+    await user.keyboard("{Control>}-{/Control}");
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.1");
+    });
+
+    await user.keyboard("{Control>}0{/Control}");
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1");
+    });
+
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.fontScale).toBe(100);
+    });
+  });
+
+  it("takes a keyboard change into an open Settings dialog", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    await user.keyboard("{Control>}={/Control}");
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole("radio", { name: "110%" })).toBeChecked();
+    });
+
+    // Saving from here keeps the keystroke rather than undoing it.
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.settings.fontScale).toBe(110);
+    });
+    expect(appliedScale()).toBe("1.1");
+  });
+
+  it("lets a keystroke overrule a size clicked in the dialog", async () => {
+    const { user } = setup();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    await user.click(within(dialog).getByRole("radio", { name: "150%" }));
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.5");
+    });
+
+    await user.keyboard("{Control>}0{/Control}");
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1");
+    });
+    expect(within(dialog).getByRole("radio", { name: "100%" })).toBeChecked();
+  });
+
+  it("stops at the largest size rather than growing without end", async () => {
+    const { user } = setup();
+    await ready();
+
+    for (let press = 0; press < 12; press += 1) {
+      await user.keyboard("{Control>}={/Control}");
+    }
+
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.5");
+    });
+  });
+
+  it("holds a hand-edited state file to a size the window can still show", async () => {
+    const base = defaultState();
+    const bridge = new FakeBridge();
+    bridge.state = { ...base, settings: { ...base.settings, fontScale: 9000 } };
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await waitFor(() => {
+      expect(appliedScale()).toBe("1.5");
+    });
+  });
+});
+
 describe("syntax colours", () => {
   afterEach(() => {
     document.documentElement.removeAttribute("data-syntax");
@@ -1323,7 +1489,7 @@ describe("syntax colours", () => {
     const { user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
 
     const group = within(dialog).getByRole("radiogroup", { name: "Syntax colours" });
     // The sample is `aria-hidden`, so the radio is named by its caption alone.
@@ -1339,7 +1505,7 @@ describe("syntax colours", () => {
     const { bridge, user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "VS Code" }));
 
     await waitFor(() => {
@@ -1352,7 +1518,7 @@ describe("syntax colours", () => {
     const { user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "One" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-syntax", "one");
@@ -1369,7 +1535,7 @@ describe("syntax colours", () => {
     const { bridge, user } = setup();
     await ready();
 
-    const dialog = await openSettings(user, "Themes");
+    const dialog = await openSettings(user, "Appearance");
     await user.click(within(dialog).getByRole("radio", { name: "VS Code" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
@@ -1653,7 +1819,7 @@ describe("the settings sections", () => {
     expect(within(dialog).getByLabelText("Timeout")).toBeInTheDocument();
 
     // The palettes are a section of their own, and not in either of those.
-    await user.click(within(dialog).getByRole("tab", { name: "Themes" }));
+    await user.click(within(dialog).getByRole("tab", { name: "Appearance" }));
     expect(within(dialog).getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Timeout")).not.toBeInTheDocument();
   });

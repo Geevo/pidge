@@ -78,6 +78,10 @@ pub struct Settings {
     /// Reopen the scratch tabs that were open last time.
     pub restore_tabs: bool,
     pub wrap_response_lines: bool,
+    /// Every size in the interface, as a percentage of its designed size.
+    /// 100 is the design; the UI clamps what it applies, so a hand-edited
+    /// state file cannot leave the text unreadably small or off the screen.
+    pub font_scale: u8,
     pub pane_layout: PaneLayout,
     /// The request pane's share of the split, as a percentage. Clamped when
     /// applied, so a hand-edited state file cannot collapse a pane entirely.
@@ -98,6 +102,7 @@ impl Default for Settings {
             max_response_bytes: 50 * 1024 * 1024,
             restore_tabs: true,
             wrap_response_lines: false,
+            font_scale: 100,
             pane_layout: PaneLayout::default(),
             split_percent: 42,
             tls: TlsSettings::default(),

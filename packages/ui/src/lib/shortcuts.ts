@@ -2,7 +2,8 @@
  * Keyboard shortcuts. Ctrl on Windows and Linux, Cmd on macOS, decided once
  * here rather than in every handler.
  */
-export type ShortcutName = "send" | "focusUrl" | "newTab" | "closeTab" | "save";
+export type ShortcutName =
+  "send" | "focusUrl" | "newTab" | "closeTab" | "save" | "textBigger" | "textSmaller" | "textReset";
 
 const isMac = (): boolean =>
   typeof navigator !== "undefined" &&
@@ -23,6 +24,22 @@ export function matchShortcut(event: KeyboardEvent): ShortcutName | null {
       return event.shiftKey ? null : "closeTab";
     case "s":
       return event.shiftKey ? null : "save";
+    /*
+     * The keys a browser binds to zoom, bound here to the text size instead.
+     *
+     * Both spellings of each: the key on a US layout is `=` unshifted and `+`
+     * shifted, and a numeric keypad sends `+` and `-` whatever the layout. A
+     * user who needs the text larger should not have to find the one the app
+     * happens to listen for.
+     */
+    case "=":
+    case "+":
+      return "textBigger";
+    case "-":
+    case "_":
+      return "textSmaller";
+    case "0":
+      return event.shiftKey ? null : "textReset";
     default:
       return null;
   }
@@ -80,6 +97,9 @@ export function shortcutHint(name: ShortcutName): string {
     newTab: "N",
     closeTab: "W",
     save: "S",
+    textBigger: "+",
+    textSmaller: "-",
+    textReset: "0",
   };
   return `${modifier}${keys[name]}`;
 }

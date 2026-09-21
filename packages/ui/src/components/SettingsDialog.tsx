@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 import type { FilePickRequest } from "../bridge";
+import { FONT_SCALES } from "../lib/fontScale";
+import { shortcutHint } from "../lib/shortcuts";
 import type { ClientIdentitySettings, Settings, SyntaxTheme, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
 import logo from "../assets/app-icon.svg";
@@ -24,6 +26,13 @@ interface Props {
   onPreviewTheme: (theme: Theme) => void;
   /** The same, for the syntax colours. */
   onPreviewSyntax: (syntaxTheme: SyntaxTheme) => void;
+  /**
+   * The text size, which is not a draft like the rest of this dialog: it
+   * applies and is kept the moment it is clicked, the way the keyboard already
+   * changes it from anywhere. Somebody who grew the text to read the screen
+   * should not then have to find Save, or lose it to Cancel.
+   */
+  onFontScale: (fontScale: number) => void;
   onSave: (settings: Settings) => void;
   onClose: () => void;
 }
@@ -102,11 +111,16 @@ const SAMPLE: { role: string; text: string }[][] = [
   [{ role: "punctuation", text: "}" }],
 ];
 
-type Section = "general" | "themes" | "certs" | "about";
+/*
+ * "Appearance" rather than "Themes": the section holds the text size as well
+ * now, and a size is not a theme. Everything about how the app looks sits
+ * behind the one word.
+ */
+type Section = "general" | "appearance" | "certs" | "about";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "themes", label: "Themes" },
+  { id: "appearance", label: "Appearance" },
   { id: "certs", label: "Certs" },
   { id: "about", label: "About" },
 ];
@@ -129,6 +143,7 @@ export function SettingsDialog({
   onBrowse,
   onPreviewTheme,
   onPreviewSyntax,
+  onFontScale,
   onSave,
   onClose,
 }: Props) {
@@ -267,8 +282,44 @@ export function SettingsDialog({
             </>
           ) : null}
 
-          {section === "themes" ? (
+          {section === "appearance" ? (
             <>
+              <div className="ac-group">
+                <h3 className="ac-group__title" id="ac-text-size-label">
+                  Text size
+                </h3>
+
+                {/*
+                 * A ladder of sizes rather than a number to type, and no
+                 * sample beside each one: the app is drawn at the chosen size
+                 * the instant it is clicked, this dialog with it, so the
+                 * preview is the whole window rather than two letters of it.
+                 * Click down the row until it reads.
+                 */}
+                <div className="ac-sizes" role="radiogroup" aria-labelledby="ac-text-size-label">
+                  {FONT_SCALES.map((scale) => (
+                    <label className="ac-size" key={scale}>
+                      <input
+                        className="ac-visually-hidden"
+                        type="radio"
+                        name="ac-font-scale"
+                        value={scale}
+                        checked={settings.fontScale === scale}
+                        onChange={() => onFontScale(scale)}
+                      />
+                      <span className="ac-size__name">{scale}%</span>
+                    </label>
+                  ))}
+                </div>
+
+                <p className="ac-hint">
+                  Applied and kept as soon as it is clicked; everything follows, from the tabs to
+                  the response. <code>{shortcutHint("textBigger")}</code> and{" "}
+                  <code>{shortcutHint("textSmaller")}</code> step through the sizes without opening
+                  this, and <code>{shortcutHint("textReset")}</code> comes back to 100%.
+                </p>
+              </div>
+
               <div className="ac-group">
                 <h3 className="ac-group__title" id="ac-theme-label">
                   Theme
@@ -533,7 +584,8 @@ export function SettingsDialog({
             type="button"
             className="ac-button ac-button--primary"
             onClick={() => {
-              onSave(draft);
+              // The text size is not in the draft; it was kept as it was picked.
+              onSave({ ...draft, fontScale: settings.fontScale });
               onClose();
             }}
           >
