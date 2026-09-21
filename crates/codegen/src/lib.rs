@@ -11,42 +11,123 @@
 
 mod csharp;
 mod curl;
+mod go;
+mod java;
+mod node;
+mod php;
 mod powershell;
 mod python;
+mod rust;
 mod text;
+mod zig;
 
 use api_client_core::{AuthConfig, ClientIdentitySettings, HttpRequest, RequestError, TlsSettings};
 use api_client_http_engine::{AuthPlan, EffectiveRequest};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// The languages a request can be written in.
+/// One way of writing a request out: a language, and the library it uses.
+///
+/// Flat rather than a language and a library side by side, because most of
+/// these are a single choice and a pair would make every one of them carry an
+/// empty half. The picker groups them back together by [`CodeTarget::language`].
+///
+/// The wire names of the first four are what they have always been, so a
+/// webview and a sidecar that disagree about this list still understand each
+/// other about those.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum CodeTarget {
+    #[serde(rename = "curl")]
     Curl,
+    #[serde(rename = "powershell")]
     PowerShell,
+    #[serde(rename = "python")]
     Python,
+    #[serde(rename = "csharp")]
     CSharp,
+    #[serde(rename = "rust-blocking")]
+    RustBlocking,
+    #[serde(rename = "rust-async")]
+    RustAsync,
+    #[serde(rename = "node-fetch")]
+    NodeFetch,
+    #[serde(rename = "node-axios")]
+    NodeAxios,
+    #[serde(rename = "go")]
+    Go,
+    #[serde(rename = "java-httpclient")]
+    JavaHttpClient,
+    #[serde(rename = "java-okhttp")]
+    JavaOkHttp,
+    #[serde(rename = "php-curl")]
+    PhpCurl,
+    #[serde(rename = "php-guzzle")]
+    PhpGuzzle,
+    #[serde(rename = "zig")]
+    Zig,
 }
 
 impl CodeTarget {
-    /// In the order the picker offers them.
-    pub const ALL: [CodeTarget; 4] = [
+    /// In the order the picker offers them, grouped by language.
+    pub const ALL: [CodeTarget; 14] = [
         CodeTarget::Curl,
         CodeTarget::PowerShell,
         CodeTarget::Python,
         CodeTarget::CSharp,
+        CodeTarget::RustBlocking,
+        CodeTarget::RustAsync,
+        CodeTarget::NodeFetch,
+        CodeTarget::NodeAxios,
+        CodeTarget::Go,
+        CodeTarget::JavaHttpClient,
+        CodeTarget::JavaOkHttp,
+        CodeTarget::PhpCurl,
+        CodeTarget::PhpGuzzle,
+        CodeTarget::Zig,
     ];
 
-    /// What the picker calls it, and what the library underneath is.
-    pub fn label(self) -> &'static str {
+    /// The language, which is what the picker lists.
+    pub fn language(self) -> &'static str {
         match self {
             CodeTarget::Curl => "curl",
             CodeTarget::PowerShell => "PowerShell",
             CodeTarget::Python => "Python",
             CodeTarget::CSharp => "C#",
+            CodeTarget::RustBlocking | CodeTarget::RustAsync => "Rust",
+            CodeTarget::NodeFetch | CodeTarget::NodeAxios => "Node.js",
+            CodeTarget::Go => "Go",
+            CodeTarget::JavaHttpClient | CodeTarget::JavaOkHttp => "Java",
+            CodeTarget::PhpCurl | CodeTarget::PhpGuzzle => "PHP",
+            CodeTarget::Zig => "Zig",
+        }
+    }
+
+    /// The library underneath, which is what the tabs under the picker offer.
+    /// A language with only one way of doing this has no tabs and no label.
+    pub fn library(self) -> Option<&'static str> {
+        match self {
+            CodeTarget::Curl | CodeTarget::PowerShell | CodeTarget::Python | CodeTarget::CSharp => {
+                None
+            }
+            CodeTarget::RustBlocking => Some("blocking"),
+            CodeTarget::RustAsync => Some("async"),
+            CodeTarget::NodeFetch => Some("fetch"),
+            CodeTarget::NodeAxios => Some("axios"),
+            CodeTarget::Go => None,
+            CodeTarget::JavaHttpClient => Some("HttpClient"),
+            CodeTarget::JavaOkHttp => Some("OkHttp"),
+            CodeTarget::PhpCurl => Some("cURL"),
+            CodeTarget::PhpGuzzle => Some("Guzzle"),
+            CodeTarget::Zig => None,
+        }
+    }
+
+    /// What the picker calls it, language and library together.
+    pub fn label(self) -> String {
+        match self.library() {
+            Some(library) => format!("{} ({library})", self.language()),
+            None => self.language().to_string(),
         }
     }
 }
@@ -99,6 +180,16 @@ pub fn generate(
         CodeTarget::PowerShell => powershell::generate(&plan),
         CodeTarget::Python => python::generate(&plan),
         CodeTarget::CSharp => csharp::generate(&plan),
+        CodeTarget::RustBlocking => rust::generate(&plan, rust::Style::Blocking),
+        CodeTarget::RustAsync => rust::generate(&plan, rust::Style::Async),
+        CodeTarget::NodeFetch => node::generate(&plan, node::Library::Fetch),
+        CodeTarget::NodeAxios => node::generate(&plan, node::Library::Axios),
+        CodeTarget::Go => go::generate(&plan),
+        CodeTarget::JavaHttpClient => java::generate(&plan, java::Library::HttpClient),
+        CodeTarget::JavaOkHttp => java::generate(&plan, java::Library::OkHttp),
+        CodeTarget::PhpCurl => php::generate(&plan, php::Library::Curl),
+        CodeTarget::PhpGuzzle => php::generate(&plan, php::Library::Guzzle),
+        CodeTarget::Zig => zig::generate(&plan),
     })
 }
 

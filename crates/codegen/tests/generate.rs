@@ -246,10 +246,19 @@ fn nothing_sets_a_content_type_for_a_multipart_body() {
     };
 
     for (target, code) in everywhere(&request) {
-        assert!(
-            !code.contains("multipart/form-data"),
-            "{target:?} wrote the content type itself:\n{code}"
-        );
+        /*
+         * A client that writes the body itself has to name the boundary it
+         * generated; one whose library writes the body must not name the type
+         * at all. What is never right is the user's own row, which has no
+         * boundary in it and would break the body.
+         */
+        if let Some(index) = code.find("multipart/form-data") {
+            let after = &code[index..];
+            assert!(
+                after.contains("boundary"),
+                "{target:?} wrote a content type with no boundary:\n{code}"
+            );
+        }
         assert!(
             code.contains("caption") && code.contains("cat.png"),
             "{target:?} lost a part:\n{code}"
@@ -637,5 +646,138 @@ fn a_blank_certificate_path_is_not_a_certificate() {
                 "{target:?} wrote `{fragment}` for a blank path:\n{code}"
             );
         }
+    }
+}
+
+/// The languages added after the first four, and the shapes each of them has to
+/// get right. One test per language rather than per rule: what matters is that
+/// the request survives the trip into a language, not which call carries it.
+#[test]
+fn every_language_writes_the_whole_request() {
+    let request = HttpRequest {
+        method: HttpMethod::Post,
+        url: "https://api.example.com/v1/things".to_string(),
+        query_params: vec![KeyValueEntry::new("q", "SW1A 1AA")],
+        headers: vec![KeyValueEntry::new("X-Trace", "abc 123")],
+        auth: AuthConfig::Basic {
+            username: "ada".to_string(),
+            password: "lovelace".to_string(),
+        },
+        body: RequestBody::Json {
+            text: "{\n  name: Ada\n}".to_string(),
+        },
+        ..HttpRequest::default()
+    };
+
+    for (target, code) in everywhere(&request) {
+        assert!(
+            code.contains("https://api.example.com/v1/things?q=SW1A%201AA"),
+            "{target:?} did not carry the URL:\n{code}"
+        );
+        assert!(
+            code.contains("X-Trace"),
+            "{target:?} did not carry the header:\n{code}"
+        );
+        assert!(
+            code.contains("application/json"),
+            "{target:?} did not carry the content type:\n{code}"
+        );
+        assert!(
+            code.contains("  name: Ada"),
+            "{target:?} did not carry the body as typed:\n{code}"
+        );
+        assert!(
+            code.contains("ada")
+                && (code.contains("lovelace") || code.contains("YWRhOmxvdmVsYWNl")),
+            "{target:?} did not carry the credentials:\n{code}"
+        );
+    }
+}
+
+/// A body's own indentation is data. The languages whose code sits inside a
+/// function are the ones that could have indented it along with everything else.
+#[test]
+fn a_body_keeps_its_own_indentation() {
+    let request = HttpRequest {
+        method: HttpMethod::Post,
+        body: RequestBody::Json {
+            text: "{\n      deeply: indented\n}".to_string(),
+        },
+        ..get("https://example.com/")
+    };
+
+    /*
+     * The six spaces are the test. A language that laid the snippet out by
+     * indenting whole blocks would have made them ten, and sent a body nobody
+     * wrote. Zig opens each line with `\\`, which is why the newline before
+     * them is not part of what is looked for.
+     */
+    for (target, code) in everywhere(&request) {
+        assert!(
+            code.contains("      deeply: indented"),
+            "{target:?} re-indented the body:\n{code}"
+        );
+        assert!(
+            !code.contains("          deeply: indented"),
+            "{target:?} added indentation of its own:\n{code}"
+        );
+    }
+}
+
+/// Every language names the library it needs, where it needs one that is not
+/// in the box.
+#[test]
+fn a_language_is_grouped_with_the_libraries_that_write_it() {
+    let rust: Vec<CodeTarget> = CodeTarget::ALL
+        .into_iter()
+        .filter(|target| target.language() == "Rust")
+        .collect();
+
+    assert_eq!(rust.len(), 2);
+    assert_eq!(rust[0].library(), Some("blocking"));
+    assert_eq!(rust[0].label(), "Rust (blocking)");
+
+    // A language with one way of doing this has no library to choose.
+    assert_eq!(CodeTarget::Go.library(), None);
+    assert_eq!(CodeTarget::Go.label(), "Go");
+
+    // Nothing is listed twice, and every one of them generates.
+    let mut labels: Vec<String> = CodeTarget::ALL.into_iter().map(|t| t.label()).collect();
+    labels.sort();
+    let before = labels.len();
+    labels.dedup();
+    assert_eq!(labels.len(), before);
+}
+
+/// Where a client cannot answer a challenge, it says so rather than looking
+/// like it sent credentials it never had.
+#[test]
+fn a_language_that_cannot_answer_a_challenge_says_so() {
+    let request = HttpRequest {
+        auth: AuthConfig::Digest {
+            username: "ada".to_string(),
+            password: "lovelace".to_string(),
+        },
+        ..get("https://example.com/")
+    };
+
+    // These four answer it themselves; the rest have to explain.
+    let answers = [
+        CodeTarget::Curl,
+        CodeTarget::PowerShell,
+        CodeTarget::Python,
+        CodeTarget::CSharp,
+        CodeTarget::PhpCurl,
+        CodeTarget::PhpGuzzle,
+    ];
+
+    for (target, code) in everywhere(&request) {
+        if answers.contains(&target) {
+            continue;
+        }
+        assert!(
+            code.to_lowercase().contains("digest"),
+            "{target:?} said nothing about the challenge:\n{code}"
+        );
     }
 }

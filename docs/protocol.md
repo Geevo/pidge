@@ -86,10 +86,16 @@ Sidecar to extension:
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.
 
-`generateCode` sends nothing: `target` is one of `curl`, `powershell`, `python`
-or `csharp`, and the reply carries either the code or the reason there is none —
-a URL that will not parse, or a variable with no value. It is answered in line
-rather than on its own task, because nothing about it touches the network.
+`generateCode` sends nothing: `target` names a language and the library that
+writes it — `curl`, `powershell`, `python`, `csharp`, `rust-blocking`,
+`rust-async`, `node-fetch`, `node-axios`, `go`, `java-httpclient`,
+`java-okhttp`, `php-curl`, `php-guzzle`, `zig` — and the reply carries either
+the code or the reason there is none: a URL that will not parse, or a variable
+with no value. It is answered in line rather than on its own task, because
+nothing about it touches the network.
+
+The first four names are what they have always been. A target the sidecar does
+not know fails to decode, which is what the protocol version is for.
 
 ## Binary bodies
 

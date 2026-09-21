@@ -295,7 +295,10 @@ fn plan_auth(request: &HttpRequest, warnings: &mut Vec<String>) -> AuthPlan {
 
 /// The `Authorization` value for a username and password, as every client
 /// spells it: the pair joined by a colon and base64'd.
-fn basic_credentials(username: &str, password: &str) -> String {
+///
+/// Public because a generated snippet sometimes has to write the header out
+/// rather than name the pair, and it should be the same header either way.
+pub fn basic_credentials(username: &str, password: &str) -> String {
     use base64::Engine as _;
     let encoded =
         base64::engine::general_purpose::STANDARD.encode(format!("{username}:{password}"));
