@@ -153,3 +153,7 @@ friends — are never written to a log.
 
 MIT; see [LICENSE](LICENSE). The bundled IBM Plex fonts are SIL Open Font
 License 1.1; see [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+
+## Credits
+
+Co-created by [MJQ7](https://github.com/MJQ7).
