@@ -1,5 +1,6 @@
 import type {
   AppState,
+  CodeTarget,
   Environment,
   HistoryEntry,
   HttpRequest,
@@ -31,6 +32,11 @@ export interface UiState {
   readonly runtime: Readonly<Record<string, TabRuntime>>;
   /** `null` means the drawer is closed; the editor is the point of the app. */
   readonly drawer: DrawerPanel | null;
+  /**
+   * Which language the Code pane is showing. One choice for the window rather
+   * than one per tab: it is a preference about the reader, not about a request.
+   */
+  readonly codeTarget: CodeTarget;
   readonly storagePath: string;
   /** The host's version, for Settings. Empty until the state has loaded. */
   readonly version: string;
@@ -70,6 +76,7 @@ export type Action =
   | { type: "setRequestPane"; tabId: string; pane: RequestPane }
   | { type: "setResponsePane"; tabId: string; pane: ResponsePane }
   | { type: "setDrawer"; drawer: DrawerPanel | null }
+  | { type: "setCodeTarget"; target: CodeTarget }
   | { type: "setSettings"; settings: Settings }
   | { type: "setEnvironments"; environments: Environment[]; activeEnvironmentId: string | null }
   | { type: "setActiveEnvironment"; environmentId: string | null }
@@ -167,6 +174,9 @@ export function reducer(state: UiState, action: Action): UiState {
 
     case "setDrawer":
       return { ...state, drawer: action.drawer };
+
+    case "setCodeTarget":
+      return { ...state, codeTarget: action.target };
 
     case "setSettings":
       return { ...state, app: { ...state.app, settings: action.settings } };

@@ -7,7 +7,7 @@ import { isSelectAll, matchShortcut, shortcutHint } from "../lib/shortcuts";
 import { urlChanged } from "../lib/url";
 import { activeTab, needsCloseConfirmation, runtimeFor } from "../state/reducer";
 import { useApiClient } from "../state/useApiClient";
-import type { HttpMethod, HttpRequest, ScratchTab, SyntaxTheme, Theme } from "../types";
+import type { CodeTarget, HttpMethod, HttpRequest, ScratchTab, SyntaxTheme, Theme } from "../types";
 import { EnvironmentSelector } from "./EnvironmentSelector";
 import { EnvironmentsDialog } from "./EnvironmentsDialog";
 import { HistoryPanel } from "./HistoryPanel";
@@ -72,6 +72,18 @@ export function App({ bridge }: Props) {
   );
 
   const send = useCallback(() => void client.send(tab.id), [client, tab.id]);
+
+  /*
+   * Rebuilt when the environment changes as well as when the bridge does: the
+   * host resolves `{{name}}` against whichever environment is active, so the
+   * same request is different code under a different one, and the Code pane
+   * regenerates on this function's identity.
+   */
+  const generateCode = useCallback(
+    (request: HttpRequest, target: CodeTarget) => bridge.generateCode(request, target),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bridge, state.app.activeEnvironmentId, state.app.environments],
+  );
 
   // An untouched tab closes silently; one with work in it asks first.
   const askCloseTab = useCallback(
@@ -294,11 +306,16 @@ export function App({ bridge }: Props) {
                   <RequestEditor
                     request={tab.request}
                     pane={runtime.requestPane}
+                    codeTarget={state.codeTarget}
                     onPaneChange={(pane) =>
                       client.dispatch({ type: "setRequestPane", tabId: tab.id, pane })
                     }
+                    onCodeTargetChange={(target) =>
+                      client.dispatch({ type: "setCodeTarget", target })
+                    }
                     onChange={setRequest}
                     onSubmit={send}
+                    generateCode={generateCode}
                   />
                 }
                 second={

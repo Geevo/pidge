@@ -1,5 +1,5 @@
 use api_client_core::{HttpRequest, KeyValueEntry, RequestErrorKind};
-use api_client_session::Session;
+use api_client_session::{CodeTarget, Session};
 use api_client_storage::{AppState, Store};
 use api_client_testserver::TestServer;
 use api_client_variables::Environment;
@@ -347,4 +347,79 @@ async fn settings_that_do_not_touch_the_engine_leave_it_alone() {
         .await
         .unwrap();
     assert_eq!(response.status, 200);
+}
+
+/// The snippet carries the values the request would be sent with, rather than
+/// `{{name}}` for somebody to fill in by hand.
+#[test]
+fn generated_code_resolves_variables_from_the_active_environment() {
+    let (_dir, session) = session();
+
+    let mut state = session.snapshot();
+    state.environments = vec![Environment {
+        id: "env-1".into(),
+        name: "Local".into(),
+        variables: vec![
+            KeyValueEntry::new("baseUrl", "https://api.example.com"),
+            KeyValueEntry::new("token", "tok_123"),
+        ],
+    }];
+    state.active_environment_id = Some("env-1".into());
+    session.replace_state(state).unwrap();
+
+    let request = HttpRequest {
+        auth: api_client_core::AuthConfig::Bearer {
+            token: "{{token}}".into(),
+        },
+        ..HttpRequest::get("{{baseUrl}}/things")
+    };
+
+    let code = session
+        .generate_code(&request, Default::default(), CodeTarget::Curl)
+        .unwrap();
+
+    assert!(code.contains("https://api.example.com/things"), "{code}");
+    assert!(code.contains("Bearer tok_123"), "{code}");
+    assert!(!code.contains("{{"), "{code}");
+}
+
+/// A name with no value is the same answer Send gives, and for the same reason.
+#[test]
+fn generated_code_reports_a_variable_it_cannot_resolve() {
+    let (_dir, session) = session();
+
+    let error = session
+        .generate_code(
+            &HttpRequest::get("{{baseUrl}}/things"),
+            Default::default(),
+            CodeTarget::Curl,
+        )
+        .expect_err("a name with no value has no code");
+
+    assert!(error.message.contains("baseUrl"), "{}", error.message);
+}
+
+/// The settings are the app's, not the request's, so the snippet has to carry
+/// them: code copied out of a client that follows redirects should follow them.
+#[test]
+fn generated_code_carries_the_settings_the_request_would_be_sent_under() {
+    let (_dir, session) = session();
+
+    let mut state = session.snapshot();
+    state.settings.follow_redirects = false;
+    state.settings.timeout_ms = 5_000;
+    state.settings.tls.accept_invalid_certs = true;
+    session.replace_state(state).unwrap();
+
+    let code = session
+        .generate_code(
+            &HttpRequest::get("https://example.com/things"),
+            Default::default(),
+            CodeTarget::Curl,
+        )
+        .unwrap();
+
+    assert!(!code.contains("--location"), "{code}");
+    assert!(code.contains("--insecure"), "{code}");
+    assert!(code.contains("--max-time 5"), "{code}");
 }

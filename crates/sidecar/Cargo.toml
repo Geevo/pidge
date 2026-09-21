@@ -12,6 +12,7 @@ name = "api-client-sidecar"
 path = "src/main.rs"
 
 [dependencies]
+api-client-codegen.workspace = true
 api-client-core.workspace = true
 api-client-protocol.workspace = true
 api-client-session.workspace = true

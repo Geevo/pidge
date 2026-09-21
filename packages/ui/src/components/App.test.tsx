@@ -94,6 +94,11 @@ function responseBodyText(): string {
   return document.querySelector(".ac-response-body")?.textContent ?? "";
 }
 
+/** The generated snippet, read the same way and for the same reason. */
+function generatedCodeText(): string {
+  return document.querySelector('[aria-label^="Request as"]')?.textContent ?? "";
+}
+
 beforeEach(() => {});
 
 afterEach(() => {
@@ -1981,5 +1986,133 @@ describe("NTLM auth", () => {
       expect.stringContaining("Optional"),
     );
     expect(screen.getByText(/same connection/)).toBeInTheDocument();
+  });
+});
+
+describe("the code pane", () => {
+  it("asks the host to write the request out, and shows what comes back", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.code = "curl --request GET \\\n  --url 'http://localhost:3000/api/test'";
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+
+    await waitFor(() => expect(bridge.generated.length).toBeGreaterThan(0));
+    const last = bridge.generated[bridge.generated.length - 1]!;
+    expect(last.target).toBe("curl");
+    expect(last.request.url).toBe("localhost:3000/api/test");
+    await waitFor(() =>
+      expect(generatedCodeText()).toContain("--url 'http://localhost:3000/api/test'"),
+    );
+  });
+
+  it("writes the request in the language that was picked", async () => {
+    const { bridge, user } = setup();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+    await waitFor(() => expect(bridge.generated.length).toBeGreaterThan(0));
+
+    bridge.code = "import requests";
+    await choose(user, screen.getByLabelText("Language"), "Python");
+
+    await waitFor(() =>
+      expect(bridge.generated[bridge.generated.length - 1]!.target).toBe("python"),
+    );
+    await waitFor(() => expect(generatedCodeText()).toContain("import requests"));
+  });
+
+  /**
+   * The same reason Send reports one: a variable with no value, or a URL that
+   * will not parse, is a real answer and belongs where the code would be.
+   */
+  it("shows the reason there is no code", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.code = new Error("`{{host}}` has no value in this environment.");
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "{{host}}/api/test");
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("no value in this environment");
+  });
+
+  /** It is a view of the request, not another thing to fill in. */
+  it("does not change what will be sent", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok());
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/api/test");
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+    await waitFor(() => expect(bridge.generated.length).toBeGreaterThan(0));
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(bridge.sent).toHaveLength(1));
+    expect(bridge.sent[0]!.url).toBe("localhost:3000/api/test");
+  });
+
+  it("copies the snippet", async () => {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.code = "curl --url 'http://localhost:3000/'";
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+    await waitFor(() => expect(bridge.generated.length).toBeGreaterThan(0));
+
+    await user.click(await screen.findByRole("button", { name: "Copy" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("curl --url 'http://localhost:3000/'"),
+    );
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+});
+
+describe("the code pane's highlighting", () => {
+  /**
+   * The snippet is tokenised, not shown as one grey block. CodeMirror wraps
+   * each token in its own span, so a line that has any is a line a language
+   * was loaded for — which is the whole of what this can observe from here.
+   */
+  async function tokensIn(
+    user: ReturnType<typeof userEvent.setup>,
+    language: string,
+    code: string,
+  ): Promise<number> {
+    const bridge = new FakeBridge();
+    bridge.code = code;
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.type(screen.getAllByRole("textbox", { name: "URL" })[0]!, "localhost:3000");
+    await user.click(screen.getAllByRole("tab", { name: "Code" })[0]!);
+    await waitFor(() => expect(bridge.generated.length).toBeGreaterThan(0));
+
+    if (language !== "curl") {
+      await choose(user, screen.getAllByLabelText("Language")[0]!, language);
+    }
+    await waitFor(() => expect(generatedCodeText()).toContain(code.split("\n")[0]!.slice(0, 10)));
+
+    const editor = document.querySelector('[aria-label^="Request as"]');
+    return editor?.querySelectorAll(".cm-line span").length ?? 0;
+  }
+
+  it.each([
+    ["curl", "curl --request POST \\\n  --url 'http://localhost:3000/'"],
+    ["PowerShell", "$headers = @{\n    'Accept' = 'application/json'\n}"],
+    ["Python", 'import requests\n\nurl = "http://localhost:3000/"'],
+    ["C#", "using System;\n\nvar client = new HttpClient();"],
+  ])("colours %s", async (language, code) => {
+    const user = userEvent.setup();
+    expect(await tokensIn(user, language, code)).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,11 @@
-import type { AppState, HistoryEntry, HttpRequest, HttpResponse, RequestError } from "./types";
+import type {
+  AppState,
+  CodeTarget,
+  HistoryEntry,
+  HttpRequest,
+  HttpResponse,
+  RequestError,
+} from "./types";
 
 /**
  * Everything the UI needs from its host.
@@ -15,6 +22,15 @@ export interface PlatformBridge {
   sendRequest(request: HttpRequest): Promise<SendOutcome>;
   /** Aborts an in-flight request by its id. Safe to call when nothing is running. */
   cancelRequest(requestId: string): Promise<void>;
+  /**
+   * Writes the request out as code for another client, without sending it.
+   *
+   * Nothing is generated here: the host resolves the environment variables and
+   * reads the settings the snippet has to carry, so the code and the Send
+   * button describe the same request. It rejects with a `RequestError` for a
+   * URL that will not parse or a variable with no value.
+   */
+  generateCode(request: HttpRequest, target: CodeTarget): Promise<string>;
   loadState(): Promise<LoadedState>;
   saveState(state: AppState): Promise<AppState>;
   saveRequest(input: SaveRequestInput): Promise<AppState>;

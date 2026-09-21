@@ -23,6 +23,7 @@ use api_client_core::{
 };
 use api_client_variables::VariableSet;
 
+pub use build::{AuthPlan, ChallengeAuth, EffectiveRequest, effective};
 pub use cancel::{CancellationHandle, CancellationRegistry};
 pub use url_input::normalize_url;
 

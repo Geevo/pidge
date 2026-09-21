@@ -1,6 +1,6 @@
 [package]
-name = "api-client-protocol"
-description = "Newline-delimited JSON protocol shared by the sidecar and the VS Code extension."
+name = "api-client-codegen"
+description = "Turns a request into code for another client."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,9 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-api-client-codegen.workspace = true
 api-client-core.workspace = true
-api-client-storage.workspace = true
+api-client-http-engine.workspace = true
+base64.workspace = true
+percent-encoding.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 ts-rs.workspace = true

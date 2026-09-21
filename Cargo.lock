@@ -83,6 +83,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
+name = "api-client-codegen"
+version = "0.1.0"
+dependencies = [
+ "api-client-core",
+ "api-client-http-engine",
+ "base64 0.23.1",
+ "percent-encoding",
+ "serde",
+ "ts-rs",
+]
+
+[[package]]
 name = "api-client-core"
 version = "0.1.0"
 dependencies = [
@@ -143,6 +155,7 @@ dependencies = [
 name = "api-client-protocol"
 version = "0.1.0"
 dependencies = [
+ "api-client-codegen",
  "api-client-core",
  "api-client-storage",
  "serde",
@@ -154,6 +167,7 @@ dependencies = [
 name = "api-client-session"
 version = "0.1.0"
 dependencies = [
+ "api-client-codegen",
  "api-client-core",
  "api-client-http-engine",
  "api-client-storage",
@@ -171,6 +185,7 @@ dependencies = [
 name = "api-client-sidecar"
 version = "0.1.0"
 dependencies = [
+ "api-client-codegen",
  "api-client-core",
  "api-client-protocol",
  "api-client-session",

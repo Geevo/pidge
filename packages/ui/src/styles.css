@@ -2403,6 +2403,37 @@ body.ac-dragging--columns * {
   cursor: col-resize !important;
 }
 
+/* ---------- generated code ---------- */
+
+.ac-codegen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/*
+ * The snippet scrolls, so the language and the Copy button stay where they are.
+ * The editor is handed the height and scrolls inside `.cm-scroller`, exactly as
+ * the response body does.
+ */
+.ac-codegen > .ac-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ac-codegen > .ac-error {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Narrow enough to leave the row to the Copy button at the other end. */
+.ac-codegen .ac-select {
+  width: 140px;
+}
+
 /* ---------- rich response body ---------- */
 
 .ac-response-body__rich {

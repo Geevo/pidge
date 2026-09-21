@@ -1,18 +1,31 @@
-import type { HttpRequest, RequestPane } from "../types";
+import type { CodeTarget, HttpRequest, RequestPane } from "../types";
 import { AuthEditor } from "./AuthEditor";
 import { BodyEditor } from "./BodyEditor";
+import { CodeView } from "./CodeView";
 import { HeadersEditor } from "./HeadersEditor";
 import { ParamsEditor } from "./ParamsEditor";
 
 interface Props {
   request: HttpRequest;
   pane: RequestPane;
+  codeTarget: CodeTarget;
   onPaneChange: (pane: RequestPane) => void;
+  onCodeTargetChange: (target: CodeTarget) => void;
   onChange: (request: HttpRequest) => void;
   onSubmit: () => void;
+  generateCode: (request: HttpRequest, target: CodeTarget) => Promise<string>;
 }
 
-export function RequestEditor({ request, pane, onPaneChange, onChange, onSubmit }: Props) {
+export function RequestEditor({
+  request,
+  pane,
+  codeTarget,
+  onPaneChange,
+  onCodeTargetChange,
+  onChange,
+  onSubmit,
+  generateCode,
+}: Props) {
   const activeCount = (rows: readonly { enabled: boolean; name: string }[]) =>
     rows.filter((row) => row.enabled && row.name.trim() !== "").length;
 
@@ -21,12 +34,22 @@ export function RequestEditor({ request, pane, onPaneChange, onChange, onSubmit 
     { id: "body", label: "Body", marked: request.body.type !== "none" },
     { id: "headers", label: "Headers", count: activeCount(request.headers) },
     { id: "auth", label: "Auth", marked: request.auth.type !== "none" },
+    // Last, and never marked: it is a view of the other four rather than a
+    // fifth thing to fill in.
+    { id: "code", label: "Code" },
   ];
 
-  // The body editor needs a bounded height to virtualize, exactly as the
-  // response one does; see `.ac-scroll--flush`.
+  /*
+   * The body editor needs a bounded height to virtualize, exactly as the
+   * response one does; see `.ac-scroll--flush`.
+   *
+   * The Code pane takes the same treatment for a different reason: its toolbar
+   * carries the language and the Copy button, and if the panel scrolled they
+   * would scroll away from the snippet they belong to.
+   */
   const editorOwnsScrolling =
-    pane === "body" && (request.body.type === "json" || request.body.type === "text");
+    pane === "code" ||
+    (pane === "body" && (request.body.type === "json" || request.body.type === "text"));
 
   return (
     <section className="ac-pane ac-pane--request" aria-label="Request">
@@ -54,6 +77,14 @@ export function RequestEditor({ request, pane, onPaneChange, onChange, onSubmit 
         ) : null}
         {pane === "headers" ? <HeadersEditor request={request} onChange={onChange} /> : null}
         {pane === "auth" ? <AuthEditor request={request} onChange={onChange} /> : null}
+        {pane === "code" ? (
+          <CodeView
+            request={request}
+            target={codeTarget}
+            onTargetChange={onCodeTargetChange}
+            generate={generateCode}
+          />
+        ) : null}
       </div>
     </section>
   );

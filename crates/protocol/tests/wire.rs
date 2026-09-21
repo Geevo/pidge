@@ -1,6 +1,7 @@
 //! The IPC contract. These tests pin the literal JSON, because the TypeScript
 //! side reads exactly these strings.
 
+use api_client_codegen::CodeTarget;
 use api_client_core::{HttpRequest, HttpResponse, RequestError, RequestErrorKind};
 use api_client_protocol::{
     ClientEnvelope, ClientMessage, PROTOCOL_VERSION, ServerEnvelope, ServerMessage, decode_line,
@@ -180,4 +181,71 @@ fn surrounding_whitespace_is_tolerated() {
     );
     let decoded: ClientEnvelope = decode_line(&line).unwrap();
     assert_eq!(decoded.msg, ClientMessage::LoadState);
+}
+
+/// The four targets are written on the wire as the picker spells them, because
+/// the TypeScript side sends exactly these strings.
+#[test]
+fn a_code_target_is_a_plain_lowercase_name() {
+    let names: Vec<String> = CodeTarget::ALL
+        .into_iter()
+        .map(|target| {
+            serde_json::to_value(target)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+
+    assert_eq!(names, ["curl", "powershell", "python", "csharp"]);
+}
+
+#[test]
+fn a_generate_names_its_target_and_carries_its_variables() {
+    let envelope = ClientEnvelope::new(
+        Some("code-1".into()),
+        ClientMessage::GenerateCode {
+            request: HttpRequest::get("https://example.com"),
+            target: CodeTarget::PowerShell,
+            variables: [("host".to_string(), "example.com".to_string())]
+                .into_iter()
+                .collect(),
+        },
+    );
+
+    let value: serde_json::Value = serde_json::from_str(&encode_line(&envelope).unwrap()).unwrap();
+
+    assert_eq!(value["msg"]["type"], "generateCode");
+    assert_eq!(value["msg"]["target"], "powershell");
+    assert_eq!(value["msg"]["variables"]["host"], "example.com");
+}
+
+/// One message either way: the code, or the reason there is not any.
+#[test]
+fn a_generate_answers_with_the_code_or_with_the_reason() {
+    let generated = ServerEnvelope::new(
+        Some("code-1".into()),
+        ServerMessage::CodeGenerated {
+            code: Some("curl --url 'https://example.com/'".into()),
+            error: None,
+        },
+    );
+    let value: serde_json::Value = serde_json::from_str(&encode_line(&generated).unwrap()).unwrap();
+    assert_eq!(value["msg"]["type"], "codeGenerated");
+    assert_eq!(value["msg"]["error"], serde_json::Value::Null);
+
+    let failed = ServerEnvelope::new(
+        Some("code-2".into()),
+        ServerMessage::CodeGenerated {
+            code: None,
+            error: Some(RequestError::new(
+                RequestErrorKind::InvalidUrl,
+                "Enter a URL.",
+            )),
+        },
+    );
+    let line = encode_line(&failed).unwrap();
+    let decoded: ServerEnvelope = decode_line(&line).unwrap();
+    assert_eq!(decoded, failed);
 }

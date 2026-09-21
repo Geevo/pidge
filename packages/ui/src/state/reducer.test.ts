@@ -10,6 +10,7 @@ function hydrated(): UiState {
     app: defaultState(),
     runtime: {},
     drawer: null,
+    codeTarget: "curl",
     storagePath: "",
     version: "",
     notice: null,

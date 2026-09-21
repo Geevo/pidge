@@ -41,6 +41,7 @@ function initialState(): UiState {
     },
     runtime: {},
     drawer: null,
+    codeTarget: "curl",
     storagePath: "",
     version: "",
     notice: null,

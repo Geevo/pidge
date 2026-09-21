@@ -1,6 +1,6 @@
 use api_client_core::{
-    ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, MultipartValue, RequestBody,
-    RequestError, RequestErrorKind, redact,
+    ApiKeyPlacement, AuthConfig, HttpMethod, HttpRequest, MultipartValue, OAuth1Settings,
+    RequestBody, RequestError, RequestErrorKind, redact,
 };
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
@@ -179,22 +179,55 @@ fn build_headers(request: &HttpRequest) -> Result<HeaderMap, RequestError> {
     Ok(headers)
 }
 
+/// What the Auth tab contributes to a request, worked out before anything is
+/// sent.
+///
+/// This exists as a value rather than as a call on the request builder because
+/// the code generator has to describe the same decisions in four languages, and
+/// a rule that lived only inside the builder would be reimplemented there — and
+/// would drift from what Send actually does the first time either changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthPlan {
+    /// No auth, or a header the user set themselves.
+    Nothing,
+    /// One header, complete and ready to send.
+    Header { name: String, value: String },
+    /// An API key in the query string, already folded into the URL.
+    QueryParam,
+    /// Answered when the server challenges.
+    Challenge(ChallengeAuth),
+    /// Signed at send time, over the final URL and body.
+    OAuth1(Box<OAuth1Settings>),
+    /// A token is fetched from the endpoint before the request goes out.
+    OAuth2 { token_url: String },
+}
+
+/// The two schemes that begin with a 401 and a second request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChallengeAuth {
+    Digest {
+        username: String,
+        password: String,
+    },
+    Ntlm {
+        username: String,
+        password: String,
+        domain: String,
+        workstation: String,
+    },
+}
+
 /// A header the user typed always wins; they typed it on purpose. The auth
 /// helper is skipped and the conflict is reported, never silently resolved.
 ///
 /// Which header that is depends on the scheme: `Authorization` for bearer and
 /// basic, but an API key names its own, and a key in the query string collides
 /// with nothing.
-fn apply_auth(
-    builder: RequestBuilder,
-    request: &HttpRequest,
-    url: &url::Url,
-    warnings: &mut Vec<String>,
-) -> Result<RequestBuilder, RequestError> {
+fn plan_auth(request: &HttpRequest, warnings: &mut Vec<String>) -> AuthPlan {
     let occupied = |name: &str| request.find_header(name).is_some();
 
-    Ok(match &request.auth {
-        AuthConfig::None => builder,
+    match &request.auth {
+        AuthConfig::None => AuthPlan::Nothing,
 
         AuthConfig::Bearer { .. }
         | AuthConfig::Basic { .. }
@@ -207,42 +240,114 @@ fn apply_auth(
             warnings.push(
                 "An explicit Authorization header is set, so the Auth tab was ignored.".to_string(),
             );
-            builder
+            AuthPlan::Nothing
         }
-        // None of these can be applied here: digest and NTLM wait for a
-        // challenge, and OAuth 2 has to fetch a token first. The engine does
-        // all three.
-        AuthConfig::Digest { .. } | AuthConfig::Ntlm { .. } | AuthConfig::OAuth2(_) => builder,
-        AuthConfig::Bearer { token } => builder.bearer_auth(token),
-        AuthConfig::Basic { username, password } => builder.basic_auth(username, Some(password)),
 
-        // Signed here, over the URL that is about to be requested.
-        AuthConfig::OAuth1(settings) => {
-            let header = oauth1::authorization(
-                request.method.as_str(),
-                url,
-                &request.body,
-                settings,
-                oauth1::nonce(),
-                oauth1::timestamp(),
-            )?;
-            builder.header(reqwest::header::AUTHORIZATION, header)
-        }
+        AuthConfig::Bearer { token } => AuthPlan::Header {
+            name: AUTHORIZATION.to_string(),
+            value: format!("Bearer {token}"),
+        },
+        AuthConfig::Basic { username, password } => AuthPlan::Header {
+            name: AUTHORIZATION.to_string(),
+            value: basic_credentials(username, password),
+        },
+
+        AuthConfig::Digest { username, password } => AuthPlan::Challenge(ChallengeAuth::Digest {
+            username: username.clone(),
+            password: password.clone(),
+        }),
+        AuthConfig::Ntlm {
+            username,
+            password,
+            domain,
+            workstation,
+        } => AuthPlan::Challenge(ChallengeAuth::Ntlm {
+            username: username.clone(),
+            password: password.clone(),
+            domain: domain.clone(),
+            workstation: workstation.clone(),
+        }),
+
+        AuthConfig::OAuth1(settings) => AuthPlan::OAuth1(Box::new(settings.clone())),
+        AuthConfig::OAuth2(settings) => AuthPlan::OAuth2 {
+            token_url: settings.token_url.clone(),
+        },
 
         // The query placement is handled with the other query params.
         AuthConfig::ApiKey {
             placement: ApiKeyPlacement::Query,
             ..
-        } => builder,
-        AuthConfig::ApiKey { key, .. } if key.trim().is_empty() => builder,
+        } => AuthPlan::QueryParam,
+        AuthConfig::ApiKey { key, .. } if key.trim().is_empty() => AuthPlan::Nothing,
         AuthConfig::ApiKey { key, .. } if occupied(key.trim()) => {
             warnings.push(format!(
                 "An explicit {} header is set, so the Auth tab was ignored.",
                 key.trim()
             ));
-            builder
+            AuthPlan::Nothing
         }
-        AuthConfig::ApiKey { key, value, .. } => builder.header(key.trim(), value),
+        AuthConfig::ApiKey { key, value, .. } => AuthPlan::Header {
+            name: key.trim().to_string(),
+            value: value.clone(),
+        },
+    }
+}
+
+/// The `Authorization` value for a username and password, as every client
+/// spells it: the pair joined by a colon and base64'd.
+fn basic_credentials(username: &str, password: &str) -> String {
+    use base64::Engine as _;
+    let encoded =
+        base64::engine::general_purpose::STANDARD.encode(format!("{username}:{password}"));
+    format!("Basic {encoded}")
+}
+
+const AUTHORIZATION: &str = "Authorization";
+
+fn apply_auth(
+    builder: RequestBuilder,
+    request: &HttpRequest,
+    url: &url::Url,
+    warnings: &mut Vec<String>,
+) -> Result<RequestBuilder, RequestError> {
+    Ok(match plan_auth(request, warnings) {
+        // None of these can be applied here: digest and NTLM wait for a
+        // challenge, and OAuth 2 has to fetch a token first. The engine does
+        // all three. A key in the query string is already in the URL.
+        AuthPlan::Nothing
+        | AuthPlan::QueryParam
+        | AuthPlan::Challenge(_)
+        | AuthPlan::OAuth2 { .. } => builder,
+
+        AuthPlan::Header { name, value } => {
+            /*
+             * Credentials are marked sensitive, which is what keeps them out of
+             * an HPACK table shared across a connection. reqwest's own
+             * `bearer_auth` and `basic_auth` do this; setting the header by
+             * name would quietly stop doing it.
+             */
+            let is_authorization = name.eq_ignore_ascii_case(AUTHORIZATION);
+            match HeaderValue::from_str(&value) {
+                Ok(mut header) if is_authorization => {
+                    header.set_sensitive(true);
+                    builder.header(name, header)
+                }
+                _ => builder.header(name, value),
+            }
+        }
+
+        // Signed here, over the URL that is about to be requested.
+        AuthPlan::OAuth1(settings) => {
+            let header = oauth1::authorization(
+                request.method.as_str(),
+                url,
+                &request.body,
+                &settings,
+                oauth1::nonce(),
+                oauth1::timestamp(),
+            )?;
+            builder.header(reqwest::header::AUTHORIZATION, header)
+        }
     })
 }
 
@@ -252,42 +357,30 @@ fn apply_body(
     user_content_type: bool,
     warnings: &mut Vec<String>,
 ) -> Result<RequestBuilder, RequestError> {
+    // Set before the body rather than with it, so that one function decides
+    // what the content type is and both the engine and the generated code read
+    // the same answer.
+    let builder = match content_type_for(&request.body, user_content_type, warnings) {
+        Some(value) => builder.header(CONTENT_TYPE, value),
+        None => builder,
+    };
+
     Ok(match &request.body {
         RequestBody::None => builder,
 
-        RequestBody::Json { text } => {
-            let builder = with_content_type(builder, user_content_type, "application/json");
-            builder.body(text.clone())
-        }
+        RequestBody::Json { text } => builder.body(text.clone()),
 
-        RequestBody::Text { text, content_type } => {
-            let fallback = content_type
-                .as_deref()
-                .unwrap_or("text/plain; charset=utf-8");
-            let builder = with_content_type(builder, user_content_type, fallback);
-            builder.body(text.clone())
-        }
+        RequestBody::Text { text, .. } => builder.body(text.clone()),
 
         RequestBody::UrlEncoded { entries } => {
             let mut serializer = url::form_urlencoded::Serializer::new(String::new());
             for entry in entries.iter().filter(|entry| entry.is_active()) {
                 serializer.append_pair(entry.name.trim(), &entry.value);
             }
-            let builder = with_content_type(
-                builder,
-                user_content_type,
-                "application/x-www-form-urlencoded",
-            );
             builder.body(serializer.finish())
         }
 
         RequestBody::Multipart { entries } => {
-            if user_content_type {
-                warnings.push(
-                    "Multipart sets its own Content-Type with a boundary; the header you set was replaced."
-                        .to_string(),
-                );
-            }
             let mut form = reqwest::multipart::Form::new();
             for entry in entries.iter().filter(|entry| entry.is_active()) {
                 let name = entry.name.trim().to_string();
@@ -331,16 +424,96 @@ fn apply_body(
     })
 }
 
-fn with_content_type(
-    builder: RequestBuilder,
+/// The Content-Type the engine will send for a body.
+///
+/// `None` means nothing is set here: there is no body, the user named the type
+/// themselves, or the transport writes its own — multipart's carries the
+/// boundary it generated, so nobody else may write that header.
+fn content_type_for(
+    body: &RequestBody,
     user_content_type: bool,
-    fallback: &str,
-) -> RequestBuilder {
-    if user_content_type {
-        builder
-    } else {
-        builder.header(CONTENT_TYPE, fallback)
+    warnings: &mut Vec<String>,
+) -> Option<String> {
+    if let RequestBody::Multipart { .. } = body {
+        if user_content_type {
+            warnings.push(
+                "Multipart sets its own Content-Type with a boundary; the header you set was replaced."
+                    .to_string(),
+            );
+        }
+        return None;
     }
+
+    if user_content_type {
+        return None;
+    }
+
+    match body {
+        RequestBody::None | RequestBody::Multipart { .. } => None,
+        RequestBody::Json { .. } => Some("application/json".to_string()),
+        RequestBody::Text { content_type, .. } => Some(
+            content_type
+                .as_deref()
+                .unwrap_or("text/plain; charset=utf-8")
+                .to_string(),
+        ),
+        RequestBody::UrlEncoded { .. } => Some("application/x-www-form-urlencoded".to_string()),
+    }
+}
+
+/// A request worked out as far as it can be without a network: the URL that
+/// will be requested, the headers that will go with it, and whatever the Auth
+/// tab still owes.
+///
+/// [`prepare`] and the code generator are both built on this, so a snippet the
+/// user copies makes the same request the Send button does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EffectiveRequest {
+    /// Normalized, with the query rows and a query-placed API key folded in.
+    pub url: String,
+    /// The user's rows first, then the auth header, then the content type the
+    /// body implies. Order and letter case are as typed.
+    pub headers: Vec<(String, String)>,
+    /// What still has to happen at send time: a challenge, a signature, a token.
+    pub auth: AuthPlan,
+    /// The same notes the response pane shows after a send.
+    pub warnings: Vec<String>,
+}
+
+/// Works a request out without sending it. The only failure is a URL that
+/// cannot be parsed, which is the one thing nothing downstream can describe.
+pub fn effective(request: &HttpRequest) -> Result<EffectiveRequest, RequestError> {
+    let mut url = normalize_url(&request.url)?;
+    append_query_params(&mut url, request);
+
+    let mut warnings = Vec::new();
+    let user_content_type = request.find_header("content-type").is_some();
+    let multipart = matches!(request.body, RequestBody::Multipart { .. });
+
+    let mut headers: Vec<(String, String)> = request
+        .headers
+        .iter()
+        .filter(|entry| entry.is_active())
+        // Multipart writes its own, so the user's row is not what goes out.
+        .filter(|entry| !(multipart && entry.name.trim().eq_ignore_ascii_case("content-type")))
+        .map(|entry| (entry.name.trim().to_string(), entry.value.clone()))
+        .collect();
+
+    let auth = plan_auth(request, &mut warnings);
+    if let AuthPlan::Header { name, value } = &auth {
+        headers.push((name.clone(), value.clone()));
+    }
+
+    if let Some(value) = content_type_for(&request.body, user_content_type, &mut warnings) {
+        headers.push(("Content-Type".to_string(), value));
+    }
+
+    Ok(EffectiveRequest {
+        url: url.to_string(),
+        headers,
+        auth,
+        warnings,
+    })
 }
 
 #[cfg(test)]

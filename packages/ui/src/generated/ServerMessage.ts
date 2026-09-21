@@ -9,7 +9,7 @@ export type ServerMessage = { "type": "handshakeOk", serverName: string, serverV
  * The row this send added to history, so the webview can show it
  * without reloading the whole state.
  */
-historyEntry: HistoryEntry | null, } | { "type": "requestError", error: RequestError, historyEntry: HistoryEntry | null, } | { "type": "requestCancelled", wasInFlight: boolean, } | { "type": "stateLoaded", state: AppState, 
+historyEntry: HistoryEntry | null, } | { "type": "requestError", error: RequestError, historyEntry: HistoryEntry | null, } | { "type": "codeGenerated", code: string | null, error: RequestError | null, } | { "type": "requestCancelled", wasInFlight: boolean, } | { "type": "stateLoaded", state: AppState, 
 /**
  * Present when the state file had to be recovered; safe to show.
  */

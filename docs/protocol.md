@@ -14,7 +14,7 @@ generated from it into `packages/ui/src/generated/`.
 ## Envelope
 
 ```json
-{ "v": 1, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
+{ "v": 2, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
 ```
 
 | Field | Meaning                                                     |
@@ -28,8 +28,8 @@ generated from it into `packages/ui/src/generated/`.
 The extension sends `handshake` first; nothing else is accepted before it.
 
 ```json
-{"v":1,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
-{"v":1,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":1}}
+{"v":2,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
+{"v":2,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":2}}
 ```
 
 If the versions do not match, the sidecar replies `handshakeError` and stops,
@@ -37,13 +37,13 @@ rather than guessing at a message shape it does not understand:
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "id": "hs",
   "msg": {
     "type": "handshakeError",
     "message": "Protocol mismatch: …",
-    "expectedProtocolVersion": 1,
-    "receivedProtocolVersion": 2
+    "expectedProtocolVersion": 2,
+    "receivedProtocolVersion": 3
   }
 }
 ```
@@ -60,6 +60,7 @@ Extension to sidecar:
 | `handshake`          | `clientName`, `clientVersion`       |
 | `sendRequest`        | `request`, `variables`              |
 | `cancelRequest`      | `requestId`                         |
+| `generateCode`       | `request`, `target`, `variables`    |
 | `loadState`          | —                                   |
 | `saveState`          | `state`                             |
 | `saveRequest`        | `savedRequestId`, `name`, `request` |
@@ -76,6 +77,7 @@ Sidecar to extension:
 | `requestComplete`  | `response`, `historyEntry`                                      |
 | `requestError`     | `error`, `historyEntry`                                         |
 | `requestCancelled` | `wasInFlight`                                                   |
+| `codeGenerated`    | `code`, `error`                                                 |
 | `stateLoaded`      | `state`, `recovery`, `storagePath`                              |
 | `stateSaved`       | `state`                                                         |
 | `storageError`     | `message`                                                       |
@@ -83,6 +85,11 @@ Sidecar to extension:
 
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.
+
+`generateCode` sends nothing: `target` is one of `curl`, `powershell`, `python`
+or `csharp`, and the reply carries either the code or the reason there is none —
+a URL that will not parse, or a variable with no value. It is answered in line
+rather than on its own task, because nothing about it touches the network.
 
 ## Binary bodies
 
