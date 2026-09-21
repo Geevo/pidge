@@ -86,8 +86,8 @@ Sidecar to extension:
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.
 
-`generateCode` sends nothing: `target` is one of `curl`, `powershell`, `python`
-or `csharp`, and the reply carries either the code or the reason there is none —
+`generateCode` sends nothing: `target` is one of `curl`, `powershell`, `python`,
+`csharp` or `node`, and the reply carries either the code or the reason there is none —
 a URL that will not parse, or a variable with no value. It is answered in line
 rather than on its own task, because nothing about it touches the network.
 

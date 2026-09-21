@@ -11,6 +11,7 @@
 
 mod csharp;
 mod curl;
+mod node;
 mod powershell;
 mod python;
 mod text;
@@ -29,15 +30,17 @@ pub enum CodeTarget {
     PowerShell,
     Python,
     CSharp,
+    Node,
 }
 
 impl CodeTarget {
     /// In the order the picker offers them.
-    pub const ALL: [CodeTarget; 4] = [
+    pub const ALL: [CodeTarget; 5] = [
         CodeTarget::Curl,
         CodeTarget::PowerShell,
         CodeTarget::Python,
         CodeTarget::CSharp,
+        CodeTarget::Node,
     ];
 
     /// What the picker calls it, and what the library underneath is.
@@ -47,6 +50,7 @@ impl CodeTarget {
             CodeTarget::PowerShell => "PowerShell",
             CodeTarget::Python => "Python",
             CodeTarget::CSharp => "C#",
+            CodeTarget::Node => "Node.js",
         }
     }
 }
@@ -99,6 +103,7 @@ pub fn generate(
         CodeTarget::PowerShell => powershell::generate(&plan),
         CodeTarget::Python => python::generate(&plan),
         CodeTarget::CSharp => csharp::generate(&plan),
+        CodeTarget::Node => node::generate(&plan),
     })
 }
 
@@ -206,7 +211,7 @@ impl Plan<'_> {
     /// comment in its own way.
     ///
     /// Only the things a reader would otherwise assume were covered. A digest
-    /// challenge is answered by a flag in all four languages and says nothing;
+    /// challenge is a flag wherever it can be answered and says nothing here;
     /// an OAuth 1 signature is a library, and silence about it would be a lie.
     pub fn notes(&self) -> Vec<String> {
         let mut notes = Vec::new();

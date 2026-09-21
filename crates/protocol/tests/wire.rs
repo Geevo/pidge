@@ -183,7 +183,7 @@ fn surrounding_whitespace_is_tolerated() {
     assert_eq!(decoded.msg, ClientMessage::LoadState);
 }
 
-/// The four targets are written on the wire as the picker spells them, because
+/// The targets are written on the wire as the picker spells them, because
 /// the TypeScript side sends exactly these strings.
 #[test]
 fn a_code_target_is_a_plain_lowercase_name() {
@@ -198,7 +198,7 @@ fn a_code_target_is_a_plain_lowercase_name() {
         })
         .collect();
 
-    assert_eq!(names, ["curl", "powershell", "python", "csharp"]);
+    assert_eq!(names, ["curl", "powershell", "python", "csharp", "node"]);
 }
 
 #[test]
