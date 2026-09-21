@@ -2111,6 +2111,7 @@ describe("the code pane's highlighting", () => {
     ["PowerShell", "$headers = @{\n    'Accept' = 'application/json'\n}"],
     ["Python", 'import requests\n\nurl = "http://localhost:3000/"'],
     ["C#", "using System;\n\nvar client = new HttpClient();"],
+    ["Node.js", 'const url = "http://localhost:3000/";'],
   ])("colours %s", async (language, code) => {
     const user = userEvent.setup();
     expect(await tokensIn(user, language, code)).toBeGreaterThan(0);
