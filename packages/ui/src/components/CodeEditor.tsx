@@ -17,6 +17,7 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { csharp } from "../lib/csharp";
+import { go, java, php, rust, zig } from "../lib/languages";
 import { powershell } from "../lib/powershell";
 import { python } from "../lib/python";
 import { shell } from "../lib/shell";
@@ -55,7 +56,23 @@ import type { SyntaxLanguage } from "../lib/mime";
  * around it is wearing.
  */
 const highlightStyle = HighlightStyle.define([
-  { tag: [tags.propertyName, tags.attributeName, tags.tagName], color: "var(--ac-syntax-key)" },
+  /*
+   * A plain name is the same colour as a key. Every language here calls the
+   * thing on the left of a `=` and the thing after a `.` by the same colour,
+   * and so does the editor everyone will compare this with; without the first
+   * of these, a JavaScript body and the Node.js snippet were most of the way
+   * to being one grey block.
+   */
+  {
+    tag: [
+      tags.propertyName,
+      tags.attributeName,
+      tags.tagName,
+      tags.variableName,
+      tags.standard(tags.variableName),
+    ],
+    color: "var(--ac-syntax-key)",
+  },
   { tag: [tags.string, tags.attributeValue], color: "var(--ac-syntax-string)" },
   { tag: tags.number, color: "var(--ac-syntax-number)" },
   { tag: [tags.bool, tags.null, tags.atom, tags.keyword], color: "var(--ac-syntax-keyword)" },
@@ -69,7 +86,11 @@ const highlightStyle = HighlightStyle.define([
   },
   { tag: [tags.typeName, tags.className], color: "var(--ac-syntax-type)" },
   {
-    tag: [tags.function(tags.variableName), tags.definition(tags.variableName)],
+    tag: [
+      tags.function(tags.variableName),
+      tags.function(tags.propertyName),
+      tags.definition(tags.variableName),
+    ],
     color: "var(--ac-syntax-function)",
   },
   { tag: tags.link, color: "var(--ac-accent)", textDecoration: "underline" },
@@ -80,7 +101,17 @@ const highlightStyle = HighlightStyle.define([
  * Everything this editor can colour: the languages a response body arrives in,
  * and the four a request can be written out as.
  */
-export type EditorLanguage = SyntaxLanguage | "shell" | "powershell" | "python" | "csharp";
+export type EditorLanguage =
+  | SyntaxLanguage
+  | "shell"
+  | "powershell"
+  | "python"
+  | "csharp"
+  | "rust"
+  | "go"
+  | "java"
+  | "php"
+  | "zig";
 
 /*
  * Every language is bundled rather than fetched: this app is read from disk,
@@ -91,9 +122,12 @@ export type EditorLanguage = SyntaxLanguage | "shell" | "powershell" | "python" 
  * colouring a twenty-line snippet needs: it is the parse tree they lack, and
  * only folding and indentation ever wanted one.
  *
- * All four are ours. `legacy-modes` has a mode for each, and each of them
+ * All of them are ours. `legacy-modes` has a mode for most, and each of those
  * colours the keywords and the strings and leaves most of a generated snippet
- * the colour of plain text; the four files in `lib/` say what each was missing.
+ * the colour of plain text; the files in `lib/` say what each was missing.
+ *
+ * The five written with braces share `lib/curly`, which is the half of a
+ * tokenizer they have in common; `lib/languages` is the half they do not.
  */
 const LANGUAGES: Record<EditorLanguage, () => Extension> = {
   json,
@@ -107,6 +141,11 @@ const LANGUAGES: Record<EditorLanguage, () => Extension> = {
   powershell: () => StreamLanguage.define(powershell),
   python: () => StreamLanguage.define(python),
   csharp: () => StreamLanguage.define(csharp),
+  rust: () => StreamLanguage.define(rust),
+  go: () => StreamLanguage.define(go),
+  java: () => StreamLanguage.define(java),
+  php: () => StreamLanguage.define(php),
+  zig: () => StreamLanguage.define(zig),
 };
 
 /**
@@ -117,7 +156,17 @@ export function isFoldable(language: EditorLanguage): boolean {
   return language !== "text" && !STREAM_LANGUAGES.includes(language);
 }
 
-const STREAM_LANGUAGES: readonly EditorLanguage[] = ["shell", "powershell", "python", "csharp"];
+const STREAM_LANGUAGES: readonly EditorLanguage[] = [
+  "shell",
+  "powershell",
+  "python",
+  "csharp",
+  "rust",
+  "go",
+  "java",
+  "php",
+  "zig",
+];
 
 interface Props {
   value: string;

@@ -183,8 +183,9 @@ fn surrounding_whitespace_is_tolerated() {
     assert_eq!(decoded.msg, ClientMessage::LoadState);
 }
 
-/// The four targets are written on the wire as the picker spells them, because
-/// the TypeScript side sends exactly these strings.
+/// Every target is a plain lowercase name, because the TypeScript side sends
+/// exactly these strings — and the first four are the ones they have always
+/// been, so adding a language does not change what an older pair understood.
 #[test]
 fn a_code_target_is_a_plain_lowercase_name() {
     let names: Vec<String> = CodeTarget::ALL
@@ -198,7 +199,21 @@ fn a_code_target_is_a_plain_lowercase_name() {
         })
         .collect();
 
-    assert_eq!(names, ["curl", "powershell", "python", "csharp"]);
+    assert_eq!(&names[..4], ["curl", "powershell", "python", "csharp"]);
+    assert!(names.contains(&"rust-blocking".to_string()), "{names:?}");
+    assert!(names.contains(&"java-okhttp".to_string()), "{names:?}");
+
+    for name in &names {
+        assert!(
+            name.chars().all(|c| c.is_ascii_lowercase() || c == '-'),
+            "`{name}` is not a plain name"
+        );
+    }
+
+    let mut sorted = names.clone();
+    sorted.sort();
+    sorted.dedup();
+    assert_eq!(sorted.len(), names.len(), "a name is used twice: {names:?}");
 }
 
 #[test]

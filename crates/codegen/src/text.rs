@@ -131,13 +131,42 @@ fn wrap(prefix: &str, note: &str) -> String {
     lines.join("\n")
 }
 
-/// Indents every line of a block by `spaces`, leaving blank lines blank.
+/**
+ * Marks a line as the inside of a multi-line string literal.
+ *
+ * The body of a request is carried into the snippet verbatim, and in a language
+ * whose code sits inside a function the snippet is then indented — which would
+ * put four spaces inside the body and send something nobody wrote. A literal
+ * says where it begins and ends, rather than the indenter guessing, and the
+ * mark is taken out again once everything has been laid out.
+ */
+pub const KEEP: char = '\u{1}';
+
+/// Marks every line of `block` after the first, which is where a literal's own
+/// content starts.
+pub fn keep(block: &str) -> String {
+    let mut lines = block.lines();
+    let first = lines.next().unwrap_or_default().to_string();
+    let rest: Vec<String> = lines.map(|line| format!("{KEEP}{line}")).collect();
+    if rest.is_empty() {
+        return first;
+    }
+    format!("{first}\n{}", rest.join("\n"))
+}
+
+/// Takes the marks out, once nothing is going to be indented again.
+pub fn settle(block: String) -> String {
+    block.replace(KEEP, "")
+}
+
+/// Indents every line of a block by `spaces`, leaving blank lines blank and
+/// leaving the inside of a literal exactly where it is.
 pub fn indent(block: &str, spaces: usize) -> String {
     let pad = " ".repeat(spaces);
     block
         .lines()
         .map(|line| {
-            if line.is_empty() {
+            if line.is_empty() || line.starts_with(KEEP) {
                 line.to_string()
             } else {
                 format!("{pad}{line}")
@@ -181,6 +210,16 @@ mod tests {
     fn a_plus_in_a_form_value_is_escaped() {
         let entries = vec![KeyValueEntry::new("phone", "+44 7700 900000")];
         assert_eq!(form_encoded(&entries), "phone=%2B44+7700+900000");
+    }
+
+    /// A body's own indentation is data, and survives the code around it
+    /// being laid out.
+    #[test]
+    fn the_inside_of_a_literal_is_not_indented() {
+        let literal = keep("r#\"{\n  \"a\": 1\n}\"#");
+        let block = indent(&format!("let payload = {literal};"), 4);
+
+        assert_eq!(settle(block), "    let payload = r#\"{\n  \"a\": 1\n}\"#;");
     }
 
     #[test]

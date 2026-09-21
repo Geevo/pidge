@@ -70,7 +70,7 @@ snippet says so in a comment instead of looking complete and failing.
 | `core`        | `HttpRequest`, `HttpResponse`, `RequestError`, secret-header redaction    |
 | `variables`   | `{{name}}` substitution and `Environment`                                 |
 | `http-engine` | reqwest client, request building, cancellation, timing, response limits   |
-| `codegen`     | the request written out as curl, PowerShell, Python or C#                 |
+| `codegen`     | the request written out in ten languages, and the libraries for them      |
 | `storage`     | `AppState`, atomic writes, schema version and migrations, history cap     |
 | `session`     | engine + store + in-memory state; every operation a frontend can perform  |
 | `protocol`    | the newline-delimited JSON messages between the extension and the sidecar |

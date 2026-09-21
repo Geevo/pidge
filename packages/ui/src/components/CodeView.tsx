@@ -6,16 +6,46 @@ import type { CodeTarget, HttpRequest, RequestError } from "../types";
 import { CodeEditor, type EditorLanguage } from "./CodeEditor";
 import { Select } from "./Select";
 
+interface Target {
+  readonly value: CodeTarget;
+  /** What the picker lists. */
+  readonly language: string;
+  /** What the tabs under it offer, or `null` where there is only one way. */
+  readonly library: string | null;
+  /**
+   * What to colour it as, which is not always the language's own name: a curl
+   * command is a shell script, and Node.js is JavaScript.
+   */
+  readonly highlight: EditorLanguage;
+}
+
 /**
- * `language` is what to colour the snippet as, which is not always the target's
- * own name: a curl command is a shell script.
+ * Every way a request can be written, grouped by language.
+ *
+ * The order is the picker's order, and the first of each language is what
+ * choosing that language gives you.
  */
-const TARGETS: { value: CodeTarget; label: string; language: EditorLanguage }[] = [
-  { value: "curl", label: "curl", language: "shell" },
-  { value: "powershell", label: "PowerShell", language: "powershell" },
-  { value: "python", label: "Python", language: "python" },
-  { value: "csharp", label: "C#", language: "csharp" },
+const TARGETS: readonly Target[] = [
+  { value: "curl", language: "curl", library: null, highlight: "shell" },
+  { value: "powershell", language: "PowerShell", library: null, highlight: "powershell" },
+  { value: "python", language: "Python", library: null, highlight: "python" },
+  { value: "csharp", language: "C#", library: null, highlight: "csharp" },
+  { value: "rust-blocking", language: "Rust", library: "blocking", highlight: "rust" },
+  { value: "rust-async", language: "Rust", library: "async", highlight: "rust" },
+  { value: "node-fetch", language: "Node.js", library: "fetch", highlight: "javascript" },
+  { value: "node-axios", language: "Node.js", library: "axios", highlight: "javascript" },
+  { value: "go", language: "Go", library: null, highlight: "go" },
+  { value: "java-httpclient", language: "Java", library: "HttpClient", highlight: "java" },
+  { value: "java-okhttp", language: "Java", library: "OkHttp", highlight: "java" },
+  { value: "php-curl", language: "PHP", library: "cURL", highlight: "php" },
+  { value: "php-guzzle", language: "PHP", library: "Guzzle", highlight: "php" },
+  { value: "zig", language: "Zig", library: null, highlight: "zig" },
 ];
+
+const LANGUAGES = [...new Set(TARGETS.map((target) => target.language))].map((language) => ({
+  value: language,
+  label: language,
+}));
 
 /**
  * Long enough that typing a URL does not send a generate per keystroke, short
@@ -46,6 +76,8 @@ export function CodeView({ request, target, onTargetChange, generate }: Props) {
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<RequestError | null>(null);
   const entry = TARGETS.find((candidate) => candidate.value === target) ?? TARGETS[0]!;
+  // The libraries for the language showing, which is what the tabs are.
+  const libraries = TARGETS.filter((candidate) => candidate.language === entry.language);
 
   useEffect(() => {
     let live = true;
@@ -74,15 +106,37 @@ export function CodeView({ request, target, onTargetChange, generate }: Props) {
     <div className="ac-codegen">
       <div className="ac-response-tools">
         <Select
-          value={target}
-          options={TARGETS}
-          onChange={(value) => onTargetChange(value as CodeTarget)}
+          value={entry.language}
+          options={LANGUAGES}
+          onChange={(language) => {
+            // The first of a language is what choosing it gives you.
+            const first = TARGETS.find((candidate) => candidate.language === language);
+            if (first) onTargetChange(first.value);
+          }}
           label="Language"
           title="Which client to write this request for"
         />
         <span className="ac-spacer" />
         <CopyButton code={code} />
       </div>
+
+      {/* Only where there is a choice: one library needs no tabs to pick it. */}
+      {libraries.length > 1 ? (
+        <div className="ac-subtabs ac-subtabs--libraries" role="tablist" aria-label="Library">
+          {libraries.map((candidate) => (
+            <button
+              key={candidate.value}
+              type="button"
+              role="tab"
+              className="ac-subtab"
+              aria-selected={candidate.value === target}
+              onClick={() => onTargetChange(candidate.value)}
+            >
+              {candidate.library}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="ac-error" role="alert">
@@ -97,10 +151,10 @@ export function CodeView({ request, target, onTargetChange, generate }: Props) {
          */
         <CodeEditor
           value={code ?? ""}
-          language={entry.language}
+          language={entry.highlight}
           readOnly
           wrap
-          ariaLabel={`Request as ${entry.label}`}
+          ariaLabel={`Request as ${entry.language}`}
         />
       )}
     </div>
