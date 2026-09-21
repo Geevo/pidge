@@ -8,6 +8,7 @@ import type {
 } from "../bridge";
 import type {
   AppState,
+  CodeTarget,
   HistoryEntry,
   HttpRequest,
   HttpResponse,
@@ -34,6 +35,9 @@ export class FakeBridge implements PlatformBridge {
   pickFile?: (request: FilePickRequest) => Promise<string | null>;
 
   readonly sent: HttpRequest[] = [];
+  readonly generated: { request: HttpRequest; target: CodeTarget }[] = [];
+  /** What the next generate answers with. A string is code; an Error rejects. */
+  code: string | Error = "curl --url 'https://example.com/'";
   readonly cancelled: string[] = [];
   readonly saved: AppState[] = [];
 
@@ -66,6 +70,11 @@ export class FakeBridge implements PlatformBridge {
       });
     }
     return Promise.resolve(next);
+  }
+
+  generateCode(request: HttpRequest, target: CodeTarget): Promise<string> {
+    this.generated.push({ request, target });
+    return this.code instanceof Error ? Promise.reject(this.code) : Promise.resolve(this.code);
   }
 
   cancelRequest(requestId: string): Promise<void> {

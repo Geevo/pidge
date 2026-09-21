@@ -7,6 +7,8 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use api_client_codegen::ClientOptions;
+pub use api_client_codegen::CodeTarget;
 use api_client_core::{HttpRequest, HttpResponse, RequestError, RequestErrorKind};
 use api_client_http_engine::{CancellationRegistry, EngineConfig, HttpEngine};
 use api_client_storage::{
@@ -167,6 +169,38 @@ impl Session {
     }
 
     /// Cancels an in-flight request. Returns false if it had already finished.
+    /// Writes a request out as code for another client.
+    ///
+    /// Variables are resolved exactly as a send resolves them, so the snippet
+    /// carries the values the request would actually go out with rather than
+    /// `{{name}}` for somebody to fill in by hand. An unresolved name is the
+    /// same error it would be on Send: there is no honest code to write for it.
+    pub fn generate_code(
+        &self,
+        request: &HttpRequest,
+        overrides: BTreeMap<String, String>,
+        target: CodeTarget,
+    ) -> Result<String, RequestError> {
+        let (resolved, options) = {
+            let state = self.state();
+            let mut variables = state.active_variables();
+            for (name, value) in overrides {
+                variables.insert(name, value);
+            }
+            let settings = &state.settings;
+            (
+                api_client_variables::resolve_request(request, &variables)?,
+                ClientOptions {
+                    timeout_ms: settings.timeout_ms,
+                    follow_redirects: settings.follow_redirects,
+                    tls: settings.tls.clone(),
+                },
+            )
+        };
+
+        api_client_codegen::generate(&resolved, &options, target)
+    }
+
     pub fn cancel(&self, request_id: &str) -> bool {
         self.inner.cancellations.cancel(request_id)
     }

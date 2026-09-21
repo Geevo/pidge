@@ -148,6 +148,26 @@ pub async fn run(store: Store) -> io::Result<()> {
                 });
             }
 
+            ClientMessage::GenerateCode {
+                request,
+                target,
+                variables,
+            } => {
+                // Nothing here touches the network, so it answers in line
+                // rather than on its own task.
+                let msg = match session.generate_code(&request, variables, target) {
+                    Ok(code) => ServerMessage::CodeGenerated {
+                        code: Some(code),
+                        error: None,
+                    },
+                    Err(error) => ServerMessage::CodeGenerated {
+                        code: None,
+                        error: Some(error),
+                    },
+                };
+                send(&outbound, ServerEnvelope::new(id, msg));
+            }
+
             ClientMessage::CancelRequest { request_id } => {
                 let was_in_flight = session.cancel(&request_id);
                 send(

@@ -1,4 +1,4 @@
-import type { AppState, HttpRequest, ServerMessage } from "@api-client/ui";
+import type { AppState, CodeTarget, HttpRequest, ServerMessage } from "@api-client/ui";
 import * as vscode from "vscode";
 
 import { type WebviewEvent, type WebviewResponse, isWebviewRequest } from "./protocol";
@@ -92,6 +92,19 @@ export class ApiClientPanel {
           return { response: null, error: reply.error, historyEntry: reply.historyEntry };
         }
         throw new Error(describe(reply));
+      }
+
+      case "generateCode": {
+        const { request, target } = params as { request: HttpRequest; target: CodeTarget };
+        const reply = await this.sidecar.call({
+          type: "generateCode",
+          request,
+          target,
+          variables: {},
+        });
+        if (reply.type !== "codeGenerated") throw new Error(describe(reply));
+        if (reply.code === null) throw new Error(reply.error?.message ?? "No code was generated.");
+        return reply.code;
       }
 
       case "cancelRequest": {

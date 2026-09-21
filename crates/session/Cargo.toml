@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+api-client-codegen.workspace = true
 api-client-core.workspace = true
 api-client-http-engine.workspace = true
 api-client-storage.workspace = true

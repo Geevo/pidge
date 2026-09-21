@@ -3,6 +3,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
+use api_client_codegen::CodeTarget;
 use api_client_core::{HttpRequest, RequestErrorKind};
 use api_client_protocol::{
     ClientEnvelope, ClientMessage, PROTOCOL_VERSION, ServerEnvelope, ServerMessage,
@@ -374,4 +375,59 @@ fn reports_its_protocol_version_on_the_command_line() {
         String::from_utf8_lossy(&output.stdout).trim(),
         PROTOCOL_VERSION.to_string()
     );
+}
+
+/// Writing a request out as code is the sidecar's job too, so the extension and
+/// the desktop app cannot answer the question differently.
+#[test]
+fn writes_a_request_out_as_code() {
+    let mut sidecar = Sidecar::start();
+    sidecar.handshake();
+
+    sidecar.send(
+        Some("code-1"),
+        ClientMessage::GenerateCode {
+            request: HttpRequest::get("https://example.com/things"),
+            target: CodeTarget::Curl,
+            variables: Default::default(),
+        },
+    );
+
+    let envelope = sidecar.recv();
+    assert_eq!(envelope.id.as_deref(), Some("code-1"));
+    match envelope.msg {
+        ServerMessage::CodeGenerated { code, error } => {
+            assert!(error.is_none(), "{error:?}");
+            let code = code.expect("a URL that parses has code");
+            assert!(code.contains("curl"), "{code}");
+            assert!(code.contains("https://example.com/things"), "{code}");
+        }
+        other => panic!("unexpected reply: {other:?}"),
+    }
+}
+
+/// A variable with no value is the same answer it would be on Send: there is no
+/// honest snippet to write, and the reason comes back in the same message.
+#[test]
+fn says_why_there_is_no_code() {
+    let mut sidecar = Sidecar::start();
+    sidecar.handshake();
+
+    sidecar.send(
+        Some("code-2"),
+        ClientMessage::GenerateCode {
+            request: HttpRequest::get("{{host}}/things"),
+            target: CodeTarget::Curl,
+            variables: Default::default(),
+        },
+    );
+
+    match sidecar.recv().msg {
+        ServerMessage::CodeGenerated { code, error } => {
+            assert!(code.is_none());
+            let error = error.expect("an unresolved variable is reported");
+            assert!(error.message.contains("host"), "{}", error.message);
+        }
+        other => panic!("unexpected reply: {other:?}"),
+    }
 }

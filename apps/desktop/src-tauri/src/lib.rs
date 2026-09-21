@@ -28,6 +28,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::send_http_request,
             commands::cancel_http_request,
+            commands::generate_code,
             commands::load_state,
             commands::save_state,
             commands::save_request,

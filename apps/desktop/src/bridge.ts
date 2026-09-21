@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppState,
+  CodeTarget,
   FilePickRequest,
   HttpRequest,
   LoadedState,
@@ -95,6 +96,10 @@ const tauriBridge = {
 
   async cancelRequest(requestId: string): Promise<void> {
     await invoke<boolean>("cancel_http_request", { requestId });
+  },
+
+  generateCode(request: HttpRequest, target: CodeTarget): Promise<string> {
+    return invoke<string>("generate_code", { request, target });
   },
 
   loadState(): Promise<LoadedState> {

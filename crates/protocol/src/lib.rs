@@ -6,6 +6,7 @@
 //!
 //! stdout carries protocol messages and nothing else. Logs go to stderr.
 
+use api_client_codegen::CodeTarget;
 use api_client_core::{HttpRequest, HttpResponse, RequestError};
 use api_client_storage::{AppState, HistoryEntry};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,12 @@ use std::collections::BTreeMap;
 use ts_rs::TS;
 
 /// Bump on any breaking change to the message shapes below.
-pub const PROTOCOL_VERSION: u32 = 1;
+///
+/// 2 added `GenerateCode`. A new message is additive for the sidecar, but an
+/// extension that sends one to a build that predates it would get a protocol
+/// error in place of an answer — which is the mismatch this number exists to
+/// catch at the handshake instead.
+pub const PROTOCOL_VERSION: u32 = 2;
 
 /// Extension host to sidecar.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -56,6 +62,14 @@ pub enum ClientMessage {
     #[serde(rename_all = "camelCase")]
     CancelRequest {
         request_id: String,
+    },
+    /// Write a request out as code, without sending it.
+    #[serde(rename_all = "camelCase")]
+    GenerateCode {
+        request: HttpRequest,
+        target: CodeTarget,
+        #[serde(default)]
+        variables: BTreeMap<String, String>,
     },
     /// Read the persisted state. The sidecar owns the file so that both
     /// frontends go through the same storage code.
@@ -126,6 +140,14 @@ pub enum ServerMessage {
     RequestError {
         error: RequestError,
         history_entry: Option<HistoryEntry>,
+    },
+    /// The snippet, or the reason there is not one: an unresolved variable, or
+    /// a URL that will not parse. The webview shows the error where the code
+    /// would have been.
+    #[serde(rename_all = "camelCase")]
+    CodeGenerated {
+        code: Option<String>,
+        error: Option<RequestError>,
     },
     /// Acknowledges a cancel, whether or not anything was in flight.
     #[serde(rename_all = "camelCase")]

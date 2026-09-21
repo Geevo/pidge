@@ -8,6 +8,7 @@ import { xml } from "@codemirror/lang-xml";
 import { yaml } from "@codemirror/lang-yaml";
 import {
   HighlightStyle,
+  StreamLanguage,
   bracketMatching,
   codeFolding,
   foldGutter,
@@ -15,6 +16,10 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
+import { csharp } from "../lib/csharp";
+import { powershell } from "../lib/powershell";
+import { python } from "../lib/python";
+import { shell } from "../lib/shell";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import {
   EditorView,
@@ -71,11 +76,26 @@ const highlightStyle = HighlightStyle.define([
   { tag: tags.invalid, color: "var(--ac-syntax-invalid)" },
 ]);
 
+/**
+ * Everything this editor can colour: the languages a response body arrives in,
+ * and the four a request can be written out as.
+ */
+export type EditorLanguage = SyntaxLanguage | "shell" | "powershell" | "python" | "csharp";
+
 /*
  * Every language is bundled rather than fetched: this app is read from disk,
  * and a body should be highlighted the moment it arrives.
+ *
+ * The four at the end are stream tokenizers rather than Lezer grammars, which
+ * do not exist for a shell script or for C#. A tokenizer is the whole of what
+ * colouring a twenty-line snippet needs: it is the parse tree they lack, and
+ * only folding and indentation ever wanted one.
+ *
+ * All four are ours. `legacy-modes` has a mode for each, and each of them
+ * colours the keywords and the strings and leaves most of a generated snippet
+ * the colour of plain text; the four files in `lib/` say what each was missing.
  */
-const LANGUAGES: Record<SyntaxLanguage, () => Extension> = {
+const LANGUAGES: Record<EditorLanguage, () => Extension> = {
   json,
   html,
   xml,
@@ -83,16 +103,25 @@ const LANGUAGES: Record<SyntaxLanguage, () => Extension> = {
   javascript,
   yaml,
   text: () => [],
+  shell: () => StreamLanguage.define(shell),
+  powershell: () => StreamLanguage.define(powershell),
+  python: () => StreamLanguage.define(python),
+  csharp: () => StreamLanguage.define(csharp),
 };
 
-/** Plain text has nothing to fold; every other language folds its own blocks. */
-export function isFoldable(language: SyntaxLanguage): boolean {
-  return language !== "text";
+/**
+ * Plain text has nothing to fold, and a stream tokenizer has no tree to fold
+ * with. Everything with a real grammar folds its own blocks.
+ */
+export function isFoldable(language: EditorLanguage): boolean {
+  return language !== "text" && !STREAM_LANGUAGES.includes(language);
 }
+
+const STREAM_LANGUAGES: readonly EditorLanguage[] = ["shell", "powershell", "python", "csharp"];
 
 interface Props {
   value: string;
-  language: SyntaxLanguage;
+  language: EditorLanguage;
   readOnly?: boolean;
   ariaLabel: string;
   /** Gutter arrows that collapse and expand a block, object or element. */

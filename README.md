@@ -42,6 +42,12 @@ No macOS build. It ought to build there; nobody has tried.
   OAuth 1 and OAuth 2. A header you typed yourself always wins over the tab.
 - `{{variables}}` from flat environments, so one request runs against staging
   and production.
+- The same request as curl, PowerShell, Python or C#, highlighted, in a tab
+  beside the others. It is generated from what would be sent — variables
+  resolved, query folded into the URL, your timeout, redirect and certificate
+  settings written in — so what you paste elsewhere behaves like what you just
+  sent. What a snippet cannot reproduce it says in a comment rather than
+  quietly leaving out.
 - HTTPS you can look at: a padlock on the response opens the certificate the
   server actually presented, and says so when it is expired or self-signed.
 - Your system's certificate store by default, plus extra CAs and client

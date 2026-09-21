@@ -1,5 +1,6 @@
 import type {
   AppState,
+  CodeTarget,
   FilePickRequest,
   HostCommand,
   HttpRequest,
@@ -41,6 +42,10 @@ class VsCodeBridge implements PlatformBridge {
 
   async cancelRequest(requestId: string): Promise<void> {
     await this.call<null>("cancelRequest", { requestId });
+  }
+
+  generateCode(request: HttpRequest, target: CodeTarget): Promise<string> {
+    return this.call<string>("generateCode", { request, target });
   }
 
   pickFile(request: FilePickRequest): Promise<string | null> {

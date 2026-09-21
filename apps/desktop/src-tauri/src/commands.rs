@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use api_client_core::HttpRequest;
-use api_client_session::{SendOutcome, Session};
+use api_client_core::{HttpRequest, RequestError};
+use api_client_session::{CodeTarget, SendOutcome, Session};
 use api_client_storage::AppState;
 use serde::Serialize;
 use tauri::State;
@@ -68,6 +68,20 @@ pub async fn send_http_request(
     Ok(session
         .send_with_overrides(request, variables.unwrap_or_default())
         .await)
+}
+
+/// Writes a request out as code, without sending it.
+///
+/// The error is the engine's own: an unresolved variable or a URL that will not
+/// parse are both things the UI already knows how to show.
+#[tauri::command]
+pub fn generate_code(
+    session: State<'_, Session>,
+    request: HttpRequest,
+    target: CodeTarget,
+    variables: Option<BTreeMap<String, String>>,
+) -> Result<String, RequestError> {
+    session.generate_code(&request, variables.unwrap_or_default(), target)
 }
 
 #[tauri::command]

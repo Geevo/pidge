@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/codegen",
     "crates/core",
     "crates/http-engine",
     "crates/storage",
@@ -20,6 +21,7 @@ license = "MIT"
 repository = "https://github.com/Geevo/api-client"
 
 [workspace.dependencies]
+api-client-codegen = { path = "crates/codegen" }
 api-client-core = { path = "crates/core" }
 api-client-http-engine = { path = "crates/http-engine" }
 api-client-storage = { path = "crates/storage" }

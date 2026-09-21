@@ -8,6 +8,7 @@ export type { ApiKeyPlacement } from "./generated/ApiKeyPlacement";
 export type { AuthConfig } from "./generated/AuthConfig";
 export type { ClientEnvelope } from "./generated/ClientEnvelope";
 export type { ClientMessage } from "./generated/ClientMessage";
+export type { CodeTarget } from "./generated/CodeTarget";
 export type { Environment } from "./generated/Environment";
 export type { HistoryEntry } from "./generated/HistoryEntry";
 export type { HttpMethod } from "./generated/HttpMethod";
@@ -52,7 +53,7 @@ export const HTTP_METHODS: readonly HttpMethod[] = [
 ];
 
 /** Which tab of the request editor is showing. */
-export type RequestPane = "params" | "body" | "headers" | "auth";
+export type RequestPane = "params" | "body" | "headers" | "auth" | "code";
 
 /** Which tab of the response pane is showing. */
 export type ResponsePane = "body" | "headers";

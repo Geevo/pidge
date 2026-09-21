@@ -24,9 +24,12 @@
           ┌────────────────────┼────────────────────┐
   ┌───────▼────────┐  ┌────────▼────────┐  ┌────────▼────────┐
   │ http-engine    │  │ storage         │  │ variables       │
-  └───────┬────────┘  └─────────────────┘  └─────────────────┘
-          │
-   ┌──────▼───────┐
+  └───┬────────┬───┘  └─────────────────┘  └─────────────────┘
+      │        │
+      │  ┌─────▼────────┐
+      │  │ codegen      │  the same request, written out
+      │  └──────────────┘
+   ┌──▼───────────┐
    │ core         │  models + normalized errors
    └──────────────┘
 ```
@@ -47,6 +50,19 @@ It takes an `HttpRequest`, sends it, and returns an `HttpResponse` or a
 `RequestError`. That is why the engine tests can drive it directly, and why a
 CLI could be added without touching it.
 
+`crates/codegen` sits on the engine rather than beside it, for the same reason.
+Writing a request out as curl means knowing the URL that will be requested, the
+headers that will go with it and the content type the body implies — and
+`http_engine::effective` is what works those out for the send itself. A snippet
+that computed them a second time would be right until one of them changed.
+
+What it cannot take from the engine is the settings around a send: the timeout,
+whether redirects are followed, and the trust and identity settings. Generated
+code has no app to inherit those from, so `ClientOptions` carries them in and
+each generator writes them out. Where a client has no equivalent — `.NET` reads
+trust from the machine store, and `requests` cannot open a PKCS#12 bundle — the
+snippet says so in a comment instead of looking complete and failing.
+
 ## Crates
 
 | Crate         | Owns                                                                      |
@@ -54,6 +70,7 @@ CLI could be added without touching it.
 | `core`        | `HttpRequest`, `HttpResponse`, `RequestError`, secret-header redaction    |
 | `variables`   | `{{name}}` substitution and `Environment`                                 |
 | `http-engine` | reqwest client, request building, cancellation, timing, response limits   |
+| `codegen`     | the request written out as curl, PowerShell, Python or C#                 |
 | `storage`     | `AppState`, atomic writes, schema version and migrations, history cap     |
 | `session`     | engine + store + in-memory state; every operation a frontend can perform  |
 | `protocol`    | the newline-delimited JSON messages between the extension and the sidecar |
