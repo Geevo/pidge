@@ -1573,6 +1573,115 @@ th,
   background: color-mix(in srgb, var(--ac-accent) 28%, transparent) !important;
 }
 
+/*
+ * Find. Every match is marked in the amber the status line uses for a
+ * redirect, which no theme spends on anything else in an editor; the one you
+ * are on is marked harder and outlined, so it can be picked out of a page of
+ * them at a glance.
+ */
+.ac-editor .cm-searchMatch {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ac-status-redirect) 30%, transparent);
+}
+
+.ac-editor .cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--ac-status-redirect) 60%, transparent);
+  outline: 1px solid var(--ac-status-redirect);
+}
+
+.ac-editor .cm-panels {
+  border-color: var(--ac-border);
+  background: var(--ac-bg-subtle);
+  color: var(--ac-text);
+}
+
+.ac-editor .cm-panels-top {
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-find {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  font-family: var(--ac-font);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-find__field {
+  flex: 0 1 260px;
+  min-width: 80px;
+  height: var(--ac-row-height);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-fill);
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-find__field::placeholder {
+  color: var(--ac-text-faint);
+}
+
+.ac-find__field:focus {
+  outline: none;
+  background-color: var(--ac-bg-input);
+  box-shadow: var(--ac-ring);
+}
+
+/* Nothing found: the field says so as well as the count beside it. */
+.ac-find--none .ac-find__field:focus {
+  box-shadow: 0 0 0 1px var(--ac-danger);
+}
+
+.ac-find__count {
+  min-width: 7ch;
+  padding: 0 6px;
+  color: var(--ac-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ac-find--none .ac-find__count {
+  color: var(--ac-danger);
+}
+
+.ac-find__button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: var(--ac-row-height);
+  height: var(--ac-row-height);
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--ac-radius);
+  background: transparent;
+  color: var(--ac-text-muted);
+  cursor: pointer;
+}
+
+.ac-find__button:hover {
+  background: var(--ac-fill);
+  color: var(--ac-text);
+}
+
+.ac-find__case {
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-tiny);
+  font-weight: 600;
+}
+
+.ac-find__case[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ac-accent) 20%, transparent);
+  color: var(--ac-accent);
+}
+
+/* The close button sits at the far end, away from the ones used most. */
+.ac-find__button:last-child {
+  margin-left: auto;
+}
+
 /* ---------- response ---------- */
 
 .ac-status {

@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,8 +21,9 @@ import {
   type SyntaxLanguage,
 } from "../lib/mime";
 import { selectContents } from "../lib/selection";
-import { isSelectAll } from "../lib/shortcuts";
+import { isFind, isSelectAll } from "../lib/shortcuts";
 import { CodeEditor, isFoldable } from "./CodeEditor";
+import { openFind } from "./findPanel";
 import { ResponseHeaders } from "./ResponseHeaders";
 
 /**
@@ -143,6 +145,24 @@ function ResponseBody({
   const view = useRef<EditorView | null>(null);
   const onReady = useCallback((editor: EditorView) => {
     view.current = editor;
+  }, []);
+
+  /*
+   * Ctrl/Cmd+F from anywhere outside an editor finds in the body: from the URL
+   * bar, a header, or nowhere in particular. An editor with focus has already
+   * taken the key for itself by the time it arrives here, and an open dialog
+   * is not the body's to search under.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isFind(event) || event.defaultPrevented || !view.current) return;
+      if (event.target instanceof Element && event.target.closest(".cm-editor")) return;
+      if (document.querySelector(".ac-dialog")) return;
+      event.preventDefault();
+      openFind(view.current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   /*

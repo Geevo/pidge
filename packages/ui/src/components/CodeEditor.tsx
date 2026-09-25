@@ -34,6 +34,7 @@ import {
 import { tags } from "@lezer/highlight";
 
 import type { SyntaxLanguage } from "../lib/mime";
+import { findInEditor } from "./findPanel";
 
 /**
  * CodeMirror 6 rather than Monaco: it is a fraction of the size, it embeds
@@ -231,6 +232,7 @@ export function CodeEditor({
           EditorState.readOnly.of(readOnly),
           EditorView.editable.of(!readOnly),
           wrapCompartment.current.of(wrap ? EditorView.lineWrapping : []),
+          findInEditor(),
           keymap.of([
             ...(folding ? foldKeymap : []),
             {

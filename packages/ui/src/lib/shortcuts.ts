@@ -103,3 +103,18 @@ export function shortcutHint(name: ShortcutName): string {
   };
   return `${modifier}${keys[name]}`;
 }
+
+/**
+ * Find. An editor with focus answers this itself; anywhere else in the window
+ * it means the response body, which is what anyone reaching for it is reading.
+ */
+export function isFind(event: {
+  key: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}): boolean {
+  const primary = isMac() ? event.metaKey : event.ctrlKey;
+  return primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "f";
+}

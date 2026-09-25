@@ -1241,6 +1241,60 @@ describe("dragging a tab", () => {
   });
 });
 
+describe("finding in the response body", () => {
+  async function withBody() {
+    const { bridge, user } = setup();
+    await ready();
+    bridge.queue(ok({ body: btoa('{"name":"alpha","tags":["alpha","beta"],"note":"Alpha"}') }));
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+    await waitFor(() => expect(responseBodyText()).toContain('"name"'));
+    return user;
+  }
+
+  it("opens on Ctrl+F from outside the editor and counts the matches", async () => {
+    const user = await withBody();
+
+    // Focus is on the Send button, nowhere near the body.
+    await user.keyboard("{Control>}f{/Control}");
+    const field = await screen.findByRole("textbox", { name: "Find" });
+    expect(field).toHaveFocus();
+
+    await user.type(field, "alpha");
+    expect(await screen.findByText("1 of 3")).toBeInTheDocument();
+
+    await user.keyboard("{Enter}");
+    expect(await screen.findByText("2 of 3")).toBeInTheDocument();
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    expect(await screen.findByText("1 of 3")).toBeInTheDocument();
+  });
+
+  it("matches case only when asked to", async () => {
+    const user = await withBody();
+
+    await user.keyboard("{Control>}f{/Control}");
+    await user.type(await screen.findByRole("textbox", { name: "Find" }), "Alpha");
+    expect(await screen.findByText("1 of 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Match case" }));
+    expect(await screen.findByText("1 of 1")).toBeInTheDocument();
+  });
+
+  it("says when nothing matches, and closes on Escape", async () => {
+    const user = await withBody();
+
+    await user.keyboard("{Control>}f{/Control}");
+    await user.type(await screen.findByRole("textbox", { name: "Find" }), "gamma");
+    expect(await screen.findByText("No results")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: "Find" })).not.toBeInTheDocument();
+    });
+  });
+});
+
 describe("tabs that do not fit", () => {
   /*
    * jsdom has no layout, so the strip reports a width here: 400px showing,
