@@ -2,7 +2,9 @@ import { useState } from "react";
 
 import type { HistoryEntry } from "../types";
 import { formatDuration, formatTime, requestLabel, statusClass } from "../lib/format";
+import { matchesSearch } from "../lib/search";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DrawerSearch } from "./DrawerSearch";
 import { MethodBadge } from "./MethodBadge";
 
 interface Props {
@@ -17,6 +19,15 @@ interface Props {
  */
 export function HistoryPanel({ history, onOpen, onClear }: Props) {
   const [confirming, setConfirming] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const shown = history.filter((entry) =>
+    matchesSearch(query, [
+      entry.request.method,
+      entry.request.url,
+      entry.status !== null ? String(entry.status) : "failed",
+    ]),
+  );
 
   return (
     <>
@@ -46,8 +57,14 @@ export function HistoryPanel({ history, onOpen, onClear }: Props) {
       {history.length === 0 ? (
         <p className="ac-hint">Nothing sent yet.</p>
       ) : (
+        <DrawerSearch label="Search history" value={query} onChange={setQuery} />
+      )}
+
+      {history.length > 0 && shown.length === 0 ? <p className="ac-hint">No matches.</p> : null}
+
+      {shown.length > 0 ? (
         <ul className="ac-list">
-          {history.map((entry) => (
+          {shown.map((entry) => (
             <li key={entry.id} className="ac-list__item">
               <button type="button" className="ac-list__button" onClick={() => onOpen(entry)}>
                 <span className="ac-list__title">
@@ -73,7 +90,7 @@ export function HistoryPanel({ history, onOpen, onClear }: Props) {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </>
   );
 }

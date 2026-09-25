@@ -8,6 +8,7 @@ import { shortenUrl } from "./format";
 import { isSelectAll, matchEditingCommand } from "./shortcuts";
 import { createHistory, record, redo, undo } from "./textHistory";
 import { installFieldHistory } from "./fieldHistory";
+import { matchesSearch } from "./search";
 
 describe("formatting", () => {
   it("formats sizes the way the status line shows them", () => {
@@ -440,5 +441,30 @@ describe("url and params stay in sync", () => {
   it("leaves a half-typed url alone", () => {
     expect(paramsChanged("local", []).url).toBe("local");
     expect(urlChanged("localhost:30", []).url).toBe("localhost:30");
+  });
+});
+
+describe("drawer search", () => {
+  const fields = ["Create user", "POST", "https://api.example.com/users"];
+
+  it("matches everything when nothing is typed", () => {
+    expect(matchesSearch("", fields)).toBe(true);
+    expect(matchesSearch("   ", fields)).toBe(true);
+  });
+
+  it("ignores case and matches part of a word", () => {
+    expect(matchesSearch("post", fields)).toBe(true);
+    expect(matchesSearch("EXAMPLE", fields)).toBe(true);
+    expect(matchesSearch("creat", fields)).toBe(true);
+  });
+
+  it("needs every word, in any order and any field", () => {
+    expect(matchesSearch("users post", fields)).toBe(true);
+    expect(matchesSearch("post orders", fields)).toBe(false);
+  });
+
+  it("skips missing fields", () => {
+    expect(matchesSearch("post", [null, "POST"])).toBe(true);
+    expect(matchesSearch("null", [null, "POST"])).toBe(false);
   });
 });

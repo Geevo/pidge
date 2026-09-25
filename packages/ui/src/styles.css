@@ -1743,6 +1743,51 @@ th,
   letter-spacing: 0.04em;
 }
 
+/*
+ * The drawer's filter, fixed under its header like the header itself. The
+ * cross sits inside the field's right edge, so the field keeps the full width.
+ */
+.ac-drawer__search {
+  position: relative;
+  flex: none;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-drawer__search input {
+  width: 100%;
+  height: var(--ac-row-height);
+  padding: 0 26px 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-fill);
+  font-size: var(--ac-font-size-small);
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.ac-drawer__search input::placeholder {
+  color: var(--ac-text-faint);
+}
+
+.ac-drawer__search input:hover {
+  background-color: var(--ac-fill-hover);
+}
+
+.ac-drawer__search input:focus {
+  outline: none;
+  background-color: var(--ac-bg-input);
+  box-shadow: var(--ac-ring);
+}
+
+.ac-drawer__search .ac-icon-button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+
 .ac-list {
   margin: 0;
   padding: 0;

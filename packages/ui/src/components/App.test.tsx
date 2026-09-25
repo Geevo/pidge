@@ -550,6 +550,83 @@ describe("history and saved requests", () => {
     expect(bridge.state.history).toHaveLength(1);
   });
 
+  it("filters history by URL, method and status", async () => {
+    const bridge = new FakeBridge();
+    const users = historyEntry(response({ finalUrl: "http://localhost:3000/users" }));
+    const orders = historyEntry(
+      response({ finalUrl: "http://localhost:3000/orders", status: 404, statusText: "Not Found" }),
+    );
+    orders.request.method = "POST";
+    bridge.state = { ...defaultState(), history: [users, orders] };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "History" }));
+    const drawer = await screen.findByRole("complementary");
+    const search = within(drawer).getByRole("textbox", { name: "Search history" });
+
+    await user.type(search, "users");
+    expect(within(drawer).getByText(/localhost:3000\/users/)).toBeInTheDocument();
+    expect(within(drawer).queryByText(/localhost:3000\/orders/)).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "post 404");
+    expect(within(drawer).getByText(/localhost:3000\/orders/)).toBeInTheDocument();
+    expect(within(drawer).queryByText(/localhost:3000\/users/)).not.toBeInTheDocument();
+
+    await user.type(search, " nothing");
+    expect(within(drawer).getByText("No matches.")).toBeInTheDocument();
+
+    // Escape empties the search and brings the whole list back.
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    expect(within(drawer).getByText(/localhost:3000\/users/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/localhost:3000\/orders/)).toBeInTheDocument();
+  });
+
+  it("filters saved requests by name and URL", async () => {
+    const bridge = new FakeBridge();
+    const saved = (name: string, url: string) => ({
+      id: name,
+      name,
+      request: { ...historyEntry(response({ finalUrl: url })).request },
+      createdAt: 0,
+      updatedAt: 0,
+    });
+    bridge.state = {
+      ...defaultState(),
+      savedRequests: [
+        saved("List users", "http://localhost:3000/users"),
+        saved("Health check", "http://localhost:3000/health"),
+      ],
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    const search = within(panel).getByRole("textbox", { name: "Search saved" });
+
+    await user.type(search, "health");
+    expect(within(panel).getByText("Health check")).toBeInTheDocument();
+    expect(within(panel).queryByText("List users")).not.toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("button", { name: "Clear search" }));
+    expect(search).toHaveValue("");
+    expect(within(panel).getByText("List users")).toBeInTheDocument();
+  });
+
+  it("leaves the search out while a drawer is empty", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "History" }));
+    const drawer = await screen.findByRole("complementary");
+    expect(within(drawer).queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
   it("saves a request and opens it from the Saved panel", async () => {
     const { bridge, user } = setup();
     await ready();
