@@ -8,4 +8,4 @@
  * Each of the borrowed palettes has a light and a dark form, and the one
  * used follows whichever the theme above resolves to.
  */
-export type SyntaxTheme = "app" | "vsCode" | "one";
+export type SyntaxTheme = "app" | "vsCode" | "one" | "github";

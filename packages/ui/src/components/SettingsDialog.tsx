@@ -75,9 +75,10 @@ function ThemeSample({ theme }: { theme: Theme }) {
 }
 
 const SYNTAX_THEMES: { value: SyntaxTheme; label: string }[] = [
-  { value: "app", label: "Match the app" },
+  { value: "app", label: "Default" },
   { value: "vsCode", label: "VS Code" },
-  { value: "one", label: "One" },
+  { value: "one", label: "Atom One" },
+  { value: "github", label: "GitHub" },
 ];
 
 /*
@@ -92,7 +93,7 @@ const SYNTAX_THEMES: { value: SyntaxTheme; label: string }[] = [
 const SAMPLE: { role: string; text: string }[][] = [
   [{ role: "punctuation", text: "{" }],
   [
-    { role: "key", text: '  "name"' },
+    { role: "key", text: '  "id"' },
     { role: "punctuation", text: ": " },
     { role: "string", text: '"demo"' },
     { role: "punctuation", text: "," },
@@ -313,10 +314,9 @@ export function SettingsDialog({
                 </div>
 
                 <p className="ac-hint">
-                  Applied and kept as soon as it is clicked; everything follows, from the tabs to
-                  the response. <code>{shortcutHint("textBigger")}</code> and{" "}
-                  <code>{shortcutHint("textSmaller")}</code> step through the sizes without opening
-                  this, and <code>{shortcutHint("textReset")}</code> comes back to 100%.
+                  <code>{shortcutHint("textBigger")}</code> bigger,{" "}
+                  <code>{shortcutHint("textSmaller")}</code> smaller,{" "}
+                  <code>{shortcutHint("textReset")}</code> reset.
                 </p>
               </div>
 
@@ -370,7 +370,11 @@ export function SettingsDialog({
                   Syntax colours
                 </h3>
 
-                <div className="ac-swatches" role="radiogroup" aria-labelledby="ac-syntax-label">
+                <div
+                  className="ac-swatches ac-swatches--code"
+                  role="radiogroup"
+                  aria-labelledby="ac-syntax-label"
+                >
                   {SYNTAX_THEMES.map((entry) => (
                     <label className="ac-swatch" key={entry.value}>
                       <input

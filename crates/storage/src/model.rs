@@ -60,6 +60,8 @@ pub enum SyntaxTheme {
     VsCode,
     /// One Dark and One Light, from Atom.
     One,
+    /// GitHub's defaults, Dark Default and Light Default.
+    Github,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

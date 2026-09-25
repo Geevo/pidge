@@ -402,6 +402,35 @@
   --ac-syntax-invalid: #be5046;
 }
 
+/* GitHub, Light Default. */
+[data-syntax="github"] {
+  --ac-syntax-key: #0550ae;
+  --ac-syntax-string: #0a3069;
+  --ac-syntax-number: #0550ae;
+  --ac-syntax-keyword: #cf222e;
+  --ac-syntax-comment: #6e7781;
+  --ac-syntax-punctuation: #1f2328;
+  --ac-syntax-type: #953800;
+  --ac-syntax-function: #8250df;
+  --ac-syntax-invalid: #82071e;
+}
+
+/* GitHub, Dark Default. */
+:root[data-theme="dark"][data-syntax="github"],
+:root[data-theme="dark"] [data-syntax="github"],
+:root[data-theme="warmDark"][data-syntax="github"],
+:root[data-theme="warmDark"] [data-syntax="github"] {
+  --ac-syntax-key: #79c0ff;
+  --ac-syntax-string: #a5d6ff;
+  --ac-syntax-number: #79c0ff;
+  --ac-syntax-keyword: #ff7b72;
+  --ac-syntax-comment: #8b949e;
+  --ac-syntax-punctuation: #e6edf3;
+  --ac-syntax-type: #ffa657;
+  --ac-syntax-function: #d2a8ff;
+  --ac-syntax-invalid: #ffa198;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2120,7 +2149,7 @@ th,
 
 /*
  * A theme is picked by looking at it, not by reading its name, so the sample
- * is the control: five palettes, or three sets of syntax colours, side by side
+ * is the control: five palettes, or four sets of syntax colours, side by side
  * under the group's own heading — which is also what names the radio group, so
  * there is no second label for the same thing.
  *
@@ -2132,6 +2161,24 @@ th,
   display: flex;
   gap: 6px;
   padding: 4px 8px 8px;
+}
+
+/*
+ * The syntax samples are text, and text grows with the text size where the
+ * theme pictures do not. Each column is as wide as the longest sample line
+ * (fifteen characters, plus the sample's padding and border), and the row
+ * wraps rather than clipping the line once four no longer fit. The `ch` is
+ * measured in the sample's own face and size, which the name puts back.
+ */
+.ac-swatches--code {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(15ch + 14px), 1fr));
+  font-family: var(--ac-font-mono);
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-swatches--code .ac-swatch__name {
+  font-family: var(--ac-font);
 }
 
 .ac-swatch {
@@ -2151,7 +2198,7 @@ th,
 .ac-swatch__sample {
   display: block;
   overflow: hidden;
-  padding: 6px 7px;
+  padding: 6px;
   border: 1px solid var(--ac-border);
   border-radius: var(--ac-radius-sm);
   background: var(--ac-bg-input);

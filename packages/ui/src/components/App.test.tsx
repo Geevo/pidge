@@ -1485,7 +1485,7 @@ describe("syntax colours", () => {
     document.documentElement.removeAttribute("data-syntax");
   });
 
-  it("offers the app's own colours and the two borrowed schemes", async () => {
+  it("offers the app's own colours and the three borrowed schemes", async () => {
     const { user } = setup();
     await ready();
 
@@ -1497,8 +1497,8 @@ describe("syntax colours", () => {
       .getAllByRole("radio")
       .map((radio) => radio.getAttribute("value"));
 
-    expect(names).toEqual(["app", "vsCode", "one"]);
-    expect(within(group).getByRole("radio", { name: "Match the app" })).toBeChecked();
+    expect(names).toEqual(["app", "vsCode", "one", "github"]);
+    expect(within(group).getByRole("radio", { name: "Default" })).toBeChecked();
   });
 
   it("recolours the editors as a scheme is picked, before anything is saved", async () => {
@@ -1519,7 +1519,7 @@ describe("syntax colours", () => {
     await ready();
 
     const dialog = await openSettings(user, "Appearance");
-    await user.click(within(dialog).getByRole("radio", { name: "One" }));
+    await user.click(within(dialog).getByRole("radio", { name: "Atom One" }));
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute("data-syntax", "one");
     });
