@@ -1,11 +1,11 @@
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ScratchTab } from "../types";
 import { requestLabel } from "../lib/format";
 import { MethodBadge } from "./MethodBadge";
 import type { WindowControls } from "../bridge";
 import { WindowButtons } from "./WindowChrome";
-import { CloseIcon, PlusIcon } from "./icons";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon } from "./icons";
 
 interface Props {
   tabs: readonly ScratchTab[];
@@ -22,7 +22,11 @@ interface Props {
 /** How far a press has to travel before it is a drag rather than a click. */
 const DRAG_THRESHOLD = 4;
 
-/** Where one tab sits in the strip, measured when the drag begins. */
+/**
+ * Where one tab sits in the strip, measured when the drag begins. Measured
+ * along the strip's whole scrolled length rather than on screen, so the slots
+ * still hold while the strip scrolls under a dragged tab.
+ */
 interface Slot {
   left: number;
   width: number;
@@ -41,7 +45,14 @@ interface Drag {
   from: number;
   /** Where the tab would land if it were let go now. */
   to: number;
+  /** The frame that scrolls the strip while the tab is held at one end. */
+  frame: number | null;
 }
+
+/** How close to an end of the strip a dragged tab has to come to scroll it. */
+const EDGE = 24;
+/** The fastest the strip scrolls under a dragged tab, in pixels a frame. */
+const MAX_SCROLL_STEP = 14;
 
 /**
  * The tab strip.
@@ -118,6 +129,7 @@ export function RequestTabBar({
       const current = drag.current;
       drag.current = null;
       if (!current?.slots) return;
+      if (current.frame !== null) cancelAnimationFrame(current.frame);
 
       const element = tabElements()[current.from];
       if (element) {
@@ -146,6 +158,79 @@ export function RequestTabBar({
   useLayoutEffect(settle, [tabs, settle]);
 
   /*
+   * Tabs that no longer fit scroll, the way Notepad's do: an arrow at each
+   * end of the strip, each dimmed once there is nothing further that way.
+   * Tabs shrink to their minimum width first, so the arrows only appear once
+   * shrinking is no longer enough.
+   */
+  const [overflow, setOverflow] = useState({ left: false, right: false, any: false });
+
+  const measureOverflow = useCallback(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const hidden = list.scrollWidth - list.clientWidth;
+    const next = {
+      any: hidden > 1,
+      left: list.scrollLeft > 1,
+      right: list.scrollLeft < hidden - 1,
+    };
+    setOverflow((was) =>
+      was.any === next.any && was.left === next.left && was.right === next.right ? was : next,
+    );
+  }, []);
+
+  // The window resizing, a tab's label changing, a tab coming or going.
+  useLayoutEffect(() => {
+    measureOverflow();
+    const list = listRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measureOverflow);
+    observer.observe(list);
+    for (const tab of tabElements()) observer.observe(tab);
+    return () => observer.disconnect();
+  }, [tabs, measureOverflow, tabElements]);
+
+  const smooth = (): ScrollBehavior =>
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
+  // The open tab is always in view: a new one, or one chosen from elsewhere.
+  useEffect(() => {
+    const list = listRef.current;
+    const tab = tabElements().find((element) => element.dataset.tabId === activeTabId);
+    if (!list || !tab || drag.current) return;
+
+    const start = tab.offsetLeft;
+    const end = start + tab.offsetWidth;
+    if (start < list.scrollLeft) {
+      list.scrollTo?.({ left: start, behavior: smooth() });
+    } else if (end > list.scrollLeft + list.clientWidth) {
+      list.scrollTo?.({ left: end - list.clientWidth, behavior: smooth() });
+    }
+  }, [activeTabId, tabs.length, tabElements]);
+
+  /* Most of a strip's width at a time, so the tab cut off at the edge stays in sight. */
+  const scrollTabs = (direction: -1 | 1) => {
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTo?.({
+      left: list.scrollLeft + direction * list.clientWidth * 0.8,
+      behavior: smooth(),
+    });
+  };
+
+  /*
+   * An ordinary wheel scrolls the strip sideways. A sideways swipe on a
+   * touchpad already does, natively, so only the vertical part is taken here.
+   * Nothing moves under a tab that is being dragged.
+   */
+  const onWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const list = listRef.current;
+    if (!list || drag.current?.slots || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    const lines = event.deltaMode === 1 ? 16 : 1;
+    list.scrollLeft += event.deltaY * lines;
+  };
+
+  /*
    * The moves and the release are handled on the strip, which also takes the
    * pointer capture, so the drag carries on wherever the pointer goes.
    */
@@ -162,9 +247,10 @@ export function RequestTabBar({
 
     if (!current.slots) {
       if (Math.abs(event.clientX - current.startX) < DRAG_THRESHOLD) return;
+      const origin = list.getBoundingClientRect().left - list.scrollLeft;
       current.slots = tabElements().map((tab) => {
         const rect = tab.getBoundingClientRect();
-        return { left: rect.left, width: rect.width };
+        return { left: rect.left - origin, width: rect.width };
       });
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -178,26 +264,51 @@ export function RequestTabBar({
        */
       tabElements()[current.from]?.classList.add("ac-tab--dragging");
       listRef.current?.classList.add("ac-tabbar__list--dragging");
+      current.frame = requestAnimationFrame(scrollWhileHeld);
     }
+
+    place();
+  };
+
+  /*
+   * Draws the drag as it stands: the held tab under the pointer, kept to the
+   * visible strip, and the tabs it has passed stepped aside to make room.
+   */
+  const place = () => {
+    const current = drag.current;
+    const list = listRef.current;
+    if (!current?.slots || !list) return;
 
     const { slots, from } = current;
     const own = slots[from]!;
     const bounds = list.getBoundingClientRect();
-    const left = Math.max(
+    const onScreen = Math.max(
       bounds.left,
       Math.min(current.x - current.grab, bounds.right - own.width),
     );
+    const left = onScreen - bounds.left + list.scrollLeft;
     const middle = left + own.width / 2;
 
-    // Lands after every other tab whose middle its own middle has passed.
-    current.to = slots.filter(
-      (slot, index) => index !== from && slot.left + slot.width / 2 < middle,
-    ).length;
+    /*
+     * Lands after every other tab whose middle its own middle has passed. Held
+     * hard against an end with nothing left to scroll, it is past every tab
+     * on that side: a tab wider than the last one could otherwise never get
+     * its middle beyond the last one's, since the strip ends where it does.
+     */
+    const hidden = list.scrollWidth - list.clientWidth;
+    if (current.x - current.grab >= bounds.right - own.width && list.scrollLeft >= hidden - 1) {
+      current.to = slots.length - 1;
+    } else if (current.x - current.grab <= bounds.left && list.scrollLeft <= 1) {
+      current.to = 0;
+    } else {
+      current.to = slots.filter(
+        (slot, index) => index !== from && slot.left + slot.width / 2 < middle,
+      ).length;
+    }
 
     // The tabs it has passed move one place over, by its width and the gap.
     const step = own.width + (parseFloat(getComputedStyle(list).columnGap) || 0);
-    const elements = tabElements();
-    elements.forEach((element, index) => {
+    tabElements().forEach((element, index) => {
       if (index === from) {
         element.style.left = `${left - own.left}px`;
       } else if (from < index && index <= current.to) {
@@ -210,75 +321,131 @@ export function RequestTabBar({
     });
   };
 
+  /*
+   * While the held tab is pushed against either end of the strip, the strip
+   * scrolls to bring the tabs beyond into reach, faster the further past the
+   * end the pointer goes. It runs every frame of the drag, since holding still
+   * at the end has to keep scrolling without any pointer moves to drive it.
+   */
+  const scrollWhileHeld = () => {
+    const current = drag.current;
+    const list = listRef.current;
+    if (!current?.slots || !list) return;
+
+    const own = current.slots[current.from]!;
+    const bounds = list.getBoundingClientRect();
+    const start = current.x - current.grab;
+    const past = Math.max(bounds.left + EDGE - start, start + own.width - (bounds.right - EDGE));
+    if (past > 0) {
+      const speed = Math.min(MAX_SCROLL_STEP, 2 + past / 4);
+      const direction = start + own.width / 2 < bounds.left + bounds.width / 2 ? -1 : 1;
+      const before = list.scrollLeft;
+      list.scrollLeft = before + direction * speed;
+      if (list.scrollLeft !== before) place();
+    }
+    current.frame = requestAnimationFrame(scrollWhileHeld);
+  };
+
   return (
     <div className="ac-tabbar">
-      <div
-        ref={listRef}
-        className="ac-tabbar__list"
-        role="tablist"
-        aria-label="Open requests"
-        onPointerMove={onPointerMove}
-        onPointerUp={() => endDrag(true)}
-        onPointerCancel={() => endDrag(false)}
-        onLostPointerCapture={() => endDrag(false)}
-      >
-        {tabs.map((tab, index) => {
-          const label = tab.name ?? requestLabel(tab.request.url, tab.request.method);
-          const active = activeTabId === tab.id;
+      <div className="ac-tabbar__strip">
+        {overflow.any ? (
+          <button
+            type="button"
+            className="ac-tabbar__scroll"
+            aria-label="Scroll tabs left"
+            tabIndex={-1}
+            disabled={!overflow.left}
+            onClick={() => scrollTabs(-1)}
+          >
+            <ChevronLeftIcon size={14} />
+          </button>
+        ) : null}
 
-          return (
-            <div
-              key={tab.id}
-              className={`ac-tab${active ? " ac-tab--active" : ""}`}
-              role="presentation"
-              data-tab-id={tab.id}
-              onPointerDown={(event) => {
-                // The main button only, and not on the close button.
-                if (event.button !== 0) return;
-                if ((event.target as Element).closest(".ac-tab__close")) return;
-                drag.current = {
-                  tabId: tab.id,
-                  pointerId: event.pointerId,
-                  startX: event.clientX,
-                  grab: event.clientX - event.currentTarget.getBoundingClientRect().left,
-                  x: event.clientX,
-                  slots: null,
-                  from: index,
-                  to: index,
-                };
-              }}
-            >
-              <button
-                type="button"
-                role="tab"
-                className="ac-tab__button"
-                aria-selected={active}
-                title={label}
-                onClick={() => onSelect(tab.id)}
-                onAuxClick={(event) => {
-                  // Middle click closes, as in every editor.
-                  if (event.button === 1) onClose(tab.id);
+        <div
+          ref={listRef}
+          className="ac-tabbar__list"
+          role="tablist"
+          aria-label="Open requests"
+          onPointerMove={onPointerMove}
+          onPointerUp={() => endDrag(true)}
+          onPointerCancel={() => endDrag(false)}
+          onLostPointerCapture={() => endDrag(false)}
+          onScroll={measureOverflow}
+          onWheel={onWheel}
+        >
+          {tabs.map((tab, index) => {
+            const label = tab.name ?? requestLabel(tab.request.url, tab.request.method);
+            const active = activeTabId === tab.id;
+
+            return (
+              <div
+                key={tab.id}
+                className={`ac-tab${active ? " ac-tab--active" : ""}`}
+                role="presentation"
+                data-tab-id={tab.id}
+                onPointerDown={(event) => {
+                  // The main button only, and not on the close button.
+                  if (event.button !== 0) return;
+                  if ((event.target as Element).closest(".ac-tab__close")) return;
+                  drag.current = {
+                    tabId: tab.id,
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    grab: event.clientX - event.currentTarget.getBoundingClientRect().left,
+                    x: event.clientX,
+                    slots: null,
+                    from: index,
+                    to: index,
+                    frame: null,
+                  };
                 }}
               >
-                <MethodBadge method={tab.request.method} small />
-                <span className="ac-tab__label">{label}</span>
-              </button>
+                <button
+                  type="button"
+                  role="tab"
+                  className="ac-tab__button"
+                  aria-selected={active}
+                  title={label}
+                  onClick={() => onSelect(tab.id)}
+                  onAuxClick={(event) => {
+                    // Middle click closes, as in every editor.
+                    if (event.button === 1) onClose(tab.id);
+                  }}
+                >
+                  <MethodBadge method={tab.request.method} small />
+                  <span className="ac-tab__label">{label}</span>
+                </button>
 
-              {tab.savedRequestId && tab.dirty ? (
-                <span className="ac-tab__dot" title="Unsaved changes" />
-              ) : null}
+                {tab.savedRequestId && tab.dirty ? (
+                  <span className="ac-tab__dot" title="Unsaved changes" />
+                ) : null}
 
-              <button
-                type="button"
-                className="ac-tab__close"
-                aria-label={`Close ${label}`}
-                onClick={() => onClose(tab.id)}
-              >
-                <CloseIcon size={12} />
-              </button>
-            </div>
-          );
-        })}
+                <button
+                  type="button"
+                  className="ac-tab__close"
+                  aria-label={`Close ${label}`}
+                  onClick={() => onClose(tab.id)}
+                >
+                  <CloseIcon size={12} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {overflow.any ? (
+          <button
+            type="button"
+            className="ac-tabbar__scroll"
+            aria-label="Scroll tabs right"
+            tabIndex={-1}
+            disabled={!overflow.right}
+            onClick={() => scrollTabs(1)}
+          >
+            <ChevronRightIcon size={14} />
+          </button>
+        ) : null}
 
         <button
           type="button"
@@ -289,17 +456,17 @@ export function RequestTabBar({
         >
           <PlusIcon size={15} />
         </button>
-
-        {/*
-          The leftover strip is the title bar. The host's own drag-region
-          handler covers both dragging and double-click to maximise, so there
-          is deliberately no handler here: adding one toggled the window twice.
-        */}
-        <div
-          className="ac-tabbar__drag"
-          {...(windowControls ? { "data-tauri-drag-region": true } : {})}
-        />
       </div>
+
+      {/*
+        The leftover strip is the title bar. The host's own drag-region
+        handler covers both dragging and double-click to maximise, so there
+        is deliberately no handler here: adding one toggled the window twice.
+      */}
+      <div
+        className="ac-tabbar__drag"
+        {...(windowControls ? { "data-tauri-drag-region": true } : {})}
+      />
 
       {windowControls ? <WindowButtons controls={windowControls} /> : null}
     </div>

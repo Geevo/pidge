@@ -1176,6 +1176,31 @@ describe("dragging a tab", () => {
     });
   });
 
+  it("reaches the far end even when the dragged tab is wider than the last", async () => {
+    // The strip is exactly as wide as its tabs, and the first tab is the widest.
+    const widths = [160, 100, 100];
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.classList.contains("ac-tab")) {
+        const index = [...this.parentElement!.querySelectorAll(".ac-tab")].indexOf(this);
+        const left = widths.slice(0, index).reduce((sum, width) => sum + width, 0);
+        return new DOMRect(left, 0, widths[index], 30);
+      }
+      if (this.classList.contains("ac-tabbar__list")) return new DOMRect(0, 0, 360, 34);
+      return new DOMRect();
+    });
+    await threeTabs();
+    const alpha = rowOf("alpha");
+
+    fireEvent.pointerDown(alpha, { pointerId: 1, button: 0, clientX: 80 });
+    fireEvent.pointerMove(alpha, { pointerId: 1, buttons: 1, clientX: 90 });
+    fireEvent.pointerMove(alpha, { pointerId: 1, buttons: 1, clientX: 500 });
+    fireEvent.pointerUp(alpha, { pointerId: 1, clientX: 500 });
+
+    expect(tabNames()[2]).toContain("alpha");
+  });
+
   it("treats a press that barely moves as a click", async () => {
     await threeTabs();
     const bravo = rowOf("bravo");
@@ -1213,6 +1238,92 @@ describe("dragging a tab", () => {
 
     expect(strip()).not.toHaveClass("ac-tabbar__list--dragging");
     expect(tabNames()[0]).toContain("alpha");
+  });
+});
+
+describe("tabs that do not fit", () => {
+  /*
+   * jsdom has no layout, so the strip reports a width here: 400px showing,
+   * of 1000px of tabs, scrolled to wherever `scrollLeft` has been put.
+   */
+  let scrolledTo: number[] = [];
+  beforeEach(() => {
+    scrolledTo = [];
+    const isStrip = (element: Element) => element.classList.contains("ac-tabbar__list");
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return isStrip(this) ? 1000 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return isStrip(this) ? 400 : 0;
+    });
+    HTMLElement.prototype.scrollTo = function (
+      this: HTMLElement,
+      options?: ScrollToOptions | number,
+    ) {
+      const left = typeof options === "number" ? options : (options?.left ?? 0);
+      scrolledTo.push(left);
+      this.scrollLeft = left;
+      this.dispatchEvent(new Event("scroll"));
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
+  });
+
+  async function manyTabs() {
+    const bridge = new FakeBridge();
+    const tabs = Array.from({ length: 8 }, (_, index) => ({
+      ...defaultState().tabs[0]!,
+      id: `tab-${index}`,
+      name: `Tab ${index}`,
+    }));
+    bridge.state = { ...defaultState(), tabs, activeTabId: "tab-0" };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+    return user;
+  }
+
+  it("offers an arrow at each end, spent at the end it is already at", async () => {
+    await manyTabs();
+
+    const left = screen.getByRole("button", { name: "Scroll tabs left" });
+    const right = screen.getByRole("button", { name: "Scroll tabs right" });
+    expect(left).toBeDisabled();
+    expect(right).toBeEnabled();
+  });
+
+  it("scrolls most of a strip's width at a time", async () => {
+    const user = await manyTabs();
+
+    await user.click(screen.getByRole("button", { name: "Scroll tabs right" }));
+    expect(scrolledTo.at(-1)).toBe(320);
+    expect(screen.getByRole("button", { name: "Scroll tabs left" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Scroll tabs left" }));
+    expect(scrolledTo.at(-1)).toBe(0);
+  });
+
+  it("turns an ordinary wheel into a sideways scroll", async () => {
+    await manyTabs();
+    const strip = screen.getByRole("tablist", { name: "Open requests" });
+
+    fireEvent.wheel(strip, { deltaY: 120 });
+    expect(strip.scrollLeft).toBe(120);
+  });
+
+  it("draws no arrows while every tab fits", async () => {
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(400);
+    await manyTabs();
+
+    expect(screen.queryByRole("button", { name: "Scroll tabs left" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Scroll tabs right" })).not.toBeInTheDocument();
   });
 });
 

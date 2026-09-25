@@ -1073,19 +1073,66 @@ th,
 }
 
 /*
- * The padding is on the list, not the bar: the bar also carries the window
+ * The tabs, their scroll arrows and the new-tab button, as wide as they need
+ * and no wider, so the rest of the bar is left to drag the window by. The
+ * padding is here rather than on the bar: the bar also carries the window
  * buttons, and those are aligned to the desktop's own, not to us.
  */
-.ac-tabbar__list {
+.ac-tabbar__strip {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+/*
+ * The part that scrolls. Its scrollbar is hidden, since the arrows either
+ * side do that job; a sideways swipe still scrolls it natively. Positioned so
+ * that a tab's offsetLeft is measured from here, for scrolling it into view.
+ */
+.ac-tabbar__list {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
   gap: 2px;
   align-items: stretch;
   min-width: 0;
-  padding: 4px 4px 0;
+  padding: 0 4px;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.ac-tabbar__list::-webkit-scrollbar {
+  display: none;
+}
+
+.ac-tabbar__scroll {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ac-radius) var(--ac-radius) 0 0;
+  background: transparent;
+  color: var(--ac-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.ac-tabbar__scroll:hover:not(:disabled) {
+  background: var(--ac-fill);
+  color: var(--ac-text);
+}
+
+/* At the end already: still there, so the strip does not shift, but spent. */
+.ac-tabbar__scroll:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /*
@@ -1100,7 +1147,9 @@ th,
   flex: 0 1 auto;
   align-items: center;
   gap: 4px;
-  min-width: 0;
+  /* How narrow a tab gets before the strip scrolls instead: room for the
+     method, the first several letters of the name, and the close button. */
+  min-width: calc(136px * var(--ac-font-scale));
   max-width: 240px;
   padding-right: 4px;
   border-radius: var(--ac-radius) var(--ac-radius) 0 0;
