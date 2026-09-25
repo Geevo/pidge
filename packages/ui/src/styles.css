@@ -177,15 +177,15 @@
 :root[data-theme="dark"],
 [data-theme="dark"],
 [data-theme="warmDark"] {
-  --ac-bg: #141619;
-  --ac-bg-subtle: #1a1d23;
-  --ac-bg-raised: #22262e;
-  --ac-bg-input: #1b1e25;
-  --ac-border: #24282f;
-  --ac-border-strong: #333944;
-  --ac-text: #e4e7ec;
-  --ac-text-muted: #9aa3b2;
-  --ac-text-faint: #6d7684;
+  --ac-bg: #121212;
+  --ac-bg-subtle: #181818;
+  --ac-bg-raised: #1d1d1d;
+  --ac-bg-input: #171717;
+  --ac-border: #272727;
+  --ac-border-strong: #363636;
+  --ac-text: #e6e6e6;
+  --ac-text-muted: #a0a0a0;
+  --ac-text-faint: #707070;
   --ac-accent: #4c8dff;
   --ac-accent-text: #0d1117;
   --ac-focus: #4c8dff;
@@ -195,7 +195,7 @@
   --ac-status-redirect: #d9a441;
   --ac-status-client: #f0883e;
   --ac-status-server: #f0776a;
-  --ac-status-other: #9aa3b2;
+  --ac-status-other: #a0a0a0;
 
   /* Pill backgrounds stay Swagger's; only the bare-text variants lighten. */
   --ac-method-get-text: #61affe;
@@ -206,7 +206,7 @@
   --ac-method-head-text: #b07cff;
   --ac-method-options-text: #5aa9e6;
 
-  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a0a0a0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 
   /* Dark swallows a shadow, so what floats has to be lighter as well. */
   --ac-shadow: 0 2px 8px rgb(0 0 0 / 40%), 0 16px 48px rgb(0 0 0 / 50%);
@@ -221,15 +221,15 @@
    * these values into any other named light palette on a dark desktop.
    */
   :root:not([data-theme]) {
-    --ac-bg: #16181d;
-    --ac-bg-subtle: #1c1f26;
-    --ac-bg-raised: #21252d;
-    --ac-bg-input: #1b1e25;
-    --ac-border: #2d323c;
-    --ac-border-strong: #424956;
-    --ac-text: #e4e7ec;
-    --ac-text-muted: #9aa3b2;
-    --ac-text-faint: #6d7684;
+    --ac-bg: #121212;
+    --ac-bg-subtle: #181818;
+    --ac-bg-raised: #1d1d1d;
+    --ac-bg-input: #171717;
+    --ac-border: #272727;
+    --ac-border-strong: #363636;
+    --ac-text: #e6e6e6;
+    --ac-text-muted: #a0a0a0;
+    --ac-text-faint: #707070;
     --ac-accent: #4c8dff;
     --ac-accent-text: #0d1117;
     --ac-focus: #4c8dff;
@@ -239,7 +239,7 @@
     --ac-status-redirect: #d9a441;
     --ac-status-client: #f0883e;
     --ac-status-server: #f0776a;
-    --ac-status-other: #9aa3b2;
+    --ac-status-other: #a0a0a0;
 
     /* Pill backgrounds stay Swagger's; only the bare-text variants lighten. */
     --ac-method-get-text: #61affe;
@@ -250,7 +250,7 @@
     --ac-method-head-text: #b07cff;
     --ac-method-options-text: #5aa9e6;
 
-    --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    --ac-select-arrow: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a0a0a0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
 
     color-scheme: dark;
   }
@@ -258,7 +258,7 @@
 
 /*
  * The warm pair: the same two palettes with the grey ramp warmed up, so the
- * app reads as ink on paper rather than slate. Only the neutrals change — the
+ * app reads as ink on paper rather than charcoal. Only the neutrals change — the
  * accent, the status colours and the method palette carry meaning and stay put.
  */
 :root[data-theme="warmDark"],

@@ -37,7 +37,7 @@ pub enum Theme {
     System,
     Light,
     Dark,
-    /// Dark, with warm neutrals in place of the cool greys.
+    /// Dark, with warm neutrals in place of the plain greys.
     WarmDark,
     /// Light, on paper rather than white.
     WarmLight,
