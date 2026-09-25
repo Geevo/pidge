@@ -203,6 +203,7 @@ export function App({ bridge }: Props) {
         activeTabId={state.app.activeTabId}
         onSelect={(tabId) => client.dispatch({ type: "selectTab", tabId })}
         onClose={askCloseTab}
+        onMove={(tabId, toIndex) => client.dispatch({ type: "moveTab", tabId, toIndex })}
         onNew={() => client.newTab()}
         windowControls={bridge.window}
       />

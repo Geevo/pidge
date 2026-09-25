@@ -1059,11 +1059,17 @@ th,
 
 /* ---------- tabs ---------- */
 
+/*
+ * Nothing in the strip is text anyone copies, and a press that turns into a
+ * tab drag must not start a selection on the way.
+ */
 .ac-tabbar {
   display: flex;
   align-items: stretch;
   min-height: calc(34px * var(--ac-font-scale));
   background: var(--ac-bg-subtle);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /*
@@ -1088,6 +1094,8 @@ th,
  */
 .ac-tab {
   position: relative;
+  /* A number, not `auto`, so a drag's offset has somewhere to ease from. */
+  left: 0;
   display: flex;
   flex: 0 1 auto;
   align-items: center;
@@ -1099,7 +1107,8 @@ th,
   color: var(--ac-text-muted);
   transition:
     background-color 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    left 150ms ease;
 }
 
 .ac-tab:hover:not(.ac-tab--active) {
@@ -1154,6 +1163,39 @@ th,
 .ac-tab:hover + .ac-tab::before,
 .ac-tab--active + .ac-tab::before {
   opacity: 0;
+}
+
+/*
+ * While a tab is dragged, the tabs it passes ease aside to make room (the
+ * `left` transition above), and the separators go: they would blink on and
+ * off as tabs slide under one another. The dragged tab itself floats above the
+ * strip and follows the pointer with no easing, so it never lags behind.
+ */
+.ac-tabbar__list--dragging .ac-tab::before {
+  opacity: 0;
+}
+
+/*
+ * The strip holds the pointer for the whole drag, so the cursor is set there.
+ * Not on the body: a rule over every element in the app restyled all of them,
+ * the editors included, and froze the frame the drag began and ended on.
+ */
+.ac-tabbar__list--dragging,
+.ac-tabbar__list--dragging * {
+  cursor: grabbing;
+}
+
+.ac-tab--dragging {
+  z-index: 1;
+  background: var(--ac-bg-raised);
+  box-shadow: var(--ac-shadow);
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-tab {
+    transition: none;
+  }
 }
 
 .ac-tab__button {

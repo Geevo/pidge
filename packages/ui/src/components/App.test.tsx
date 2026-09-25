@@ -1109,6 +1109,113 @@ describe("dragging the divider", () => {
   });
 });
 
+describe("dragging a tab", () => {
+  /*
+   * jsdom has no layout, so the strip is laid out here: every tab 100px wide,
+   * side by side from the left, in whatever order the DOM has them now.
+   */
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.classList.contains("ac-tab")) {
+        const index = [...this.parentElement!.querySelectorAll(".ac-tab")].indexOf(this);
+        return new DOMRect(index * 100, 0, 100, 30);
+      }
+      if (this.classList.contains("ac-tabbar__list")) return new DOMRect(0, 0, 600, 34);
+      return new DOMRect();
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const strip = () => screen.getByRole("tablist", { name: "Open requests" });
+  const tabNames = () =>
+    within(strip())
+      .getAllByRole("tab")
+      .map((tab) => tab.textContent);
+  const rowOf = (name: string) =>
+    within(strip())
+      .getAllByRole("tab")
+      .find((tab) => tab.textContent?.includes(name))!.parentElement!;
+
+  async function threeTabs() {
+    const bridge = new FakeBridge();
+    const tabs = ["alpha", "bravo", "charlie"].map((name) => ({
+      ...defaultState().tabs[0]!,
+      id: name,
+      name,
+    }));
+    bridge.state = { ...defaultState(), tabs, activeTabId: "alpha" };
+    render(<App bridge={bridge} />);
+    await ready();
+    return bridge;
+  }
+
+  it("moves a tab along the strip as it is dragged past its neighbours", async () => {
+    const bridge = await threeTabs();
+    const alpha = rowOf("alpha");
+
+    // Grabbed in its middle, then carried past the middle of the last tab.
+    fireEvent.pointerDown(alpha, { pointerId: 1, button: 0, clientX: 50 });
+    fireEvent.pointerMove(alpha, { pointerId: 1, buttons: 1, clientX: 60 });
+    expect(strip()).toHaveClass("ac-tabbar__list--dragging");
+    fireEvent.pointerMove(alpha, { pointerId: 1, buttons: 1, clientX: 260 });
+    fireEvent.pointerUp(alpha, { pointerId: 1, clientX: 260 });
+
+    expect(tabNames()).toEqual([
+      expect.stringContaining("bravo"),
+      expect.stringContaining("charlie"),
+      expect.stringContaining("alpha"),
+    ]);
+    expect(strip()).not.toHaveClass("ac-tabbar__list--dragging");
+    await waitFor(() => {
+      expect(bridge.saved.at(-1)?.tabs.map((tab) => tab.id)).toEqual(["bravo", "charlie", "alpha"]);
+    });
+  });
+
+  it("treats a press that barely moves as a click", async () => {
+    await threeTabs();
+    const bravo = rowOf("bravo");
+
+    fireEvent.pointerDown(bravo, { pointerId: 1, button: 0, clientX: 150 });
+    fireEvent.pointerMove(bravo, { pointerId: 1, buttons: 1, clientX: 152 });
+    fireEvent.pointerUp(bravo, { pointerId: 1, clientX: 152 });
+
+    expect(strip()).not.toHaveClass("ac-tabbar__list--dragging");
+    expect(tabNames()).toEqual([
+      expect.stringContaining("alpha"),
+      expect.stringContaining("bravo"),
+      expect.stringContaining("charlie"),
+    ]);
+  });
+
+  it("does not start a drag once the button is already up", async () => {
+    await threeTabs();
+    const alpha = rowOf("alpha");
+
+    // Pressed, then released off the strip where it never saw the release.
+    fireEvent.pointerDown(alpha, { pointerId: 1, button: 0, clientX: 50 });
+    fireEvent.pointerMove(alpha, { pointerId: 1, buttons: 0, clientX: 260 });
+
+    expect(strip()).not.toHaveClass("ac-tabbar__list--dragging");
+    expect(tabNames()[0]).toContain("alpha");
+  });
+
+  it("does not start a drag from the close button", async () => {
+    await threeTabs();
+    const close = screen.getByRole("button", { name: "Close alpha" });
+
+    fireEvent.pointerDown(close, { pointerId: 1, button: 0, clientX: 90 });
+    fireEvent.pointerMove(close, { pointerId: 1, buttons: 1, clientX: 290 });
+
+    expect(strip()).not.toHaveClass("ac-tabbar__list--dragging");
+    expect(tabNames()[0]).toContain("alpha");
+  });
+});
+
 describe("window chrome", () => {
   it("draws none when the host has its own window frame", async () => {
     setup();

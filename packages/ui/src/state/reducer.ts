@@ -64,6 +64,7 @@ export type Action =
   | { type: "newTab"; request?: HttpRequest; name?: string; savedRequestId?: string }
   | { type: "closeTab"; tabId: string }
   | { type: "selectTab"; tabId: string }
+  | { type: "moveTab"; tabId: string; toIndex: number }
   | { type: "sendStarted"; tabId: string }
   | {
       type: "sendSucceeded";
@@ -141,6 +142,17 @@ export function reducer(state: UiState, action: Action): UiState {
 
     case "selectTab":
       return { ...state, app: { ...state.app, activeTabId: action.tabId } };
+
+    case "moveTab": {
+      const from = state.app.tabs.findIndex((tab) => tab.id === action.tabId);
+      const to = Math.max(0, Math.min(action.toIndex, state.app.tabs.length - 1));
+      if (from === -1 || from === to) return state;
+
+      const tabs = [...state.app.tabs];
+      const [moved] = tabs.splice(from, 1);
+      tabs.splice(to, 0, moved!);
+      return { ...state, app: { ...state.app, tabs } };
+    }
 
     case "sendStarted":
       return withRuntime(state, action.tabId, { status: { state: "sending" } });

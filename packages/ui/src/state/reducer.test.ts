@@ -38,6 +38,30 @@ describe("tabs", () => {
     expect(state.app.activeTabId).toBe(state.app.tabs[1]!.id);
   });
 
+  it("moves a tab to a new position and keeps the selection", () => {
+    let state = reducer(hydrated(), { type: "newTab" });
+    state = reducer(state, { type: "newTab" });
+    const [first, second, third] = state.app.tabs.map((tab) => tab.id);
+
+    state = reducer(state, { type: "moveTab", tabId: first!, toIndex: 2 });
+    expect(state.app.tabs.map((tab) => tab.id)).toEqual([second, third, first]);
+    expect(state.app.activeTabId).toBe(third);
+
+    state = reducer(state, { type: "moveTab", tabId: first!, toIndex: 0 });
+    expect(state.app.tabs.map((tab) => tab.id)).toEqual([first, second, third]);
+  });
+
+  it("keeps a moved tab inside the strip", () => {
+    let state = reducer(hydrated(), { type: "newTab" });
+    const [first, second] = state.app.tabs.map((tab) => tab.id);
+
+    state = reducer(state, { type: "moveTab", tabId: first!, toIndex: 99 });
+    expect(state.app.tabs.map((tab) => tab.id)).toEqual([second, first]);
+
+    const unchanged = reducer(state, { type: "moveTab", tabId: "missing", toIndex: 0 });
+    expect(unchanged).toBe(state);
+  });
+
   it("always leaves one tab open", () => {
     const start = hydrated();
     const state = reducer(start, { type: "closeTab", tabId: start.app.tabs[0]!.id });
