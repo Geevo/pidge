@@ -1825,20 +1825,6 @@ th,
   color: var(--ac-danger);
 }
 
-.ac-response-body {
-  margin: 0;
-  padding: 8px;
-  font-family: var(--ac-font-mono);
-  font-size: var(--ac-font-size);
-  white-space: pre;
-  tab-size: 2;
-}
-
-.ac-response-body--wrap {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .ac-empty--dialog {
   gap: 12px;
   height: auto;
@@ -2833,6 +2819,14 @@ body.ac-dragging--columns * {
   align-items: center;
   padding: 3px 6px;
   border-bottom: 1px solid var(--ac-border);
+}
+
+/* Said once, at the far end of the bar, rather than as a banner over the body. */
+.ac-response-tools__note {
+  margin-left: auto;
+  padding: 0 4px;
+  color: var(--ac-text-faint);
+  font-size: var(--ac-font-size-small);
 }
 
 /* A checkbox that belongs with the buttons beside it, at their size. */

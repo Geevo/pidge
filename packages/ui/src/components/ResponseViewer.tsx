@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { foldAll, unfoldAll } from "@codemirror/language";
 import type { EditorView } from "@codemirror/view";
 
@@ -20,18 +13,23 @@ import {
   syntaxForMime,
   type SyntaxLanguage,
 } from "../lib/mime";
-import { selectContents } from "../lib/selection";
-import { isFind, isSelectAll } from "../lib/shortcuts";
+import { isFind } from "../lib/shortcuts";
 import { CodeEditor, isFoldable } from "./CodeEditor";
 import { openFind } from "./findPanel";
 import { ResponseHeaders } from "./ResponseHeaders";
 
 /**
- * Past this, the body is shown as plain text. Highlighting and folding a
- * multi-megabyte document costs more than it is worth, and the fallback still
- * shows everything.
+ * Every body is shown in the editor, whatever its size. There used to be a
+ * plain-text fallback past 2 MB, on the belief that the editor could not cope;
+ * measured in WebKitGTK it was the other way round. The editor only draws the
+ * lines on screen, and put 50 MB of JSON up in 1.4 s where the fallback took
+ * over a minute.
+ *
+ * Its one slow case is wrapping a single enormous line, which it has to lay
+ * out whole: a 20 MB line took 25 s wrapped and under a second unwrapped. So a
+ * line longer than this is left unwrapped, whatever the setting says.
  */
-const RICH_VIEW_LIMIT = 2 * 1024 * 1024;
+const WRAP_LINE_LIMIT = 256 * 1024;
 
 interface Props {
   status: TabStatus;
@@ -53,8 +51,7 @@ export function ResponseViewer({ status, pane, wrapLines, onPaneChange }: Props)
    * is what made scrolling crawl. When it is on screen the panel becomes a flex
    * container with hidden overflow, and CodeMirror does the scrolling itself.
    */
-  const editorOwnsScrolling =
-    pane === "body" && rendered?.kind === "text" && rendered.text.length <= RICH_VIEW_LIMIT;
+  const editorOwnsScrolling = pane === "body" && rendered?.kind === "text";
 
   return (
     <section className="ac-pane ac-pane--response" aria-label="Response">
@@ -193,6 +190,14 @@ function ResponseBody({
     setFormatted(startsFormatted);
   }
 
+  const longestLine = useMemo(
+    () =>
+      rendered.kind === "text"
+        ? longestLineOf(formatted && rendered.json !== null ? rendered.json : rendered.text)
+        : 0,
+    [rendered, formatted],
+  );
+
   if (rendered.kind === "binary") {
     return (
       <p className="ac-empty">
@@ -206,34 +211,16 @@ function ResponseBody({
     return <p className="ac-empty">No response body.</p>;
   }
 
-  // Big bodies skip the editor entirely rather than freezing on mount.
-  if (rendered.text.length > RICH_VIEW_LIMIT) {
-    return (
-      <>
-        <p className="ac-hint">
-          {formatBytes(response.sizeBytes)} is too large to highlight; showing plain text.
-        </p>
-        <pre
-          className={`ac-response-body${wrapLines ? " ac-response-body--wrap" : ""}`}
-          tabIndex={0}
-          aria-label="Response body"
-          onKeyDown={selectAllWithin}
-        >
-          {rendered.text}
-        </pre>
-      </>
-    );
-  }
-
   // Formatted means it is JSON, so it is highlighted and folded as JSON.
   const asJson = formatted ? rendered.json : null;
   const text = asJson ?? rendered.text;
   const language = asJson === null ? rendered.language : "json";
   const foldable = isFoldable(language);
+  const tooLongToWrap = wrapLines && longestLine > WRAP_LINE_LIMIT;
 
   return (
     <div className="ac-response-body__rich">
-      {offerToFormat || foldable ? (
+      {offerToFormat || foldable || tooLongToWrap ? (
         <div className="ac-response-tools">
           {offerToFormat ? (
             <label
@@ -267,6 +254,10 @@ function ResponseBody({
               </button>
             </>
           ) : null}
+
+          {tooLongToWrap ? (
+            <span className="ac-response-tools__note">Not wrapped: one line is too long.</span>
+          ) : null}
         </div>
       ) : null}
 
@@ -275,7 +266,7 @@ function ResponseBody({
         language={language}
         readOnly
         folding={foldable}
-        wrap={wrapLines}
+        wrap={wrapLines && !tooLongToWrap}
         ariaLabel="Response body"
         onReady={onReady}
       />
@@ -283,18 +274,15 @@ function ResponseBody({
   );
 }
 
-/**
- * Ctrl/Cmd+A over the plain-text body.
- *
- * The editor answers this key itself; a `pre` has no such thing, and left to
- * the browser the shortcut selects the entire window rather than the body under
- * the pointer. Answering it here keeps the selection to the text being read.
- */
-function selectAllWithin(event: ReactKeyboardEvent<HTMLElement>) {
-  if (!isSelectAll(event)) return;
-
-  event.preventDefault();
-  selectContents(event.currentTarget);
+/** The length of the longest line, without splitting a large body into lines. */
+function longestLineOf(text: string): number {
+  let longest = 0;
+  let start = 0;
+  for (let end = text.indexOf("\n"); end !== -1; end = text.indexOf("\n", start)) {
+    longest = Math.max(longest, end - start);
+    start = end + 1;
+  }
+  return Math.max(longest, text.length - start);
 }
 
 type RenderedBody =

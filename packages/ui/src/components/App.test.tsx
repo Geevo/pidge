@@ -89,9 +89,7 @@ async function ready() {
  * highlight spans, so it is read as a whole rather than matched span by span.
  */
 function responseBodyText(): string {
-  const editor = document.querySelector('[aria-label="Response body"]');
-  if (editor) return editor.textContent ?? "";
-  return document.querySelector(".ac-response-body")?.textContent ?? "";
+  return document.querySelector('[aria-label="Response body"]')?.textContent ?? "";
 }
 
 /** The generated snippet, read the same way and for the same reason. */
@@ -953,26 +951,65 @@ describe("response bodies", () => {
     expect(screen.queryByText(/Binary response/)).not.toBeInTheDocument();
   });
 
-  it("falls back to plain text for a body too large to highlight", async () => {
+  it("shows a body of any size in the editor", async () => {
     const { bridge, user } = setup();
     await ready();
-    const big = `{"pad":"${"x".repeat(2 * 1024 * 1024)}"}`;
+    const big = `{"pad":"${"x".repeat(3 * 1024 * 1024)}"}`;
     bridge.queue(ok({ body: btoa(big), sizeBytes: big.length }));
 
     await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
     await user.click(screen.getByRole("button", { name: "Send" }));
     await screen.findByText("200 OK");
 
-    expect(await screen.findByText(/too large to highlight/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
+    expect(await screen.findByTestId("code-editor")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
+  });
+
+  it("leaves one enormous line unwrapped, and says so", async () => {
+    const bridge = new FakeBridge();
+    bridge.state = {
+      ...defaultState(),
+      settings: { ...defaultState().settings, wrapResponseLines: true },
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+    const line = "x".repeat(300 * 1024);
+    bridge.queue(ok({ body: btoa(line), mimeType: "text/plain", sizeBytes: line.length }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    expect(await screen.findByText("Not wrapped: one line is too long.")).toBeInTheDocument();
+    expect(document.querySelector(".cm-lineWrapping")).toBeNull();
+  });
+
+  it("still wraps a body whose lines are ordinary", async () => {
+    const bridge = new FakeBridge();
+    bridge.state = {
+      ...defaultState(),
+      settings: { ...defaultState().settings, wrapResponseLines: true },
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+    bridge.queue(ok({ body: btoa("short\nlines"), mimeType: "text/plain", sizeBytes: 11 }));
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("200 OK");
+
+    await waitFor(() => expect(document.querySelector(".cm-lineWrapping")).not.toBeNull());
+    expect(screen.queryByText("Not wrapped: one line is too long.")).not.toBeInTheDocument();
   });
 });
 
 /*
  * Ctrl/Cmd+A used to reach the document and select the whole window — tab
  * strip, buttons and all — because nothing in the response pane could hold
- * focus. The editor and the plain-text fallback now take the key themselves,
- * and the app drops it when whatever holds focus has no use for it.
+ * focus. The editor now takes the key itself, and the app drops it when
+ * whatever holds focus has no use for it.
  */
 describe("selecting all", () => {
   const selectAll = (target: Element) => {
@@ -1058,25 +1095,6 @@ describe("selecting all", () => {
     const field = within(dialog).getByLabelText(/Timeout/i);
     field.focus();
     expect(selectAll(field).defaultPrevented).toBe(false);
-  });
-
-  it("keeps the key inside the plain-text fallback", async () => {
-    const { bridge, user } = setup();
-    await ready();
-    const big = `{"pad":"${"x".repeat(2 * 1024 * 1024)}"}`;
-    bridge.queue(ok({ body: btoa(big), sizeBytes: big.length }));
-    await send(user);
-
-    await screen.findByText(/too large to highlight/);
-    const body = await screen.findByLabelText("Response body");
-    expect(body).toHaveAttribute("tabindex", "0");
-
-    body.focus();
-    expect(selectAll(body).defaultPrevented).toBe(true);
-
-    const selection = window.getSelection();
-    expect(selection?.rangeCount).toBe(1);
-    expect(body.contains(selection?.getRangeAt(0).commonAncestorContainer ?? null)).toBe(true);
   });
 });
 

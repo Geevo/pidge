@@ -8,7 +8,7 @@ import {
   search,
   setSearchQuery,
 } from "@codemirror/search";
-import type { Extension } from "@codemirror/state";
+import type { EditorState, Extension, Text } from "@codemirror/state";
 import {
   EditorView,
   type Panel,
@@ -143,6 +143,28 @@ function createFindPanel(view: EditorView): Panel {
     }
   });
 
+  /*
+   * The matches, found once per search and kept: stepping from one to the next
+   * moves the selection but changes neither the query nor the document, so it
+   * only has to look up where the selection sits among them. Recounting on
+   * every step walked the whole body again after CodeMirror had just walked
+   * it, doubling the wait for a rare word in a large body.
+   */
+  let found: { query: SearchQuery; doc: Text; matches: { from: number; to: number }[] } | null =
+    null;
+
+  function matchesFor(state: EditorState, query: SearchQuery) {
+    if (found && found.doc === state.doc && found.query.eq(query)) return found.matches;
+    const matches: { from: number; to: number }[] = [];
+    const cursor = query.getCursor(state);
+    for (let match = cursor.next(); !match.done; match = cursor.next()) {
+      matches.push(match.value);
+      if (matches.length > COUNT_LIMIT) break;
+    }
+    found = { query, doc: state.doc, matches };
+    return matches;
+  }
+
   function refresh(state = view.state) {
     const query = getSearchQuery(state);
     if (!query.search || !query.valid) {
@@ -151,15 +173,10 @@ function createFindPanel(view: EditorView): Panel {
       return;
     }
 
-    const selection = state.selection.main;
-    const cursor = query.getCursor(state);
-    let total = 0;
-    let current = 0;
-    for (let match = cursor.next(); !match.done; match = cursor.next()) {
-      total += 1;
-      if (match.value.from === selection.from && match.value.to === selection.to) current = total;
-      if (total > COUNT_LIMIT) break;
-    }
+    const matches = matchesFor(state, query);
+    const { from, to } = state.selection.main;
+    const current = matches.findIndex((match) => match.from === from && match.to === to) + 1;
+    const total = matches.length;
 
     dom.classList.toggle("ac-find--none", total === 0);
     if (total === 0) count.textContent = "No results";
