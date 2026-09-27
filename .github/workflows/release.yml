@@ -1,0 +1,142 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 or v0.1.0-pre.12 builds everything on clean
+# runners and opens a draft release with the files and their checksums. Nothing
+# is public until the draft is published by hand.
+#
+# Run it from the Actions tab instead to build without releasing: the files are
+# kept as workflow artifacts.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux
+    # The oldest supported Ubuntu, so the AppImage and the deb run on older
+    # glibc too.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libsoup-3.0-dev librsvg2-dev libayatana-appindicator3-dev \
+            libxdo-dev libssl-dev patchelf file
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          case "$GITHUB_REF_NAME" in
+            "v$version" | "v$version"-*) ;;
+            *) echo "::error::Tag $GITHUB_REF_NAME does not match app version $version"; exit 1 ;;
+          esac
+
+      # NO_STRIP: see docs/packaging.md.
+      - name: Build
+        run: NO_STRIP=1 pnpm --filter @api-client/desktop build:app
+
+      - name: Collect
+        run: |
+          version=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          mkdir out
+          cp target/release/bundle/appimage/*.AppImage "out/pidge-$version-x86_64.AppImage"
+          cp target/release/bundle/deb/*.deb target/release/bundle/rpm/*.rpm out/
+          ls -l out
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: out/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Just the executable: the zip is the whole install.
+      - name: Build
+        run: pnpm --filter @api-client/desktop exec tauri build --no-bundle
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          New-Item -ItemType Directory out, zip | Out-Null
+          Copy-Item target/release/pidge.exe, LICENSE, THIRD-PARTY-LICENSES.md, `
+            packages/ui/src/fonts/IBMPlexSans-LICENSE.txt, `
+            packages/ui/src/fonts/IBMPlexMono-LICENSE.txt zip/
+          Compress-Archive zip/* "out/pidge-$version-windows-x64.zip"
+          Get-ChildItem out
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: out
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      # Proof that these files were built here, from this tag, by this
+      # workflow; checked with `gh attestation verify`. GitHub only offers it
+      # for public repositories on this plan.
+      - uses: actions/attest-build-provenance@v4
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-checksums: out/SHA256SUMS
+
+      - name: Create the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" out/* --draft $prerelease \
+            --title "$GITHUB_REF_NAME" --notes "Built from $GITHUB_SHA."

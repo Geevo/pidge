@@ -33,6 +33,16 @@ install.
 
 No macOS build yet. It should build there; nobody's tried.
 
+Every release is built by GitHub Actions from the tagged source and comes with a
+`SHA256SUMS`. To check that a download is what that build produced:
+
+```bash
+gh attestation verify pidge-<version>-x86_64.AppImage -R Geevo/pidge
+```
+
+Nothing's code-signed yet, so Windows SmartScreen will still give you a
+talking-to the first time.
+
 ## What it does
 
 - All the methods you'd expect: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`,

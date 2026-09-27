@@ -137,10 +137,10 @@ one by correlation id.
 - If the sidecar exits, every pending call is rejected with a message pointing
   at **pidge: Restart Request Engine**.
 - The extension never downloads a binary. It uses the one packaged for the
-  current platform, or the path in `apiClient.sidecarPath`, or a local
+  current platform, or the path in `pidge.sidecarPath`, or a local
   `target/{debug,release}` build when running from source.
 
 ## Tracing
 
-Set `apiClient.trace` to `true` to log message types and correlation ids to the
+Set `pidge.trace` to `true` to log message types and correlation ids to the
 **pidge** output channel. Payloads are not logged.

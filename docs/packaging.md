@@ -10,6 +10,35 @@ Tauri builds the frontend first (`beforeBuildCommand`) and produces installers
 for the host platform under `target/release/bundle/`. Windows, macOS, and Linux
 are all supported; each has to be built on its own platform, as usual for Tauri.
 
+### Releases
+
+Releases are built by `.github/workflows/release.yml`, not on anyone's machine.
+Pushing a tag builds the Linux bundles on Ubuntu 22.04, so they run on older
+glibc, and the Windows zip on a Windows runner:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The tag has to match the version in `tauri.conf.json`, optionally with a suffix
+such as `-pre.12`; one with a suffix becomes a pre-release. The result is a
+**draft** with every file and a `SHA256SUMS`, so the notes are written and the
+release published by hand. Running the workflow from the Actions tab builds the
+same files as workflow artifacts without releasing anything.
+
+Nothing is code-signed. What there is instead:
+
+- `SHA256SUMS`, which anyone can check a download against:
+  `sha256sum --check --ignore-missing SHA256SUMS`.
+- While the repository is public, a build attestation for every file: GitHub's
+  signed record that it was built by this workflow from that tag.
+  `gh attestation verify <file> -R Geevo/pidge` checks it. GitHub does not
+  offer attestations for private repositories on this plan, so the step is
+  skipped there.
+
+Windows SmartScreen still warns about an unsigned executable; only a
+code-signing certificate stops that.
+
 ### Windows from Linux
 
 The MSVC target cross-compiles with `cargo-xwin`, which fetches the Windows SDK
@@ -128,7 +157,7 @@ pnpm --filter pidge package   # vsce package --no-dependencies
 
 `Sidecar.resolveBinary` looks, in order, at:
 
-1. the `apiClient.sidecarPath` setting,
+1. the `pidge.sidecarPath` setting,
 2. `bin/<platform>-<arch>/`,
 3. `target/debug` then `target/release`, so the repo runs from source.
 

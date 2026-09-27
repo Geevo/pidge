@@ -43,6 +43,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "publisher": "Geevo",
     "category": "DeveloperTool",
     "shortDescription": "A local-first HTTP client.",
     "longDescription": "Type a URL, press Send. No accounts, no cloud, no workspace."
