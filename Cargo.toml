@@ -18,7 +18,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT"
-repository = "https://github.com/Geevo/api-client"
+repository = "https://github.com/Geevo/pidge"
 
 [workspace.dependencies]
 api-client-codegen = { path = "crates/codegen" }
