@@ -108,6 +108,7 @@ interface PlatformBridge {
   clearHistory(): Promise<AppState>;
   pickFile?(request: FilePickRequest): Promise<string | null>;
   exportSavedRequests?(input: ExportInput): Promise<string | null>;
+  importSavedRequests?(): Promise<ImportOutcome | null>;
   subscribe?(listener: (command: HostCommand) => void): () => void;
   readonly window?: WindowControls;
   readonly platform: string;

@@ -1961,6 +1961,11 @@ th,
   letter-spacing: 0.04em;
 }
 
+.ac-drawer__actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
 /*
  * The drawer's filter, fixed under its header like the header itself. The
  * cross sits inside the field's right edge, so the field keeps the full width.

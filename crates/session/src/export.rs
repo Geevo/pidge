@@ -12,6 +12,9 @@ use api_client_core::redact::{auth_secrets_mut, is_secret_header};
 use api_client_storage::SavedRequest;
 use serde::Serialize;
 
+/// What an export says it is, so an import can tell.
+pub(crate) const EXPORT_KIND: &str = "api-client/saved-requests";
+
 /// The JSON form, labelled so a file can say what it is.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +35,7 @@ pub fn export(saved: &[SavedRequest], format: ExportFormat, include_secrets: boo
     match format {
         ExportFormat::Json => {
             let file = ExportFile {
-                kind: "api-client/saved-requests",
+                kind: EXPORT_KIND,
                 version: 1,
                 saved_requests: &saved,
             };
@@ -61,6 +64,19 @@ fn replace_secrets(request: &mut HttpRequest) {
             hide(&mut header.value, &name);
         }
     }
+}
+
+/// True when the request carries a secret as it is, not as a `{{variable}}`.
+pub(crate) fn holds_plain_secret(request: &HttpRequest) -> bool {
+    let mut request = request.clone();
+    let auth = auth_secrets_mut(&mut request.auth)
+        .into_iter()
+        .any(|(_, value)| !value.is_empty() && !only_references(value));
+    auth || request.headers.iter().any(|header| {
+        is_secret_header(&header.name)
+            && !header.value.is_empty()
+            && !only_references(&header.value)
+    })
 }
 
 /// Leaves alone a value that is already a variable, such as `{{token}}` or

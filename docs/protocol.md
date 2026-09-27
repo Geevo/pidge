@@ -14,7 +14,7 @@ generated from it into `packages/ui/src/generated/`.
 ## Envelope
 
 ```json
-{ "v": 3, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
+{ "v": 4, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
 ```
 
 | Field | Meaning                                                     |
@@ -28,8 +28,8 @@ generated from it into `packages/ui/src/generated/`.
 The extension sends `handshake` first; nothing else is accepted before it.
 
 ```json
-{"v":3,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
-{"v":3,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":3}}
+{"v":4,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
+{"v":4,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":4}}
 ```
 
 If the versions do not match, the sidecar replies `handshakeError` and stops,
@@ -37,13 +37,13 @@ rather than guessing at a message shape it does not understand:
 
 ```json
 {
-  "v": 3,
+  "v": 4,
   "id": "hs",
   "msg": {
     "type": "handshakeError",
     "message": "Protocol mismatch: …",
-    "expectedProtocolVersion": 3,
-    "receivedProtocolVersion": 4
+    "expectedProtocolVersion": 4,
+    "receivedProtocolVersion": 5
   }
 }
 ```
@@ -67,23 +67,26 @@ Extension to sidecar:
 | `deleteSavedRequest`  | `savedRequestId`                              |
 | `clearHistory`        | —                                             |
 | `exportSavedRequests` | `savedRequestIds`, `format`, `includeSecrets` |
+| `importSavedRequests` | `contents`                                    |
 | `shutdown`            | —                                             |
 
 Sidecar to extension:
 
-| `type`                  | Payload                                                         |
-| ----------------------- | --------------------------------------------------------------- |
-| `handshakeOk`           | `serverName`, `serverVersion`, `protocolVersion`                |
-| `handshakeError`        | `message`, `expectedProtocolVersion`, `receivedProtocolVersion` |
-| `requestComplete`       | `response`, `historyEntry`                                      |
-| `requestError`          | `error`, `historyEntry`                                         |
-| `requestCancelled`      | `wasInFlight`                                                   |
-| `codeGenerated`         | `code`, `error`                                                 |
-| `stateLoaded`           | `state`, `recovery`, `storagePath`                              |
-| `stateSaved`            | `state`                                                         |
-| `savedRequestsExported` | `contents`                                                      |
-| `storageError`          | `message`                                                       |
-| `protocolError`         | `message`                                                       |
+| `type`                  | Payload                                                              |
+| ----------------------- | -------------------------------------------------------------------- |
+| `handshakeOk`           | `serverName`, `serverVersion`, `protocolVersion`                     |
+| `handshakeError`        | `message`, `expectedProtocolVersion`, `receivedProtocolVersion`      |
+| `requestComplete`       | `response`, `historyEntry`                                           |
+| `requestError`          | `error`, `historyEntry`                                              |
+| `requestCancelled`      | `wasInFlight`                                                        |
+| `codeGenerated`         | `code`, `error`                                                      |
+| `stateLoaded`           | `state`, `recovery`, `storagePath`                                   |
+| `stateSaved`            | `state`                                                              |
+| `savedRequestsExported` | `contents`                                                           |
+| `savedRequestsImported` | `state`, `imported`, `undefinedVariables`, `skipped`, `plainSecrets` |
+| `importRejected`        | `message`                                                            |
+| `storageError`          | `message`                                                            |
+| `protocolError`         | `message`                                                            |
 
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.
@@ -103,6 +106,14 @@ not know fails to decode, which is what the protocol version is for.
 extension host asks where to save it and writes it, so the sidecar never writes
 to a path it was handed. `format` is `json` or `http`, and unless
 `includeSecrets` is set every secret is a `{{variable}}` named for it.
+
+`importSavedRequests` is the same the other way round: the extension host picks
+and reads the file, and sends its contents. They are a JSON export or a `.http`
+file, told apart by whether they start with `{`. Everything in them is added as
+new saved requests, never replacing one. The reply lists the `{{variables}}` no
+environment defines, a sentence for each request that could not come across,
+and whether the file held a secret in plain text. A file that is not saved
+requests at all gets `importRejected`, and nothing changes.
 
 The TypeScript side keeps its own copy of `PROTOCOL_VERSION`, in
 `apps/vscode/src/extension/protocol.ts`, and a test fails if the two differ.

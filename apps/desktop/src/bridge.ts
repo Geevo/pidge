@@ -6,6 +6,7 @@ import type {
   CodeTarget,
   ExportInput,
   FilePickRequest,
+  ImportOutcome,
   HttpRequest,
   LoadedState,
   PlatformBridge,
@@ -93,6 +94,11 @@ const tauriBridge = {
 
   sendRequest(request: HttpRequest): Promise<SendOutcome> {
     return invoke<SendOutcome>("send_http_request", { request });
+  },
+
+  // The file dialog is opened by the command itself, so no path crosses here.
+  importSavedRequests(): Promise<ImportOutcome | null> {
+    return invoke<ImportOutcome | null>("import_saved_requests");
   },
 
   // The save dialog is opened by the command itself, so no path crosses here.

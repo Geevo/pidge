@@ -13,6 +13,7 @@ import type {
   HistoryEntry,
   HttpRequest,
   HttpResponse,
+  ImportOutcome,
   RequestError,
   SavedRequest,
 } from "../types";
@@ -36,6 +37,8 @@ export class FakeBridge implements PlatformBridge {
   pickFile?: (request: FilePickRequest) => Promise<string | null>;
   /** Set by tests that need a host that can save files. */
   exportSavedRequests?: (input: ExportInput) => Promise<string | null>;
+  /** Set by tests that need a host that can open files. */
+  importSavedRequests?: () => Promise<ImportOutcome | null>;
 
   readonly sent: HttpRequest[] = [];
   readonly generated: { request: HttpRequest; target: CodeTarget }[] = [];

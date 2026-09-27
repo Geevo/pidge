@@ -423,3 +423,62 @@ fn generated_code_carries_the_settings_the_request_would_be_sent_under() {
     assert!(code.contains("--insecure"), "{code}");
     assert!(code.contains("--max-time 5"), "{code}");
 }
+
+#[test]
+fn importing_adds_requests_and_says_what_they_still_need() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = Session::start(Store::in_dir(dir.path())).unwrap();
+
+    let mut state = session.snapshot();
+    state.environments.push(api_client_variables::Environment {
+        id: "env".into(),
+        name: "Local".into(),
+        variables: vec![api_client_core::KeyValueEntry::new(
+            "baseUrl",
+            "http://localhost",
+        )],
+    });
+    session.replace_state(state).unwrap();
+
+    let file = "### Me\n\
+                GET {{baseUrl}}/me\n\
+                Authorization: Bearer {{token}}\n\
+                \n\
+                ### Login\n\
+                POST {{baseUrl}}/login\n\
+                Authorization: Basic ada s3cret\n";
+    let outcome = session.import_saved_requests(file).unwrap();
+
+    assert_eq!(outcome.imported, 2);
+    assert_eq!(outcome.undefined_variables, ["token"]);
+    assert!(
+        outcome.plain_secrets,
+        "Basic ada s3cret is a password as it is"
+    );
+    assert!(outcome.skipped.is_empty());
+
+    // Importing only ever adds, and it lasts.
+    session.import_saved_requests(file).unwrap();
+    drop(session);
+    let reopened = Session::start(Store::in_dir(dir.path())).unwrap();
+    let names: Vec<_> = reopened
+        .snapshot()
+        .saved_requests
+        .iter()
+        .map(|saved| saved.name.clone())
+        .collect();
+    assert_eq!(names, ["Me", "Login", "Me", "Login"]);
+}
+
+#[test]
+fn importing_something_else_changes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = Session::start(Store::in_dir(dir.path())).unwrap();
+
+    let error = session
+        .import_saved_requests(r#"{"version": 2, "tabs": []}"#)
+        .err()
+        .unwrap();
+    assert!(error.to_string().contains("not a file of saved requests"));
+    assert!(session.snapshot().saved_requests.is_empty());
+}

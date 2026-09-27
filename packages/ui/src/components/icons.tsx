@@ -161,3 +161,11 @@ export function ExportIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function ImportIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 2.5V10M5 7.2 8 10l3-2.8M3 9.5v3.2c0 .5.4.8.8.8h8.4c.4 0 .8-.3.8-.8V9.5" />
+    </Svg>
+  );
+}

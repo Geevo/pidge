@@ -434,3 +434,80 @@ fn says_why_there_is_no_code() {
         other => panic!("unexpected reply: {other:?}"),
     }
 }
+
+#[test]
+fn exports_and_imports_saved_requests_over_the_pipe() {
+    let mut sidecar = Sidecar::start();
+    sidecar.handshake();
+
+    let mut request = HttpRequest::get("https://example.com/users");
+    request.auth = api_client_core::AuthConfig::Bearer {
+        token: "tok-1".into(),
+    };
+    sidecar.send(
+        Some("save"),
+        ClientMessage::SaveRequest {
+            saved_request_id: None,
+            name: "Users".into(),
+            request,
+        },
+    );
+    let saved_id = match sidecar.recv().msg {
+        ServerMessage::StateSaved { state } => state.saved_requests[0].id.clone(),
+        other => panic!("unexpected: {other:?}"),
+    };
+
+    sidecar.send(
+        Some("export"),
+        ClientMessage::ExportSavedRequests {
+            saved_request_ids: vec![saved_id],
+            format: api_client_codegen::ExportFormat::Http,
+            include_secrets: false,
+        },
+    );
+    let contents = match sidecar.recv().msg {
+        ServerMessage::SavedRequestsExported { contents } => contents,
+        other => panic!("unexpected: {other:?}"),
+    };
+    assert!(
+        contents.contains("Authorization: Bearer {{token}}"),
+        "{contents}"
+    );
+    assert!(!contents.contains("tok-1"));
+
+    sidecar.send(
+        Some("import"),
+        ClientMessage::ImportSavedRequests { contents },
+    );
+    match sidecar.recv().msg {
+        ServerMessage::SavedRequestsImported {
+            state,
+            imported,
+            undefined_variables,
+            plain_secrets,
+            ..
+        } => {
+            assert_eq!(imported, 1);
+            assert_eq!(state.saved_requests.len(), 2);
+            assert_eq!(undefined_variables, ["token"]);
+            assert!(!plain_secrets);
+        }
+        other => panic!("unexpected: {other:?}"),
+    }
+
+    sidecar.send(
+        Some("bad"),
+        ClientMessage::ImportSavedRequests {
+            contents: "{\"tabs\": []}".into(),
+        },
+    );
+    match sidecar.recv().msg {
+        ServerMessage::ImportRejected { message } => {
+            assert!(
+                message.contains("not a file of saved requests"),
+                "{message}"
+            );
+        }
+        other => panic!("unexpected: {other:?}"),
+    }
+}

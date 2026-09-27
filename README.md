@@ -55,9 +55,10 @@ No macOS build. It ought to build there; nobody has tried.
   certificates for a network that needs them.
 - Tabs, local history, saved requests, light and dark themes, syntax colours
   that can borrow VS Code's or One's, and a keyboard that does what you expect.
-- Saved requests export to a file: JSON, which keeps everything, or a `.http`
-  file that VS Code REST Client and JetBrains run. Passwords and tokens become
-  `{{variables}}` unless you ask for them.
+- Saved requests export to a file and import from one: JSON, which keeps
+  everything, or a `.http` file that VS Code REST Client and JetBrains run.
+  Passwords and tokens become `{{variables}}` unless you ask for them, and an
+  import tells you which ones it still needs.
 - Text you can read: five sizes from 90% to 150%, on the keyboard or under
   Settings, and the whole window grows with it rather than the labels alone.
 

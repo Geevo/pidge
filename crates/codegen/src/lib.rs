@@ -13,6 +13,7 @@ mod csharp;
 mod curl;
 mod go;
 mod http_file;
+mod http_import;
 mod java;
 mod node;
 mod php;
@@ -23,6 +24,7 @@ mod text;
 mod zig;
 
 pub use http_file::http_file;
+pub use http_import::{ParsedHttpFile, ParsedRequest, parse_http_file};
 
 use api_client_core::{AuthConfig, ClientIdentitySettings, HttpRequest, RequestError, TlsSettings};
 use api_client_http_engine::{AuthPlan, EffectiveRequest};

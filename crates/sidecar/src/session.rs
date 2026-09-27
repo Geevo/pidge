@@ -4,7 +4,7 @@ use api_client_protocol::{
     ClientEnvelope, ClientMessage, PROTOCOL_VERSION, ServerEnvelope, ServerMessage, encode_line,
     version_mismatch,
 };
-use api_client_session::Session;
+use api_client_session::{Session, SessionError};
 use api_client_storage::Store;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
@@ -190,6 +190,25 @@ pub async fn run(store: Store) -> io::Result<()> {
                     &outbound,
                     ServerEnvelope::new(id, ServerMessage::SavedRequestsExported { contents }),
                 );
+            }
+
+            ClientMessage::ImportSavedRequests { contents } => {
+                let msg = match session.import_saved_requests(&contents) {
+                    Ok(outcome) => ServerMessage::SavedRequestsImported {
+                        state: outcome.state,
+                        imported: u32::try_from(outcome.imported).unwrap_or(u32::MAX),
+                        undefined_variables: outcome.undefined_variables,
+                        skipped: outcome.skipped,
+                        plain_secrets: outcome.plain_secrets,
+                    },
+                    Err(SessionError::Storage(err)) => ServerMessage::StorageError {
+                        message: err.to_string(),
+                    },
+                    Err(err) => ServerMessage::ImportRejected {
+                        message: err.to_string(),
+                    },
+                };
+                send(&outbound, ServerEnvelope::new(id, msg));
             }
 
             ClientMessage::LoadState => {

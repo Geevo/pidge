@@ -118,6 +118,40 @@ pub fn resolve_request(
     request: &HttpRequest,
     variables: &VariableSet,
 ) -> Result<HttpRequest, RequestError> {
+    let (resolved, missing) = resolve_collecting(request, variables);
+    if missing.is_empty() {
+        return Ok(resolved);
+    }
+    let list = missing
+        .iter()
+        .map(|name| format!("{{{{{name}}}}}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(RequestError::new(
+        RequestErrorKind::UnresolvedVariable,
+        format!("No value for {list}."),
+    )
+    .with_detail(format!(
+        "Define these in the active environment, or remove them from the request. Known variables: {}",
+        if variables.is_empty() {
+            "(none)".to_string()
+        } else {
+            variables.names().collect::<Vec<_>>().join(", ")
+        }
+    )))
+}
+
+/// Every `{{name}}` the request uses that `variables` has no value for, in
+/// the order they first appear. The same walk a send makes, so it cannot
+/// disagree with the error a send would give.
+pub fn missing_variables(request: &HttpRequest, variables: &VariableSet) -> Vec<String> {
+    resolve_collecting(request, variables).1
+}
+
+fn resolve_collecting(
+    request: &HttpRequest,
+    variables: &VariableSet,
+) -> (HttpRequest, Vec<String>) {
     let mut missing: Vec<String> = Vec::new();
     let mut resolve = |value: &str| -> String {
         match substitute(value, variables) {
@@ -235,27 +269,7 @@ pub fn resolve_request(
         },
     };
 
-    if missing.is_empty() {
-        Ok(resolved)
-    } else {
-        let list = missing
-            .iter()
-            .map(|name| format!("{{{{{name}}}}}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        Err(RequestError::new(
-            RequestErrorKind::UnresolvedVariable,
-            format!("No value for {list}."),
-        )
-        .with_detail(format!(
-            "Define these in the active environment, or remove them from the request. Known variables: {}",
-            if variables.is_empty() {
-                "(none)".to_string()
-            } else {
-                variables.names().collect::<Vec<_>>().join(", ")
-            }
-        )))
-    }
+    (resolved, missing)
 }
 
 fn resolve_entries(

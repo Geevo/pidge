@@ -15,11 +15,11 @@ use ts_rs::TS;
 
 /// Bump on any breaking change to the message shapes below.
 ///
-/// 2 added `GenerateCode`, 3 `ExportSavedRequests`. A new message is additive for the sidecar, but an
+/// 2 added `GenerateCode`, 3 `ExportSavedRequests`, 4 `ImportSavedRequests`. A new message is additive for the sidecar, but an
 /// extension that sends one to a build that predates it would get a protocol
 /// error in place of an answer — which is the mismatch this number exists to
 /// catch at the handshake instead.
-pub const PROTOCOL_VERSION: u32 = 3;
+pub const PROTOCOL_VERSION: u32 = 4;
 
 /// Extension host to sidecar.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -98,6 +98,12 @@ pub enum ClientMessage {
         format: ExportFormat,
         include_secrets: bool,
     },
+    /// Add the saved requests in a file's contents: a JSON export or a
+    /// `.http` file. The extension host picks and reads the file.
+    #[serde(rename_all = "camelCase")]
+    ImportSavedRequests {
+        contents: String,
+    },
     Shutdown,
 }
 
@@ -175,6 +181,18 @@ pub enum ServerMessage {
     StateSaved { state: AppState },
     #[serde(rename_all = "camelCase")]
     SavedRequestsExported { contents: String },
+    /// What an import added; the fields of `api_client_session::ImportOutcome`.
+    #[serde(rename_all = "camelCase")]
+    SavedRequestsImported {
+        state: AppState,
+        imported: u32,
+        undefined_variables: Vec<String>,
+        skipped: Vec<String>,
+        plain_secrets: bool,
+    },
+    /// The file was not one that can be imported; nothing was changed.
+    #[serde(rename_all = "camelCase")]
+    ImportRejected { message: String },
     #[serde(rename_all = "camelCase")]
     StorageError { message: String },
     /// The sidecar could not make sense of a line at all.

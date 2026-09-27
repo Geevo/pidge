@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { ExportInput, PlatformBridge } from "../bridge";
+import type { ImportOutcome } from "../types";
 import { toRequestError } from "../bridge";
 import type { AppState, Environment, HttpRequest, Settings } from "../types";
 import { blankTab } from "./factories";
@@ -64,6 +65,8 @@ export interface ApiClient {
   readonly clearHistory: () => Promise<void>;
   /** Absent when the host cannot save files. Says how it went in the notice. */
   readonly exportSavedRequests?: (input: ExportInput) => Promise<void>;
+  /** Absent when the host cannot open files. Says how it went in the notice. */
+  readonly importSavedRequests?: () => Promise<void>;
   readonly setDrawer: (drawer: DrawerPanel | null) => void;
   readonly setSettings: (settings: Settings) => void;
   readonly setEnvironments: (
@@ -266,6 +269,21 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     [bridge],
   );
 
+  const importSavedRequests = useCallback(async () => {
+    if (!bridge.importSavedRequests) return;
+    try {
+      const outcome = await bridge.importSavedRequests();
+      if (outcome === null) return;
+      dispatch({ type: "setSavedRequests", savedRequests: outcome.state.savedRequests });
+      dispatch({ type: "showNotice", notice: importNotice(outcome) });
+    } catch (error) {
+      dispatch({
+        type: "showNotice",
+        notice: `Could not import: ${toRequestError(error).message}`,
+      });
+    }
+  }, [bridge]);
+
   const clearHistory = useCallback(async () => {
     const next = await bridge.clearHistory();
     dispatch({ type: "setHistory", history: next.history });
@@ -291,6 +309,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
   }, []);
 
   const canExport = bridge.exportSavedRequests !== undefined;
+  const canImport = bridge.importSavedRequests !== undefined;
 
   return useMemo(
     () => ({
@@ -306,6 +325,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       deleteSavedRequest,
       clearHistory,
       exportSavedRequests: canExport ? exportSavedRequests : undefined,
+      importSavedRequests: canImport ? importSavedRequests : undefined,
       setDrawer,
       setSettings,
       setEnvironments,
@@ -324,10 +344,35 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       clearHistory,
       canExport,
       exportSavedRequests,
+      canImport,
+      importSavedRequests,
       setDrawer,
       setSettings,
       setEnvironments,
       setActiveEnvironment,
     ],
   );
+}
+
+/**
+ * One notice for an import: how many came in, what they still need, what was
+ * left behind, and whether the file itself is now a liability.
+ */
+export function importNotice(outcome: ImportOutcome): string {
+  const parts = [
+    outcome.imported === 1 ? "Imported 1 request." : `Imported ${outcome.imported} requests.`,
+  ];
+  const names = outcome.undefinedVariables.map((name) => `{{${name}}}`);
+  if (names.length > 0) {
+    const list =
+      names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+    parts.push(
+      `${outcome.imported === 1 ? "It uses" : "They use"} ${list}, which no environment defines yet.`,
+    );
+  }
+  parts.push(...outcome.skipped);
+  if (outcome.plainSecrets) {
+    parts.push("The file holds passwords or tokens in plain text; it is worth deleting.");
+  }
+  return parts.join(" ");
 }

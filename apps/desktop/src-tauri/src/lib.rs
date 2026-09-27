@@ -35,6 +35,7 @@ pub fn run() {
             commands::delete_saved_request,
             commands::clear_history,
             commands::export_saved_requests,
+            commands::import_saved_requests,
             commands::window_buttons,
         ])
         .run(tauri::generate_context!())

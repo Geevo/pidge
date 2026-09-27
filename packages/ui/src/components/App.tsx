@@ -314,6 +314,11 @@ export function App({ bridge }: Props) {
                         ? (input) => void client.exportSavedRequests?.(input)
                         : undefined
                     }
+                    onImport={
+                      client.importSavedRequests
+                        ? () => void client.importSavedRequests?.()
+                        : undefined
+                    }
                   />
                 )}
               </aside>

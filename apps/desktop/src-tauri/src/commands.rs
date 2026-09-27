@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
 use api_client_core::{HttpRequest, RequestError};
-use api_client_session::{CodeTarget, ExportFormat, SendOutcome, Session};
+use api_client_session::{
+    CodeTarget, ExportFormat, ImportOutcome, MAX_IMPORT_BYTES, SendOutcome, Session,
+};
 use api_client_storage::AppState;
 use serde::Serialize;
 use tauri::{AppHandle, State};
@@ -122,6 +124,41 @@ pub async fn export_saved_requests(
     std::fs::write(&path, contents)
         .map_err(|err| format!("Could not write {}: {err}", path.display()))?;
     Ok(Some(path.display().to_string()))
+}
+
+/// Asks for a file, then adds the saved requests in it. `None` when the
+/// dialog was dismissed. Like export, the dialog is opened here, so what is
+/// read is always a file the user just picked.
+#[tauri::command]
+pub async fn import_saved_requests(
+    app: AppHandle,
+    session: State<'_, Session>,
+) -> Result<Option<ImportOutcome>, String> {
+    let (chosen, answer) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Import saved requests")
+        .add_filter("Saved requests", &["json", "http", "rest"])
+        .pick_file(move |path| {
+            let _ = chosen.send(path);
+        });
+
+    let Some(path) = answer.await.ok().flatten() else {
+        return Ok(None);
+    };
+    let path = path.into_path().map_err(|err| err.to_string())?;
+    let size = std::fs::metadata(&path)
+        .map_err(|err| format!("Could not read {}: {err}", path.display()))?
+        .len();
+    if size > MAX_IMPORT_BYTES as u64 {
+        return Err("The file is too large to be a file of saved requests.".into());
+    }
+    let contents = std::fs::read_to_string(&path)
+        .map_err(|err| format!("Could not read {}: {err}", path.display()))?;
+    session
+        .import_saved_requests(&contents)
+        .map(Some)
+        .map_err(|err| err.to_string())
 }
 
 #[tauri::command]

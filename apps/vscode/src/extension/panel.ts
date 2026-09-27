@@ -4,6 +4,12 @@ import type { AppState, CodeTarget, ExportInput, HttpRequest, ServerMessage } fr
 import * as vscode from "vscode";
 
 import { type WebviewEvent, type WebviewResponse, isWebviewRequest } from "./protocol";
+
+/**
+ * `api_client_session::MAX_IMPORT_BYTES`. The sidecar refuses anything bigger
+ * whatever this says; checking first only saves reading it and sending it over.
+ */
+const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 import type { Sidecar } from "./sidecar";
 
 /**
@@ -161,6 +167,33 @@ export class ApiClientPanel {
         if (reply.type !== "savedRequestsExported") throw new Error(describe(reply));
         await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(reply.contents));
         return target.fsPath;
+      }
+
+      case "importSavedRequests": {
+        const chosen = await vscode.window.showOpenDialog({
+          title: "Import saved requests",
+          canSelectMany: false,
+          openLabel: "Import",
+          filters: { "Saved requests": ["json", "http", "rest"] },
+        });
+        const source = chosen?.[0];
+        if (!source) return null;
+
+        const { size } = await vscode.workspace.fs.stat(source);
+        if (size > MAX_IMPORT_BYTES) {
+          throw new Error("The file is too large to be a file of saved requests.");
+        }
+        const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(source));
+        const reply = await this.sidecar.call({ type: "importSavedRequests", contents });
+        if (reply.type === "importRejected") throw new Error(reply.message);
+        if (reply.type !== "savedRequestsImported") throw new Error(describe(reply));
+        return {
+          state: reply.state,
+          imported: reply.imported,
+          undefinedVariables: reply.undefinedVariables,
+          skipped: reply.skipped,
+          plainSecrets: reply.plainSecrets,
+        };
       }
 
       case "saveState": {

@@ -10,7 +10,7 @@ import type { ClientEnvelope, ServerEnvelope } from "@api-client/ui";
 export type { ClientEnvelope, ClientMessage, ServerEnvelope, ServerMessage } from "@api-client/ui";
 
 /** Must match `api_client_protocol::PROTOCOL_VERSION`. */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export function encodeLine(envelope: ClientEnvelope): string {
   return `${JSON.stringify(envelope)}\n`;

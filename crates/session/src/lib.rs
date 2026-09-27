@@ -5,6 +5,7 @@
 //! wrappers around this type, which is what keeps the two platforms honest.
 
 mod export;
+mod import;
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -16,6 +17,7 @@ use api_client_http_engine::{CancellationRegistry, EngineConfig, HttpEngine};
 use api_client_storage::{
     AppState, HistoryEntry, LoadOutcome, Recovery, SavedRequest, Settings, StorageError, Store,
 };
+pub use import::MAX_IMPORT_BYTES;
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -30,6 +32,26 @@ pub enum SessionError {
     Storage(#[from] StorageError),
     #[error("{}", .0.message)]
     Engine(#[from] RequestError),
+    /// A file that is not saved requests, or has none that can come across.
+    #[error("{0}")]
+    Import(String),
+}
+
+/// What an import brought in, for the notice that reports it.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ImportOutcome {
+    pub state: AppState,
+    #[ts(type = "number")]
+    pub imported: usize,
+    /// `{{names}}` the new requests use that no environment defines, which
+    /// is what an export without its secrets leaves to be filled in.
+    pub undefined_variables: Vec<String>,
+    /// A sentence for each request the file held that could not come across.
+    pub skipped: Vec<String>,
+    /// The file holds a password or token as it is: worth deleting now.
+    pub plain_secrets: bool,
 }
 
 /// What a send produced: a response or an error, plus the history row it
@@ -290,6 +312,45 @@ impl Session {
             .cloned()
             .collect();
         export::export(&chosen, format, include_secrets)
+    }
+
+    /// Adds the saved requests in `contents`, a JSON export or a `.http`
+    /// file, as new ones. Nothing already saved is changed.
+    pub fn import_saved_requests(&self, contents: &str) -> Result<ImportOutcome, SessionError> {
+        let parsed = import::parse(contents).map_err(SessionError::Import)?;
+
+        let known: api_client_variables::VariableSet = self
+            .state()
+            .environments
+            .iter()
+            .flat_map(|environment| environment.variables.iter())
+            .filter(|variable| !variable.name.trim().is_empty())
+            .map(|variable| (variable.name.trim().to_owned(), String::new()))
+            .collect();
+        let mut undefined_variables: Vec<String> = Vec::new();
+        for saved in &parsed.saved {
+            for name in api_client_variables::missing_variables(&saved.request, &known) {
+                if !undefined_variables.contains(&name) {
+                    undefined_variables.push(name);
+                }
+            }
+        }
+        let plain_secrets = parsed
+            .saved
+            .iter()
+            .any(|saved| export::holds_plain_secret(&saved.request));
+
+        let imported = parsed.saved.len();
+        self.mutate(|state| state.saved_requests.extend(parsed.saved));
+        self.persist()?;
+
+        Ok(ImportOutcome {
+            state: self.snapshot(),
+            imported,
+            undefined_variables,
+            skipped: parsed.skipped,
+            plain_secrets,
+        })
     }
 
     pub fn clear_history(&self) -> Result<(), StorageError> {

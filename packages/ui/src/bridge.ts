@@ -2,6 +2,7 @@ import type {
   AppState,
   CodeTarget,
   ExportFormat,
+  ImportOutcome,
   HistoryEntry,
   HttpRequest,
   HttpResponse,
@@ -52,6 +53,13 @@ export interface PlatformBridge {
    * Absent on a host that cannot save files, and the Export button with it.
    */
   exportSavedRequests?(input: ExportInput): Promise<string | null>;
+  /**
+   * Optional: asks for a file, then adds the saved requests in it — a JSON
+   * export or a `.http` file. Resolves with what was added, or `null` if the
+   * dialog was dismissed; rejects with the reason a file was refused, in
+   * which case nothing changed. The host picks and reads the file itself.
+   */
+  importSavedRequests?(): Promise<ImportOutcome | null>;
   /**
    * Optional: commands the host initiates, such as a Command Palette entry.
    * Returns an unsubscribe function. Hosts with no such commands omit it.

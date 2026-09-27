@@ -8,7 +8,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DrawerSearch } from "./DrawerSearch";
 import { ExportDialog } from "./ExportDialog";
 import { MethodBadge } from "./MethodBadge";
-import { ExportIcon, TrashIcon } from "./icons";
+import { ExportIcon, ImportIcon, TrashIcon } from "./icons";
 
 interface Props {
   savedRequests: readonly SavedRequest[];
@@ -16,10 +16,12 @@ interface Props {
   onDelete: (savedRequestId: string) => void;
   /** Absent when the host cannot save files, and the button with it. */
   onExport?: (input: ExportInput) => void;
+  /** Absent when the host cannot open files, and the button with it. */
+  onImport?: () => void;
 }
 
 /** A flat list. No folders, no collections, no projects. */
-export function SavedRequestsPanel({ savedRequests, onOpen, onDelete, onExport }: Props) {
+export function SavedRequestsPanel({ savedRequests, onOpen, onDelete, onExport, onImport }: Props) {
   const [deleting, setDeleting] = useState<SavedRequest | null>(null);
   const [exporting, setExporting] = useState(false);
   const [query, setQuery] = useState("");
@@ -32,17 +34,30 @@ export function SavedRequestsPanel({ savedRequests, onOpen, onDelete, onExport }
     <>
       <div className="ac-drawer__header">
         <span>Saved</span>
-        {onExport && savedRequests.length > 0 ? (
-          <button
-            type="button"
-            className="ac-icon-button"
-            aria-label="Export saved requests"
-            title="Export"
-            onClick={() => setExporting(true)}
-          >
-            <ExportIcon size={13} />
-          </button>
-        ) : null}
+        <span className="ac-drawer__actions">
+          {onImport ? (
+            <button
+              type="button"
+              className="ac-icon-button"
+              aria-label="Import saved requests"
+              title="Import"
+              onClick={onImport}
+            >
+              <ImportIcon size={13} />
+            </button>
+          ) : null}
+          {onExport && savedRequests.length > 0 ? (
+            <button
+              type="button"
+              className="ac-icon-button"
+              aria-label="Export saved requests"
+              title="Export"
+              onClick={() => setExporting(true)}
+            >
+              <ExportIcon size={13} />
+            </button>
+          ) : null}
+        </span>
       </div>
 
       {exporting && onExport ? (

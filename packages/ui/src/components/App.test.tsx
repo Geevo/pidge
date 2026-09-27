@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExportInput, FilePickRequest } from "../bridge";
+import type { ImportOutcome } from "../types";
 import { FakeBridge, defaultState, failure, historyEntry, ok, response } from "../test/fakeBridge";
 import { App } from "./App";
 
@@ -2830,5 +2831,107 @@ describe("exporting saved requests", () => {
     await user.click(within(dialog).getByRole("button", { name: "Export 1 request" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("importing saved requests", () => {
+  function importing(outcome: () => Promise<ImportOutcome | null>) {
+    const bridge = new FakeBridge();
+    bridge.importSavedRequests = outcome;
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    return { bridge, user };
+  }
+
+  function outcomeWith(names: string[], extra: Partial<ImportOutcome> = {}): ImportOutcome {
+    return {
+      state: {
+        ...defaultState(),
+        savedRequests: names.map((name) => ({
+          id: name,
+          name,
+          request: { ...historyEntry(response()).request },
+          createdAt: 0,
+          updatedAt: 0,
+        })),
+      },
+      imported: names.length,
+      undefinedVariables: [],
+      skipped: [],
+      plainSecrets: false,
+      ...extra,
+    };
+  }
+
+  it("is offered even with nothing saved yet, which is when it is wanted", async () => {
+    const { user } = importing(() => Promise.resolve(null));
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    expect(
+      within(panel).getByRole("button", { name: "Import saved requests" }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("button", { name: "Export saved requests" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists what came in and says what it still needs", async () => {
+    const { user } = importing(() =>
+      Promise.resolve(
+        outcomeWith(["Me", "Login"], {
+          undefinedVariables: ["token", "clientSecret"],
+          skipped: ["“Trace it” was skipped: TRACE is not a method this app sends."],
+          plainSecrets: true,
+        }),
+      ),
+    );
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    await user.click(within(panel).getByRole("button", { name: "Import saved requests" }));
+
+    expect(await within(panel).findByText("Me")).toBeInTheDocument();
+    expect(within(panel).getByText("Login")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Imported 2 requests. They use {{token}} and {{clientSecret}}, which no environment defines yet. " +
+          "“Trace it” was skipped: TRACE is not a method this app sends. " +
+          "The file holds passwords or tokens in plain text; it is worth deleting.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says why a file was refused", async () => {
+    const { user } = importing(() =>
+      Promise.reject(
+        new Error("This JSON is not a file of saved requests exported from API Client."),
+      ),
+    );
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    await user.click(within(panel).getByRole("button", { name: "Import saved requests" }));
+
+    expect(
+      await screen.findByText(
+        "Could not import: This JSON is not a file of saved requests exported from API Client.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("does nothing when the file dialog is dismissed", async () => {
+    const { user } = importing(() => Promise.resolve(null));
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    const panel = await screen.findByRole("complementary");
+    await user.click(within(panel).getByRole("button", { name: "Import saved requests" }));
+
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    expect(within(panel).getByText(/Nothing saved/)).toBeInTheDocument();
   });
 });
