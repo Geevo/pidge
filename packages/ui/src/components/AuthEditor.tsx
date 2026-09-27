@@ -6,6 +6,7 @@ import type {
   OAuth2ClientAuth,
   OAuth2Grant,
 } from "../types";
+import { SecretInput } from "./SecretInput";
 import { Select } from "./Select";
 
 interface Props {
@@ -114,13 +115,12 @@ export function AuthEditor({ request, onChange }: Props) {
       {auth.type === "bearer" ? (
         <div className="ac-field">
           <label htmlFor="ac-auth-token">Token</label>
-          <input
+          <SecretInput
             id="ac-auth-token"
-            type="text"
-            spellCheck={false}
+            name="token"
             placeholder="{{token}}"
             value={auth.token}
-            onChange={(event) => setAuth({ ...auth, token: event.target.value })}
+            onChange={(token) => setAuth({ ...auth, token })}
           />
         </div>
       ) : null}
@@ -139,11 +139,11 @@ export function AuthEditor({ request, onChange }: Props) {
           </div>
           <div className="ac-field">
             <label htmlFor="ac-auth-pass">Password</label>
-            <input
+            <SecretInput
               id="ac-auth-pass"
-              type="password"
+              name="password"
               value={auth.password}
-              onChange={(event) => setAuth({ ...auth, password: event.target.value })}
+              onChange={(password) => setAuth({ ...auth, password })}
             />
           </div>
           {auth.type === "digest" ? (
@@ -170,13 +170,12 @@ export function AuthEditor({ request, onChange }: Props) {
           </div>
           <div className="ac-field">
             <label htmlFor="ac-auth-key-value">Value</label>
-            <input
+            <SecretInput
               id="ac-auth-key-value"
-              type="text"
-              spellCheck={false}
+              name="API key"
               placeholder="{{apiKey}}"
               value={auth.value}
-              onChange={(event) => setAuth({ ...auth, value: event.target.value })}
+              onChange={(value) => setAuth({ ...auth, value })}
             />
           </div>
           <div className="ac-field">
@@ -214,11 +213,11 @@ export function AuthEditor({ request, onChange }: Props) {
           </div>
           <div className="ac-field">
             <label htmlFor="ac-auth-ntlm-pass">Password</label>
-            <input
+            <SecretInput
               id="ac-auth-ntlm-pass"
-              type="password"
+              name="password"
               value={auth.password}
-              onChange={(event) => setAuth({ ...auth, password: event.target.value })}
+              onChange={(password) => setAuth({ ...auth, password })}
             />
           </div>
           <div className="ac-field">
@@ -265,11 +264,11 @@ export function AuthEditor({ request, onChange }: Props) {
           </div>
           <div className="ac-field">
             <label htmlFor="ac-auth-consumer-secret">Consumer secret</label>
-            <input
+            <SecretInput
               id="ac-auth-consumer-secret"
-              type="password"
+              name="consumer secret"
               value={auth.consumerSecret}
-              onChange={(event) => setAuth({ ...auth, consumerSecret: event.target.value })}
+              onChange={(consumerSecret) => setAuth({ ...auth, consumerSecret })}
             />
           </div>
           <div className="ac-field">
@@ -285,11 +284,11 @@ export function AuthEditor({ request, onChange }: Props) {
           </div>
           <div className="ac-field">
             <label htmlFor="ac-auth-token-secret">Token secret</label>
-            <input
+            <SecretInput
               id="ac-auth-token-secret"
-              type="password"
+              name="token secret"
               value={auth.tokenSecret}
-              onChange={(event) => setAuth({ ...auth, tokenSecret: event.target.value })}
+              onChange={(tokenSecret) => setAuth({ ...auth, tokenSecret })}
             />
           </div>
           <div className="ac-field">
@@ -368,11 +367,11 @@ export function AuthEditor({ request, onChange }: Props) {
 
           <div className="ac-field">
             <label htmlFor="ac-auth-client-secret">Client secret</label>
-            <input
+            <SecretInput
               id="ac-auth-client-secret"
-              type="password"
+              name="client secret"
               value={auth.clientSecret}
-              onChange={(event) => setAuth({ ...auth, clientSecret: event.target.value })}
+              onChange={(clientSecret) => setAuth({ ...auth, clientSecret })}
             />
           </div>
 
@@ -390,11 +389,11 @@ export function AuthEditor({ request, onChange }: Props) {
               </div>
               <div className="ac-field">
                 <label htmlFor="ac-auth-owner-pass">Password</label>
-                <input
+                <SecretInput
                   id="ac-auth-owner-pass"
-                  type="password"
+                  name="password"
                   value={auth.password}
-                  onChange={(event) => setAuth({ ...auth, password: event.target.value })}
+                  onChange={(password) => setAuth({ ...auth, password })}
                 />
               </div>
             </>
@@ -403,12 +402,11 @@ export function AuthEditor({ request, onChange }: Props) {
           {auth.grant === "refreshToken" ? (
             <div className="ac-field">
               <label htmlFor="ac-auth-refresh">Refresh token</label>
-              <input
+              <SecretInput
                 id="ac-auth-refresh"
-                type="text"
-                spellCheck={false}
+                name="refresh token"
                 value={auth.refreshToken}
-                onChange={(event) => setAuth({ ...auth, refreshToken: event.target.value })}
+                onChange={(refreshToken) => setAuth({ ...auth, refreshToken })}
               />
             </div>
           ) : null}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import type { PlatformBridge } from "../bridge";
+import type { ExportInput, PlatformBridge } from "../bridge";
 import { toRequestError } from "../bridge";
 import type { AppState, Environment, HttpRequest, Settings } from "../types";
 import { blankTab } from "./factories";
@@ -62,6 +62,8 @@ export interface ApiClient {
   readonly saveActiveRequest: (name: string) => Promise<void>;
   readonly deleteSavedRequest: (savedRequestId: string) => Promise<void>;
   readonly clearHistory: () => Promise<void>;
+  /** Absent when the host cannot save files. Says how it went in the notice. */
+  readonly exportSavedRequests?: (input: ExportInput) => Promise<void>;
   readonly setDrawer: (drawer: DrawerPanel | null) => void;
   readonly setSettings: (settings: Settings) => void;
   readonly setEnvironments: (
@@ -240,6 +242,30 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     [bridge],
   );
 
+  const exportSavedRequests = useCallback(
+    async (input: ExportInput) => {
+      if (!bridge.exportSavedRequests) return;
+      try {
+        const path = await bridge.exportSavedRequests(input);
+        if (path === null) return;
+        const count = input.savedRequestIds.length;
+        const what = count === 1 ? "1 request" : `${count} requests`;
+        dispatch({
+          type: "showNotice",
+          notice: input.includeSecrets
+            ? `Exported ${what} to ${path}, with passwords and tokens in plain text.`
+            : `Exported ${what} to ${path}.`,
+        });
+      } catch (error) {
+        dispatch({
+          type: "showNotice",
+          notice: `Could not export: ${toRequestError(error).message}`,
+        });
+      }
+    },
+    [bridge],
+  );
+
   const clearHistory = useCallback(async () => {
     const next = await bridge.clearHistory();
     dispatch({ type: "setHistory", history: next.history });
@@ -264,6 +290,8 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     dispatch({ type: "setActiveEnvironment", environmentId });
   }, []);
 
+  const canExport = bridge.exportSavedRequests !== undefined;
+
   return useMemo(
     () => ({
       state,
@@ -277,6 +305,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       saveActiveRequest,
       deleteSavedRequest,
       clearHistory,
+      exportSavedRequests: canExport ? exportSavedRequests : undefined,
       setDrawer,
       setSettings,
       setEnvironments,
@@ -293,6 +322,8 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       saveActiveRequest,
       deleteSavedRequest,
       clearHistory,
+      canExport,
+      exportSavedRequests,
       setDrawer,
       setSettings,
       setEnvironments,

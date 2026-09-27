@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 
 use api_client_core::{HttpRequest, RequestError};
-use api_client_session::{CodeTarget, SendOutcome, Session};
+use api_client_session::{CodeTarget, ExportFormat, SendOutcome, Session};
 use api_client_storage::AppState;
 use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt as _;
 
 /// What the UI needs on startup, in one round trip.
 #[derive(Debug, Serialize)]
@@ -82,6 +83,45 @@ pub fn generate_code(
     variables: Option<BTreeMap<String, String>>,
 ) -> Result<String, RequestError> {
     session.generate_code(&request, variables.unwrap_or_default(), target)
+}
+
+/// Asks where to save, then writes the export there. `None` when the dialog
+/// was dismissed.
+///
+/// The dialog is opened from here rather than from the webview, so the path
+/// written to is always one the user just chose: the webview can suggest a
+/// name, never a place.
+#[tauri::command]
+pub async fn export_saved_requests(
+    app: AppHandle,
+    session: State<'_, Session>,
+    saved_request_ids: Vec<String>,
+    format: ExportFormat,
+    include_secrets: bool,
+    file_name: String,
+) -> Result<Option<String>, String> {
+    let (filter, extension) = match format {
+        ExportFormat::Json => ("JSON", "json"),
+        ExportFormat::Http => ("HTTP requests", "http"),
+    };
+    let (chosen, answer) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Export saved requests")
+        .set_file_name(file_name)
+        .add_filter(filter, &[extension])
+        .save_file(move |path| {
+            let _ = chosen.send(path);
+        });
+
+    let Some(path) = answer.await.ok().flatten() else {
+        return Ok(None);
+    };
+    let path = path.into_path().map_err(|err| err.to_string())?;
+    let contents = session.export_saved_requests(&saved_request_ids, format, include_secrets);
+    std::fs::write(&path, contents)
+        .map_err(|err| format!("Could not write {}: {err}", path.display()))?;
+    Ok(Some(path.display().to_string()))
 }
 
 #[tauri::command]

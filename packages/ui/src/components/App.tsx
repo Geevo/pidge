@@ -309,6 +309,11 @@ export function App({ bridge }: Props) {
                     savedRequests={state.app.savedRequests}
                     onOpen={(saved) => client.newTab(saved.request, saved.name, saved.id)}
                     onDelete={(id) => void client.deleteSavedRequest(id)}
+                    onExport={
+                      client.exportSavedRequests
+                        ? (input) => void client.exportSavedRequests?.(input)
+                        : undefined
+                    }
                   />
                 )}
               </aside>

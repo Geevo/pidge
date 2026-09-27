@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { Environment } from "../types";
 import { newId } from "../lib/ids";
+import { looksSecret } from "../lib/secrets";
 import { KeyValueTable } from "./KeyValueTable";
 import { PlusIcon, TrashIcon } from "./icons";
 import { Select } from "./Select";
@@ -120,6 +121,7 @@ export function EnvironmentsDialog({ environments, activeEnvironmentId, onSave, 
                     nameLabel="Variable"
                     namePlaceholder="baseUrl"
                     valuePlaceholder="http://localhost:3000"
+                    isSecret={(row) => looksSecret(row.name)}
                     onChange={(variables) => update(selected.id, { variables })}
                   />
                 </>

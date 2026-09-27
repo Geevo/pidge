@@ -1,22 +1,27 @@
 import { useState } from "react";
 
+import type { ExportInput } from "../bridge";
 import type { SavedRequest } from "../types";
 import { requestLabel } from "../lib/format";
 import { matchesSearch } from "../lib/search";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DrawerSearch } from "./DrawerSearch";
+import { ExportDialog } from "./ExportDialog";
 import { MethodBadge } from "./MethodBadge";
-import { TrashIcon } from "./icons";
+import { ExportIcon, TrashIcon } from "./icons";
 
 interface Props {
   savedRequests: readonly SavedRequest[];
   onOpen: (saved: SavedRequest) => void;
   onDelete: (savedRequestId: string) => void;
+  /** Absent when the host cannot save files, and the button with it. */
+  onExport?: (input: ExportInput) => void;
 }
 
 /** A flat list. No folders, no collections, no projects. */
-export function SavedRequestsPanel({ savedRequests, onOpen, onDelete }: Props) {
+export function SavedRequestsPanel({ savedRequests, onOpen, onDelete, onExport }: Props) {
   const [deleting, setDeleting] = useState<SavedRequest | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [query, setQuery] = useState("");
 
   const shown = savedRequests.filter((saved) =>
@@ -27,7 +32,27 @@ export function SavedRequestsPanel({ savedRequests, onOpen, onDelete }: Props) {
     <>
       <div className="ac-drawer__header">
         <span>Saved</span>
+        {onExport && savedRequests.length > 0 ? (
+          <button
+            type="button"
+            className="ac-icon-button"
+            aria-label="Export saved requests"
+            title="Export"
+            onClick={() => setExporting(true)}
+          >
+            <ExportIcon size={13} />
+          </button>
+        ) : null}
       </div>
+
+      {exporting && onExport ? (
+        <ExportDialog
+          savedRequests={savedRequests}
+          initiallySelected={shown.map((saved) => saved.id)}
+          onExport={onExport}
+          onClose={() => setExporting(false)}
+        />
+      ) : null}
 
       {deleting ? (
         <ConfirmDialog

@@ -4,11 +4,13 @@
 //! clear. The Tauri commands and the sidecar message handlers are both thin
 //! wrappers around this type, which is what keeps the two platforms honest.
 
+mod export;
+
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use api_client_codegen::ClientOptions;
-pub use api_client_codegen::CodeTarget;
+pub use api_client_codegen::{CodeTarget, ExportFormat};
 use api_client_core::{HttpRequest, HttpResponse, RequestError, RequestErrorKind};
 use api_client_http_engine::{CancellationRegistry, EngineConfig, HttpEngine};
 use api_client_storage::{
@@ -270,6 +272,24 @@ impl Session {
         let removed = self.mutate(|state| state.delete_saved_request(id));
         self.persist()?;
         Ok(removed)
+    }
+
+    /// The saved requests with these ids, in the order they are listed, as a
+    /// file to share. Secrets become `{{variables}}` unless `include_secrets`.
+    pub fn export_saved_requests(
+        &self,
+        ids: &[String],
+        format: ExportFormat,
+        include_secrets: bool,
+    ) -> String {
+        let chosen: Vec<SavedRequest> = self
+            .state()
+            .saved_requests
+            .iter()
+            .filter(|saved| ids.contains(&saved.id))
+            .cloned()
+            .collect();
+        export::export(&chosen, format, include_secrets)
     }
 
     pub fn clear_history(&self) -> Result<(), StorageError> {

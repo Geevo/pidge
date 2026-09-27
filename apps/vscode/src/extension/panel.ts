@@ -1,4 +1,6 @@
-import type { AppState, CodeTarget, HttpRequest, ServerMessage } from "@api-client/ui";
+import * as os from "node:os";
+
+import type { AppState, CodeTarget, ExportInput, HttpRequest, ServerMessage } from "@api-client/ui";
 import * as vscode from "vscode";
 
 import { type WebviewEvent, type WebviewResponse, isWebviewRequest } from "./protocol";
@@ -138,6 +140,27 @@ export class ApiClientPanel {
           ),
         });
         return chosen?.[0]?.fsPath ?? null;
+      }
+
+      case "exportSavedRequests": {
+        const input = params as ExportInput;
+        const folder = vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir());
+        const target = await vscode.window.showSaveDialog({
+          title: "Export saved requests",
+          defaultUri: vscode.Uri.joinPath(folder, input.fileName),
+          filters: input.format === "http" ? { "HTTP requests": ["http"] } : { JSON: ["json"] },
+        });
+        if (!target) return null;
+
+        const reply = await this.sidecar.call({
+          type: "exportSavedRequests",
+          savedRequestIds: [...input.savedRequestIds],
+          format: input.format,
+          includeSecrets: input.includeSecrets,
+        });
+        if (reply.type !== "savedRequestsExported") throw new Error(describe(reply));
+        await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(reply.contents));
+        return target.fsPath;
       }
 
       case "saveState": {

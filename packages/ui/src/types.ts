@@ -10,6 +10,7 @@ export type { ClientEnvelope } from "./generated/ClientEnvelope";
 export type { ClientMessage } from "./generated/ClientMessage";
 export type { CodeTarget } from "./generated/CodeTarget";
 export type { Environment } from "./generated/Environment";
+export type { ExportFormat } from "./generated/ExportFormat";
 export type { HistoryEntry } from "./generated/HistoryEntry";
 export type { HttpMethod } from "./generated/HttpMethod";
 export type { HttpRequest } from "./generated/HttpRequest";

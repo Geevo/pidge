@@ -1,6 +1,7 @@
 import type { KeyValueEntry } from "../types";
 import { emptyRow } from "../state/factories";
 import { CloseIcon } from "./icons";
+import { SecretInput } from "./SecretInput";
 
 interface Props {
   rows: readonly KeyValueEntry[];
@@ -9,6 +10,8 @@ interface Props {
   namePlaceholder?: string;
   valuePlaceholder?: string;
   label: string;
+  /** Rows whose value is covered until its eye is pressed. */
+  isSecret?: (row: KeyValueEntry) => boolean;
   onChange: (rows: KeyValueEntry[]) => void;
 }
 
@@ -24,6 +27,7 @@ export function KeyValueTable({
   valueLabel = "Value",
   namePlaceholder = "name",
   valuePlaceholder = "value",
+  isSecret = () => false,
   onChange,
 }: Props) {
   const displayed =
@@ -80,14 +84,23 @@ export function KeyValueTable({
               />
             </td>
             <td>
-              <input
-                type="text"
-                aria-label={`${valueLabel} ${index + 1}`}
-                placeholder={valuePlaceholder}
-                spellCheck={false}
-                value={row.value}
-                onChange={(event) => update(index, { value: event.target.value })}
-              />
+              {isSecret(row) ? (
+                <SecretInput
+                  ariaLabel={`${valueLabel} ${index + 1}`}
+                  name={`${row.name.trim()} value`}
+                  value={row.value}
+                  onChange={(value) => update(index, { value })}
+                />
+              ) : (
+                <input
+                  type="text"
+                  aria-label={`${valueLabel} ${index + 1}`}
+                  placeholder={valuePlaceholder}
+                  spellCheck={false}
+                  value={row.value}
+                  onChange={(event) => update(index, { value: event.target.value })}
+                />
+              )}
             </td>
             <td className="ac-kv__remove">
               {isBlank(row) ? null : (

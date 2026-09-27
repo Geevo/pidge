@@ -12,6 +12,7 @@
 mod csharp;
 mod curl;
 mod go;
+mod http_file;
 mod java;
 mod node;
 mod php;
@@ -21,10 +22,24 @@ mod rust;
 mod text;
 mod zig;
 
+pub use http_file::http_file;
+
 use api_client_core::{AuthConfig, ClientIdentitySettings, HttpRequest, RequestError, TlsSettings};
 use api_client_http_engine::{AuthPlan, EffectiveRequest};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+
+/// What a file of exported saved requests is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ExportFormat {
+    /// The saved requests exactly as stored. Nothing is lost.
+    Json,
+    /// Plain-text blocks that VS Code's REST Client and JetBrains run. See
+    /// [`http_file`].
+    Http,
+}
 
 /// One way of writing a request out: a language, and the library it uses.
 ///

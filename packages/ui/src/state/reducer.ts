@@ -59,6 +59,7 @@ export type Action =
       version: string;
       notice: string | null;
     }
+  | { type: "showNotice"; notice: string }
   | { type: "dismissNotice" }
   | { type: "setRequest"; tabId: string; request: HttpRequest }
   | { type: "newTab"; request?: HttpRequest; name?: string; savedRequestId?: string }
@@ -100,6 +101,9 @@ export function reducer(state: UiState, action: Action): UiState {
         loaded: true,
       };
     }
+
+    case "showNotice":
+      return { ...state, notice: action.notice };
 
     case "dismissNotice":
       return { ...state, notice: null };

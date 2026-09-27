@@ -17,4 +17,4 @@ recovery: string | null, storagePath: string,
 /**
  * The host's own version, for the About tab.
  */
-version: string, } | { "type": "stateSaved", state: AppState, } | { "type": "storageError", message: string, } | { "type": "protocolError", message: string, };
+version: string, } | { "type": "stateSaved", state: AppState, } | { "type": "savedRequestsExported", contents: string, } | { "type": "storageError", message: string, } | { "type": "protocolError", message: string, };

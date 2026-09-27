@@ -1425,7 +1425,8 @@ th,
   width: 28px;
 }
 
-.ac-kv input[type="text"] {
+.ac-kv input[type="text"],
+.ac-kv input[type="password"] {
   width: 100%;
   height: calc(26px * var(--ac-font-scale));
   padding: 0 8px;
@@ -1439,18 +1440,21 @@ th,
     box-shadow 120ms ease;
 }
 
-.ac-kv input[type="text"]:hover {
+.ac-kv input[type="text"]:hover,
+.ac-kv input[type="password"]:hover {
   background: var(--ac-fill-hover);
 }
 
-.ac-kv input[type="text"]:focus {
+.ac-kv input[type="text"]:focus,
+.ac-kv input[type="password"]:focus {
   border-color: color-mix(in srgb, var(--ac-focus) 55%, transparent);
   background: var(--ac-bg-input);
   box-shadow: var(--ac-ring);
 }
 
 /* The empty row is an invitation; it sits back until it is pointed at. */
-.ac-kv tbody tr:last-child input[type="text"]:not(:hover):not(:focus) {
+.ac-kv tbody tr:last-child input[type="text"]:not(:hover):not(:focus),
+.ac-kv tbody tr:last-child input[type="password"]:not(:hover):not(:focus) {
   background: color-mix(in srgb, var(--ac-text) 3%, transparent);
 }
 
@@ -1513,6 +1517,34 @@ th,
   outline: none;
   background-color: var(--ac-bg-input);
   box-shadow: var(--ac-ring);
+}
+
+/*
+ * A masked field with its eye inside the right edge, the way the drawer's
+ * search holds its cross, so the field keeps its full width.
+ */
+.ac-secret {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-secret input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-field .ac-secret input,
+.ac-kv .ac-secret input {
+  padding-right: 28px;
+}
+
+.ac-secret__toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
 }
 
 .ac-hint {
@@ -2618,6 +2650,51 @@ th,
 .ac-field--toggle small {
   color: var(--ac-text-faint);
   font-size: var(--ac-font-size-small);
+}
+
+/* Drawn for the same reason as the checkbox: WebKit's own ignores the theme. */
+.ac-field--toggle input[type="radio"] {
+  appearance: none;
+  display: inline-grid;
+  flex: none;
+  place-content: center;
+  width: calc(14px * var(--ac-font-scale));
+  height: calc(14px * var(--ac-font-scale));
+  margin: 2px 0 0;
+  border: 1px solid var(--ac-border-strong);
+  border-radius: 50%;
+  background: var(--ac-bg-input);
+  cursor: pointer;
+}
+
+.ac-field--toggle input[type="radio"]::before {
+  content: "";
+  width: calc(6px * var(--ac-font-scale));
+  height: calc(6px * var(--ac-font-scale));
+  border-radius: 50%;
+  background: var(--ac-accent-text);
+  transform: scale(0);
+  transition: transform 120ms ease;
+}
+
+.ac-field--toggle input[type="radio"]:checked {
+  border-color: var(--ac-accent);
+  background: var(--ac-accent);
+}
+
+.ac-field--toggle input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+.ac-field--toggle input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: var(--ac-ring);
+}
+
+/* A long list scrolls inside its group, and the choices below stay in view. */
+.ac-export__list {
+  max-height: calc(160px * var(--ac-font-scale));
+  overflow-y: auto;
 }
 
 .ac-field--danger input[type="checkbox"]:checked {

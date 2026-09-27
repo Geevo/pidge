@@ -1,4 +1,5 @@
 import type {
+  ExportInput,
   FilePickRequest,
   LoadedState,
   PlatformBridge,
@@ -33,6 +34,8 @@ export class FakeBridge implements PlatformBridge {
   window?: WindowControls;
   /** Set by tests that need a host with a file chooser. */
   pickFile?: (request: FilePickRequest) => Promise<string | null>;
+  /** Set by tests that need a host that can save files. */
+  exportSavedRequests?: (input: ExportInput) => Promise<string | null>;
 
   readonly sent: HttpRequest[] = [];
   readonly generated: { request: HttpRequest; target: CodeTarget }[] = [];

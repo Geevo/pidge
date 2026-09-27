@@ -135,3 +135,29 @@ export function LockIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8Z" />
+      <circle cx="8" cy="8" r="2" />
+    </Svg>
+  );
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6.2 3.8A6.4 6.4 0 0 1 8 3.5c4.1 0 6.5 4.5 6.5 4.5a11 11 0 0 1-1.7 2.3M4.3 4.9A11.3 11.3 0 0 0 1.5 8s2.4 4.5 6.5 4.5a6.6 6.6 0 0 0 3.4-.9" />
+      <path d="M6.6 6.6a2 2 0 0 0 2.8 2.8M2 2l12 12" />
+    </Svg>
+  );
+}
+
+export function ExportIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 2.5v7.5M5 5.3 8 2.5l3 2.8M3 9.5v3.2c0 .5.4.8.8.8h8.4c.4 0 .8-.3.8-.8V9.5" />
+    </Svg>
+  );
+}

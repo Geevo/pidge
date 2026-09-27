@@ -9,6 +9,7 @@
 export { App } from "./components/App";
 
 export type {
+  ExportInput,
   FilePickFilter,
   FilePickRequest,
   HostCommand,

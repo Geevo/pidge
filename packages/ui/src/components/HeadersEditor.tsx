@@ -1,3 +1,4 @@
+import { isSecretHeader } from "../lib/secrets";
 import type { HttpRequest, KeyValueEntry } from "../types";
 import { KeyValueTable } from "./KeyValueTable";
 
@@ -19,6 +20,7 @@ export function HeadersEditor({ request, onChange }: Props) {
         label="Headers"
         rows={request.headers}
         namePlaceholder="Header-Name"
+        isSecret={(row) => isSecretHeader(row.name)}
         onChange={handleChange}
       />
       {authHeaderSet && request.auth.type !== "none" ? (

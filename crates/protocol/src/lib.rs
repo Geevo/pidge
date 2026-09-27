@@ -6,7 +6,7 @@
 //!
 //! stdout carries protocol messages and nothing else. Logs go to stderr.
 
-use api_client_codegen::CodeTarget;
+use api_client_codegen::{CodeTarget, ExportFormat};
 use api_client_core::{HttpRequest, HttpResponse, RequestError};
 use api_client_storage::{AppState, HistoryEntry};
 use serde::{Deserialize, Serialize};
@@ -15,11 +15,11 @@ use ts_rs::TS;
 
 /// Bump on any breaking change to the message shapes below.
 ///
-/// 2 added `GenerateCode`. A new message is additive for the sidecar, but an
+/// 2 added `GenerateCode`, 3 `ExportSavedRequests`. A new message is additive for the sidecar, but an
 /// extension that sends one to a build that predates it would get a protocol
 /// error in place of an answer — which is the mismatch this number exists to
 /// catch at the handshake instead.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
 /// Extension host to sidecar.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -89,6 +89,15 @@ pub enum ClientMessage {
         saved_request_id: String,
     },
     ClearHistory,
+    /// Write saved requests out as a file's contents. The extension host
+    /// asks where to put it and writes it; the sidecar never touches a path
+    /// it was handed.
+    #[serde(rename_all = "camelCase")]
+    ExportSavedRequests {
+        saved_request_ids: Vec<String>,
+        format: ExportFormat,
+        include_secrets: bool,
+    },
     Shutdown,
 }
 
@@ -164,6 +173,8 @@ pub enum ServerMessage {
     /// Acknowledges any state-mutating message, carrying the new state.
     #[serde(rename_all = "camelCase")]
     StateSaved { state: AppState },
+    #[serde(rename_all = "camelCase")]
+    SavedRequestsExported { contents: String },
     #[serde(rename_all = "camelCase")]
     StorageError { message: String },
     /// The sidecar could not make sense of a line at all.

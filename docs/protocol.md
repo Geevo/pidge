@@ -14,7 +14,7 @@ generated from it into `packages/ui/src/generated/`.
 ## Envelope
 
 ```json
-{ "v": 2, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
+{ "v": 3, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
 ```
 
 | Field | Meaning                                                     |
@@ -28,8 +28,8 @@ generated from it into `packages/ui/src/generated/`.
 The extension sends `handshake` first; nothing else is accepted before it.
 
 ```json
-{"v":2,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
-{"v":2,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":2}}
+{"v":3,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
+{"v":3,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":3}}
 ```
 
 If the versions do not match, the sidecar replies `handshakeError` and stops,
@@ -37,13 +37,13 @@ rather than guessing at a message shape it does not understand:
 
 ```json
 {
-  "v": 2,
+  "v": 3,
   "id": "hs",
   "msg": {
     "type": "handshakeError",
     "message": "Protocol mismatch: …",
-    "expectedProtocolVersion": 2,
-    "receivedProtocolVersion": 3
+    "expectedProtocolVersion": 3,
+    "receivedProtocolVersion": 4
   }
 }
 ```
@@ -55,33 +55,35 @@ session, which is useful when diagnosing a mismatched install.
 
 Extension to sidecar:
 
-| `type`               | Payload                             |
-| -------------------- | ----------------------------------- |
-| `handshake`          | `clientName`, `clientVersion`       |
-| `sendRequest`        | `request`, `variables`              |
-| `cancelRequest`      | `requestId`                         |
-| `generateCode`       | `request`, `target`, `variables`    |
-| `loadState`          | —                                   |
-| `saveState`          | `state`                             |
-| `saveRequest`        | `savedRequestId`, `name`, `request` |
-| `deleteSavedRequest` | `savedRequestId`                    |
-| `clearHistory`       | —                                   |
-| `shutdown`           | —                                   |
+| `type`                | Payload                                       |
+| --------------------- | --------------------------------------------- |
+| `handshake`           | `clientName`, `clientVersion`                 |
+| `sendRequest`         | `request`, `variables`                        |
+| `cancelRequest`       | `requestId`                                   |
+| `generateCode`        | `request`, `target`, `variables`              |
+| `loadState`           | —                                             |
+| `saveState`           | `state`                                       |
+| `saveRequest`         | `savedRequestId`, `name`, `request`           |
+| `deleteSavedRequest`  | `savedRequestId`                              |
+| `clearHistory`        | —                                             |
+| `exportSavedRequests` | `savedRequestIds`, `format`, `includeSecrets` |
+| `shutdown`            | —                                             |
 
 Sidecar to extension:
 
-| `type`             | Payload                                                         |
-| ------------------ | --------------------------------------------------------------- |
-| `handshakeOk`      | `serverName`, `serverVersion`, `protocolVersion`                |
-| `handshakeError`   | `message`, `expectedProtocolVersion`, `receivedProtocolVersion` |
-| `requestComplete`  | `response`, `historyEntry`                                      |
-| `requestError`     | `error`, `historyEntry`                                         |
-| `requestCancelled` | `wasInFlight`                                                   |
-| `codeGenerated`    | `code`, `error`                                                 |
-| `stateLoaded`      | `state`, `recovery`, `storagePath`                              |
-| `stateSaved`       | `state`                                                         |
-| `storageError`     | `message`                                                       |
-| `protocolError`    | `message`                                                       |
+| `type`                  | Payload                                                         |
+| ----------------------- | --------------------------------------------------------------- |
+| `handshakeOk`           | `serverName`, `serverVersion`, `protocolVersion`                |
+| `handshakeError`        | `message`, `expectedProtocolVersion`, `receivedProtocolVersion` |
+| `requestComplete`       | `response`, `historyEntry`                                      |
+| `requestError`          | `error`, `historyEntry`                                         |
+| `requestCancelled`      | `wasInFlight`                                                   |
+| `codeGenerated`         | `code`, `error`                                                 |
+| `stateLoaded`           | `state`, `recovery`, `storagePath`                              |
+| `stateSaved`            | `state`                                                         |
+| `savedRequestsExported` | `contents`                                                      |
+| `storageError`          | `message`                                                       |
+| `protocolError`         | `message`                                                       |
 
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.
@@ -96,6 +98,14 @@ nothing about it touches the network.
 
 The first four names are what they have always been. A target the sidecar does
 not know fails to decode, which is what the protocol version is for.
+
+`exportSavedRequests` answers with the file's contents, not a file: the
+extension host asks where to save it and writes it, so the sidecar never writes
+to a path it was handed. `format` is `json` or `http`, and unless
+`includeSecrets` is set every secret is a `{{variable}}` named for it.
+
+The TypeScript side keeps its own copy of `PROTOCOL_VERSION`, in
+`apps/vscode/src/extension/protocol.ts`, and a test fails if the two differ.
 
 ## Binary bodies
 

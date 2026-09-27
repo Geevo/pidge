@@ -1,6 +1,7 @@
 import type {
   AppState,
   CodeTarget,
+  ExportInput,
   FilePickRequest,
   HostCommand,
   HttpRequest,
@@ -50,6 +51,10 @@ class VsCodeBridge implements PlatformBridge {
 
   pickFile(request: FilePickRequest): Promise<string | null> {
     return this.call<string | null>("pickFile", request);
+  }
+
+  exportSavedRequests(input: ExportInput): Promise<string | null> {
+    return this.call<string | null>("exportSavedRequests", input);
   }
 
   loadState(): Promise<LoadedState> {

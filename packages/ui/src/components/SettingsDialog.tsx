@@ -5,6 +5,7 @@ import { FONT_SCALES } from "../lib/fontScale";
 import { shortcutHint } from "../lib/shortcuts";
 import type { ClientIdentitySettings, Settings, SyntaxTheme, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
+import { SecretInput } from "./SecretInput";
 import logo from "../assets/app-icon.svg";
 
 interface Props {
@@ -516,15 +517,13 @@ export function SettingsDialog({
                 {identity ? (
                   <div className="ac-field">
                     <label htmlFor="ac-client-pass">Password</label>
-                    <input
+                    <SecretInput
                       id="ac-client-pass"
-                      type="password"
+                      name="certificate password"
                       placeholder="Required for .p12 / .pfx"
                       value={identity.password ?? ""}
-                      onChange={(event) =>
-                        patchTls({
-                          clientIdentity: { path: identity.path, password: event.target.value },
-                        })
+                      onChange={(password) =>
+                        patchTls({ clientIdentity: { path: identity.path, password } })
                       }
                     />
                   </div>

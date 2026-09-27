@@ -1,6 +1,7 @@
 import type {
   AppState,
   CodeTarget,
+  ExportFormat,
   HistoryEntry,
   HttpRequest,
   HttpResponse,
@@ -43,6 +44,15 @@ export interface PlatformBridge {
    */
   pickFile?(request: FilePickRequest): Promise<string | null>;
   /**
+   * Optional: asks where to save, then writes the chosen saved requests there.
+   * Resolves with the path written, or `null` if the dialog was dismissed.
+   *
+   * The host writes the contents, so both platforms produce the same file, and
+   * the host opens the dialog, so the path is always one the user just chose.
+   * Absent on a host that cannot save files, and the Export button with it.
+   */
+  exportSavedRequests?(input: ExportInput): Promise<string | null>;
+  /**
    * Optional: commands the host initiates, such as a Command Palette entry.
    * Returns an unsubscribe function. Hosts with no such commands omit it.
    */
@@ -63,6 +73,15 @@ export interface FilePickFilter {
   readonly name: string;
   /** Without the dot, as both hosts expect. */
   readonly extensions: readonly string[];
+}
+
+export interface ExportInput {
+  readonly savedRequestIds: readonly string[];
+  readonly format: ExportFormat;
+  /** Unless set, secrets are written as `{{variables}}` named for them. */
+  readonly includeSecrets: boolean;
+  /** A suggestion for the dialog, with no directory. */
+  readonly fileName: string;
 }
 
 /** Commands a host can push into the UI. */

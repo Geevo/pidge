@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppState,
   CodeTarget,
+  ExportInput,
   FilePickRequest,
   HttpRequest,
   LoadedState,
@@ -92,6 +93,16 @@ const tauriBridge = {
 
   sendRequest(request: HttpRequest): Promise<SendOutcome> {
     return invoke<SendOutcome>("send_http_request", { request });
+  },
+
+  // The save dialog is opened by the command itself, so no path crosses here.
+  exportSavedRequests(input: ExportInput): Promise<string | null> {
+    return invoke<string | null>("export_saved_requests", {
+      savedRequestIds: input.savedRequestIds,
+      format: input.format,
+      includeSecrets: input.includeSecrets,
+      fileName: input.fileName,
+    });
   },
 
   async cancelRequest(requestId: string): Promise<void> {

@@ -11,8 +11,8 @@
 
 use std::collections::HashMap;
 
-use api_client_core::redact::is_secret_header;
-use api_client_core::{AuthConfig, HttpRequest};
+use api_client_core::HttpRequest;
+use api_client_core::redact::{auth_kind, auth_secrets_mut, is_secret_header};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use chacha20poly1305::aead::{Aead, Generate, Key, KeyInit};
@@ -168,45 +168,9 @@ fn request_secrets(
     pass: Pass,
     visit: &mut impl FnMut(&str, &mut String),
 ) {
-    // Exhaustive on purpose: a new kind of auth has to decide what in it is secret.
-    // Identifiers — usernames, client ids, OAuth 1 tokens — stay readable.
-    match &mut request.auth {
-        AuthConfig::None => {}
-        AuthConfig::Bearer { token } => visit(&format!("{at}/auth/bearer/token"), token),
-        AuthConfig::Basic { password, .. } => {
-            visit(&format!("{at}/auth/basic/password"), password);
-        }
-        AuthConfig::Digest { password, .. } => {
-            visit(&format!("{at}/auth/digest/password"), password);
-        }
-        AuthConfig::Ntlm { password, .. } => {
-            visit(&format!("{at}/auth/ntlm/password"), password);
-        }
-        AuthConfig::OAuth1(settings) => {
-            visit(
-                &format!("{at}/auth/oauth1/consumerSecret"),
-                &mut settings.consumer_secret,
-            );
-            visit(
-                &format!("{at}/auth/oauth1/tokenSecret"),
-                &mut settings.token_secret,
-            );
-        }
-        AuthConfig::OAuth2(settings) => {
-            visit(
-                &format!("{at}/auth/oauth2/clientSecret"),
-                &mut settings.client_secret,
-            );
-            visit(
-                &format!("{at}/auth/oauth2/password"),
-                &mut settings.password,
-            );
-            visit(
-                &format!("{at}/auth/oauth2/refreshToken"),
-                &mut settings.refresh_token,
-            );
-        }
-        AuthConfig::ApiKey { value, .. } => visit(&format!("{at}/auth/apiKey/value"), value),
+    let kind = auth_kind(&request.auth);
+    for (field, value) in auth_secrets_mut(&mut request.auth) {
+        visit(&format!("{at}/auth/{kind}/{field}"), value);
     }
 
     // Opening looks at every header, so a value still decrypts after its

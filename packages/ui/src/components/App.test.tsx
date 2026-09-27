@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FilePickRequest } from "../bridge";
+import type { ExportInput, FilePickRequest } from "../bridge";
 import { FakeBridge, defaultState, failure, historyEntry, ok, response } from "../test/fakeBridge";
 import { App } from "./App";
 
@@ -471,7 +471,8 @@ describe("request configuration", () => {
 
     await user.click(screen.getByRole("tab", { name: /Headers/ }));
     await user.type(screen.getByRole("textbox", { name: "Name 1" }), "Authorization");
-    await user.type(screen.getByRole("textbox", { name: "Value 1" }), "Token x");
+    // Masked now, as a secret header's value is.
+    await user.type(screen.getByLabelText("Value 1"), "Token x");
 
     expect(screen.getByText(/Auth tab will be ignored/)).toBeInTheDocument();
   });
@@ -2647,5 +2648,187 @@ describe("the code pane's highlighting", () => {
   ])("colours %s", async (language, code) => {
     const user = userEvent.setup();
     expect(await tokensIn(user, language, code)).toBeGreaterThan(0);
+  });
+});
+
+describe("hiding secrets", () => {
+  it("covers a token until its eye is pressed, and covers it again after", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+    await choose(user, screen.getByLabelText("Auth"), "Bearer token");
+    const token = screen.getByLabelText("Token");
+    await user.type(token, "a-token");
+    expect(token).toHaveAttribute("type", "password");
+
+    await user.click(screen.getByRole("button", { name: "Show token" }));
+    expect(token).toHaveAttribute("type", "text");
+    expect(screen.getByRole("button", { name: "Hide token" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Hide token" }));
+    expect(token).toHaveAttribute("type", "password");
+    expect(token).toHaveValue("a-token");
+  });
+
+  it("covers every password-like field in each scheme", async () => {
+    const { user } = setup();
+    await ready();
+    await user.click(screen.getByRole("tab", { name: "Auth" }));
+
+    await choose(user, screen.getByLabelText("Auth"), "API key");
+    expect(screen.getByLabelText("Value")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Key")).toHaveAttribute("type", "text");
+
+    await choose(user, screen.getByLabelText("Auth"), "OAuth 2");
+    expect(screen.getByLabelText("Client secret")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Client ID")).toHaveAttribute("type", "text");
+    await choose(user, screen.getByLabelText("Grant"), "Refresh token");
+    expect(screen.getByLabelText("Refresh token")).toHaveAttribute("type", "password");
+  });
+
+  it("covers a secret header's value and leaves an ordinary one readable", async () => {
+    const { user } = setup();
+    await ready();
+
+    await user.click(screen.getByRole("tab", { name: /Headers/ }));
+    await user.type(screen.getByRole("textbox", { name: "Name 1" }), "X-API-Key");
+    await user.type(screen.getByLabelText("Value 1"), "k-1");
+    await user.type(screen.getByRole("textbox", { name: "Name 2" }), "Accept");
+
+    expect(screen.getByLabelText("Value 1")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Value 2")).toHaveAttribute("type", "text");
+
+    await user.click(screen.getByRole("button", { name: "Show X-API-Key value" }));
+    expect(screen.getByLabelText("Value 1")).toHaveAttribute("type", "text");
+  });
+});
+
+describe("exporting saved requests", () => {
+  function withSaved(bridge: FakeBridge) {
+    const saved = (name: string, url: string) => ({
+      id: name,
+      name,
+      request: { ...historyEntry(response({ finalUrl: url })).request },
+      createdAt: 0,
+      updatedAt: 0,
+    });
+    bridge.state = {
+      ...defaultState(),
+      savedRequests: [
+        saved("List users", "http://localhost:3000/users"),
+        saved("Health check", "http://localhost:3000/health"),
+      ],
+    };
+  }
+
+  async function openDrawer(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Saved requests" }));
+    return screen.findByRole("complementary");
+  }
+
+  it("is not offered by a host that cannot save files", async () => {
+    const bridge = new FakeBridge();
+    withSaved(bridge);
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const panel = await openDrawer(user);
+    expect(
+      within(panel).queryByRole("button", { name: "Export saved requests" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves secrets out unless asked, and says where the file went", async () => {
+    const bridge = new FakeBridge();
+    withSaved(bridge);
+    const exported: ExportInput[] = [];
+    bridge.exportSavedRequests = (input) => {
+      exported.push(input);
+      return Promise.resolve("/home/ada/saved-requests.json");
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const panel = await openDrawer(user);
+    await user.click(within(panel).getByRole("button", { name: "Export saved requests" }));
+    const dialog = screen.getByRole("dialog", { name: "Export saved requests" });
+
+    expect(within(dialog).getByRole("radio", { name: /JSON/ })).toBeChecked();
+    expect(within(dialog).getByRole("checkbox", { name: /Include passwords/ })).not.toBeChecked();
+    expect(within(dialog).getByText(/safe to share/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Export 2 requests" }));
+
+    await waitFor(() => expect(exported).toHaveLength(1));
+    expect(exported[0]).toEqual({
+      savedRequestIds: ["List users", "Health check"],
+      format: "json",
+      includeSecrets: false,
+      fileName: "saved-requests.json",
+    });
+    expect(
+      await screen.findByText("Exported 2 requests to /home/ada/saved-requests.json."),
+    ).toBeInTheDocument();
+  });
+
+  it("exports one request as .http with its secrets when asked", async () => {
+    const bridge = new FakeBridge();
+    withSaved(bridge);
+    const exported: ExportInput[] = [];
+    bridge.exportSavedRequests = (input) => {
+      exported.push(input);
+      return Promise.resolve("/tmp/health-check.http");
+    };
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const panel = await openDrawer(user);
+    // Whatever the search shows is what starts ticked.
+    await user.type(within(panel).getByRole("textbox", { name: "Search saved" }), "health");
+    await user.click(within(panel).getByRole("button", { name: "Export saved requests" }));
+    const dialog = screen.getByRole("dialog", { name: "Export saved requests" });
+    expect(within(dialog).getByRole("checkbox", { name: "List users" })).not.toBeChecked();
+
+    await user.click(within(dialog).getByRole("radio", { name: /\.http/ }));
+    await user.click(within(dialog).getByRole("checkbox", { name: /Include passwords/ }));
+    expect(within(dialog).getByText(/Treat the file like the passwords/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Export 1 request" }));
+
+    await waitFor(() => expect(exported).toHaveLength(1));
+    expect(exported[0]).toMatchObject({
+      savedRequestIds: ["Health check"],
+      format: "http",
+      includeSecrets: true,
+      fileName: "health-check.http",
+    });
+    expect(await screen.findByText(/with passwords and tokens in plain text/)).toBeInTheDocument();
+  });
+
+  it("cannot export nothing, and says nothing when the save dialog is dismissed", async () => {
+    const bridge = new FakeBridge();
+    withSaved(bridge);
+    bridge.exportSavedRequests = () => Promise.resolve(null);
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    await ready();
+
+    const panel = await openDrawer(user);
+    await user.click(within(panel).getByRole("button", { name: "Export saved requests" }));
+    const dialog = screen.getByRole("dialog", { name: "Export saved requests" });
+
+    await user.click(within(dialog).getByRole("checkbox", { name: /^All/ }));
+    expect(within(dialog).getByRole("button", { name: "Export 0 requests" })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: "List users" }));
+    await user.click(within(dialog).getByRole("button", { name: "Export 1 request" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

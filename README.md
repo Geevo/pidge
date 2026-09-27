@@ -55,6 +55,9 @@ No macOS build. It ought to build there; nobody has tried.
   certificates for a network that needs them.
 - Tabs, local history, saved requests, light and dark themes, syntax colours
   that can borrow VS Code's or One's, and a keyboard that does what you expect.
+- Saved requests export to a file: JSON, which keeps everything, or a `.http`
+  file that VS Code REST Client and JetBrains run. Passwords and tokens become
+  `{{variables}}` unless you ask for them.
 - Text you can read: five sizes from 90% to 150%, on the keyboard or under
   Settings, and the whole window grows with it rather than the labels alone.
 
@@ -154,7 +157,8 @@ No analytics, no telemetry, no remote configuration, no update check, no web
 fonts. Secret header values — `Authorization`, `Cookie`, `X-API-Key` and
 friends — are never written to a log. Saved passwords and tokens are encrypted
 with a key the operating system protects, without ever prompting for a
-password; see [Storage](docs/storage.md#secrets).
+password; see [Storage](docs/storage.md#secrets). On screen they stay covered
+until you press the eye beside them.
 
 ## Licence
 

@@ -179,6 +179,19 @@ pub async fn run(store: Store) -> io::Result<()> {
                 );
             }
 
+            ClientMessage::ExportSavedRequests {
+                saved_request_ids,
+                format,
+                include_secrets,
+            } => {
+                let contents =
+                    session.export_saved_requests(&saved_request_ids, format, include_secrets);
+                send(
+                    &outbound,
+                    ServerEnvelope::new(id, ServerMessage::SavedRequestsExported { contents }),
+                );
+            }
+
             ClientMessage::LoadState => {
                 send(
                     &outbound,
