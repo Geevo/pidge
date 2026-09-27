@@ -51,64 +51,60 @@ talking-to the first time.
 
 ## Features
 
-- All the methods you'd expect: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`,
-  `HEAD`, `OPTIONS`.
-- JSON, plain text, form or multipart bodies. Responses come back highlighted
-  and foldable (JSON, HTML, XML, YAML, CSS, JavaScript), going by what the
-  server says it sent. JSON gets laid out for you, and when something that's
-  secretly JSON turns up as `text/plain` (we've all been there), a
-  **Pretty print** box offers to sort it out.
-- Query params and headers as tables you can switch on and off row by row, plus
-  a toggle for URL-encoding. The URL bar shows you the difference as you flip
-  it.
-- Auth without hand-rolling headers: bearer, basic, digest, NTLM, API key,
-  OAuth 1 and OAuth 2. A header you typed yourself always wins.
-- `{{variables}}` from simple environments, so the same request can hit staging
-  and prod.
-- HTTPS you can actually look at: click the padlock to see the certificate the
-  server sent, with a heads-up if it's expired or self-signed.
-- Your system's certificate store by default, plus extra CAs and client
-  certificates if your network needs them.
-- Tabs, history, saved requests, light and dark themes (syntax colours can
-  borrow VS Code's, Atom One's or GitHub's), and keyboard shortcuts that do
-  what you'd expect.
-- Text from 90% to 150%, and the whole window grows with it, not just the
-  labels.
+- **Every method**: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`.
+- **Request bodies**: JSON, plain text, form and multipart.
+- **Readable responses**: highlighting and folding for JSON, HTML, XML, YAML,
+  CSS and JavaScript. JSON is pretty-printed, and one click away when a server
+  sends it as `text/plain`.
+- **Params and headers**: tables with an on/off switch per row, and a
+  URL-encoding toggle you can preview in the URL bar.
+- **Auth**: bearer, basic, digest, NTLM, API key, OAuth 1 and OAuth 2. A header
+  you set yourself takes priority.
+- **Environments**: `{{variables}}`, so one request works against staging and
+  prod.
+- **Certificate details**: click the padlock to see the server's certificate.
+  Expired and self-signed ones are flagged.
+- **Custom CAs and client certificates**, on top of your system's certificate
+  store.
+- **Tabs, history and saved requests.**
+- **Themes**: light and dark, with syntax colours from VS Code, Atom One or
+  GitHub.
+- **Keyboard shortcuts** for the everyday stuff (see [below](#keyboard)).
+- **Text size** from 90% to 150%, scaling the whole window, not just the text.
 
-### Copy it as code
+### Copy as code
 
 ![The Code tab showing a POST request as curl, with a 201 Created response](docs/screenshots/code.png)
 
-Get the same request as curl, PowerShell, Python, C#, Rust, Node.js, Go, Java,
-PHP or Zig, and where a language has more than one way to do it, pick the
-library. It's built from what would actually be sent (variables filled in, the
-query folded into the URL, your timeout, redirect and certificate settings
-included), so what you paste elsewhere does the same thing. If a snippet can't
-do something, like an OAuth 1 signature, it says so in a comment instead of
-quietly leaving it out.
+Turn any request into curl, PowerShell, Python, C#, Rust, Node.js, Go, Java, PHP
+or Zig, picking the library where a language has more than one. Snippets are
+built from what would actually be sent: variables filled in, query in the URL,
+your timeout, redirect and certificate settings included. Anything a snippet
+can't do, like an OAuth 1 signature, is called out in a comment.
 
-### Secrets stay secret
+### Masked and encrypted secrets
 
 ![OAuth 2 settings with the client secret covered and an eye to show it](docs/screenshots/secrets.png)
 
-Passwords, tokens and client secrets stay covered until you press the eye, so a
-screen share doesn't give them away. On disk they're encrypted with a key your
-operating system looks after (DPAPI on Windows, your keyring or
-`systemd-creds` on Linux), and it never nags you for a password to get at it.
-The details are in [docs/storage.md](docs/storage.md#secrets).
+Passwords, tokens and client secrets are hidden until you press the eye, so
+they stay off screen shares. On disk they're encrypted with a key your operating
+system protects (DPAPI on Windows, your keyring or `systemd-creds` on Linux),
+with no password prompts. Details in [docs/storage.md](docs/storage.md#secrets).
 
-### Share your requests
+### Import and export
 
 ![The export dialog with five saved requests, the .http format picked and passwords left out](docs/screenshots/export.png)
 
-Export saved requests as JSON (everything, for moving to another machine) or as
-a `.http` file that VS Code's REST Client and JetBrains can run. Passwords and
-tokens get swapped for `{{placeholders}}` unless you ask for them, so the file
-is safe to drop in a chat. Import takes either back, or a `.http` file from REST
-Client or JetBrains, and tells you which variables you still need to fill in.
+Export saved requests as JSON (everything, for moving machines) or as a `.http`
+file for VS Code's REST Client and JetBrains. Passwords and tokens become
+`{{placeholders}}` unless you include them, so exports are safe to share. Import
+reads either, or `.http` files from REST Client and JetBrains, and lists any
+variables you still need to define.
 
-What it won't do: accounts, sync, sharing through somebody's cloud, dashboards,
-telemetry, update pings, or anything that asks you to sign in.
+## What it won't do
+
+Accounts, sync, sharing through somebody's cloud, dashboards, telemetry, update
+pings, or anything that asks you to sign in.
 
 ## Keyboard
 
