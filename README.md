@@ -1,4 +1,4 @@
-# API Client
+# pidge
 
 A small HTTP client for your own machine.
 
@@ -18,11 +18,11 @@ request it ever makes is the one you asked for.
 There are builds on the [releases page](../../releases) — nothing to install
 either way.
 
-| Platform        | File                                   | Notes                                                                               |
-| --------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
-| Windows 10/11   | `api-client-<version>-windows-x64.zip` | Unzip and run the `.exe`. Needs the WebView2 runtime, which Windows 11 already has. |
-| Linux           | `api-client-<version>-x86_64.AppImage` | `chmod +x` it and run it. Carries its own browser engine.                           |
-| Linux, packaged | `.deb` / `.rpm`                        | A twentieth of the size: these use the WebKitGTK your system already has.           |
+| Platform        | File                              | Notes                                                                               |
+| --------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
+| Windows 10/11   | `pidge-<version>-windows-x64.zip` | Unzip and run the `.exe`. Needs the WebView2 runtime, which Windows 11 already has. |
+| Linux           | `pidge-<version>-x86_64.AppImage` | `chmod +x` it and run it. Carries its own browser engine.                           |
+| Linux, packaged | `.deb` / `.rpm`                   | A twentieth of the size: these use the WebKitGTK your system already has.           |
 
 No macOS build. It ought to build there; nobody has tried.
 
@@ -84,11 +84,11 @@ pings, or anything that asks you to sign in.
 
 One human-readable JSON file, where your platform keeps application data:
 
-| Platform | Path                                       |
-| -------- | ------------------------------------------ |
-| Windows  | `%APPDATA%\api-client`                     |
-| macOS    | `~/Library/Application Support/api-client` |
-| Linux    | `~/.local/share/api-client`                |
+| Platform | Path                                  |
+| -------- | ------------------------------------- |
+| Windows  | `%APPDATA%\pidge`                     |
+| macOS    | `~/Library/Application Support/pidge` |
+| Linux    | `~/.local/share/pidge`                |
 
 Settings shows you the exact path. Delete the file and the app starts fresh; if
 it is ever unreadable it is kept beside the new one rather than thrown away.

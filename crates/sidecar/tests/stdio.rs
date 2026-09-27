@@ -25,7 +25,7 @@ impl Sidecar {
             .arg(state_dir.path())
             // Keeps the suite out of the user's keyring, and the same
             // whether or not the machine running it has one.
-            .env("API_CLIENT_KEYRING", "off")
+            .env("PIDGE_KEYRING", "off")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

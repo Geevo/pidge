@@ -6,7 +6,7 @@ import { shortcutHint } from "../lib/shortcuts";
 import type { ClientIdentitySettings, Settings, SyntaxTheme, Theme } from "../types";
 import { CloseIcon, PlusIcon } from "./icons";
 import { SecretInput } from "./SecretInput";
-import logo from "../assets/app-icon.svg";
+import logo from "../assets/app-icon.png";
 
 interface Props {
   settings: Settings;
@@ -558,7 +558,7 @@ export function SettingsDialog({
                 draggable={false}
               />
 
-              <h3 className="ac-about__name">API Client</h3>
+              <h3 className="ac-about__name">pidge</h3>
               <p className="ac-about__version">{version || "unknown version"}</p>
 
               <p className="ac-about__tagline">A no-thrills, local-first HTTP client.</p>

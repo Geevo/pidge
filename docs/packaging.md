@@ -28,7 +28,7 @@ compiles the resource script that carries the icon and the manifest. On Fedora
 that is `clang`, `lld` and `llvm`; `lld-link` can also come from the Rust
 toolchain's own `rust-lld`, which is the same linker under another name.
 
-The result is `target/x86_64-pc-windows-msvc/release/api-client-desktop.exe`,
+The result is `target/x86_64-pc-windows-msvc/release/pidge.exe`,
 about 10 MB, with the icon, the manifest and the version resource compiled in.
 It needs the WebView2 runtime on the machine that runs it — present on Windows
 11 and most of Windows 10, and the NSIS installer can fetch it when it is not.
@@ -67,13 +67,14 @@ storage goes through `crates/storage`.
 
 ## The icon
 
-`packages/ui/src/assets/app-icon.svg` is the source. Everything in
+`packages/ui/src/assets/app-icon.png` is the source: 1024 px, with the corners
+already transparent. Everything in
 `apps/desktop/src-tauri/icons/` is generated from it, and Settings shows the
 same file in About, so the artwork exists once:
 
 ```bash
 cd apps/desktop
-pnpm exec tauri icon ../../packages/ui/src/assets/app-icon.svg
+pnpm exec tauri icon ../../packages/ui/src/assets/app-icon.png
 ```
 
 That writes Android, iOS and Windows Store sizes too, which this project has no
@@ -81,7 +82,7 @@ targets for; only the five files `bundle.icon` lists are kept.
 
 Where the icon comes from depends on how the app was started. An installed
 package puts the PNGs in `hicolor` and writes a desktop entry with
-`Icon=api-client-desktop` and `StartupWMClass=api-client-desktop`, and GTK
+`Icon=pidge` and `StartupWMClass=pidge`, and GTK
 derives the same app id from the binary name, so a Wayland taskbar matches the
 window to that entry. Run straight from `target/`, there is no desktop entry to
 match: X11 falls back to the window icon compiled into the binary, and Wayland
@@ -121,8 +122,8 @@ the binaries are collected before packaging.
 Then:
 
 ```bash
-pnpm --filter api-client build     # extension host + webview
-pnpm --filter api-client package   # vsce package --no-dependencies
+pnpm --filter pidge build     # extension host + webview
+pnpm --filter pidge package   # vsce package --no-dependencies
 ```
 
 `Sidecar.resolveBinary` looks, in order, at:
@@ -156,7 +157,7 @@ by the time the bundler reads `bundle.resources`.
 Verify what a VSIX would contain with:
 
 ```bash
-pnpm --filter api-client exec vsce ls --no-dependencies
+pnpm --filter pidge exec vsce ls --no-dependencies
 ```
 
 `--no-dependencies` is required: `vsce` otherwise shells out to `npm ls`, which

@@ -6,11 +6,12 @@
 mod commands;
 
 use api_client_session::Session;
-use api_client_storage::{Store, default_data_dir};
+use api_client_storage::{Store, adopt_legacy_data_dir, default_data_dir};
 
 pub fn run() {
     init_tracing();
 
+    adopt_legacy_data_dir();
     let store = Store::in_dir(default_data_dir()).with_system_keyring();
     let session = match Session::start(store) {
         Ok(session) => session,
@@ -45,7 +46,7 @@ pub fn run() {
 fn init_tracing() {
     use tracing_subscriber::EnvFilter;
 
-    let filter = EnvFilter::try_from_env("API_CLIENT_LOG")
+    let filter = EnvFilter::try_from_env("PIDGE_LOG")
         .unwrap_or_else(|_| EnvFilter::new("api_client_desktop=info,api_client_http_engine=info"));
 
     let _ = tracing_subscriber::fmt()

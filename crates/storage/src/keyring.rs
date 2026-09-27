@@ -153,7 +153,9 @@ mod platform {
     use super::{KeyFile, unavailable};
 
     /// Mixed in so that another program running as the same user cannot hand
-    /// the blob to DPAPI and get the key back without knowing it.
+    /// the blob to DPAPI and get the key back without knowing it. The app's
+    /// name before it was pidge, kept: a key protected with it opens only
+    /// with it.
     const ENTROPY: &[u8] = b"api-client state key";
 
     pub fn protect(key: &str) -> Result<KeyFile, String> {
@@ -249,6 +251,8 @@ mod platform {
     use super::{KeyFile, unavailable};
 
     /// Bound into the credential, so it cannot be passed off as another one.
+    /// Named for the app before it was pidge, and kept: a credential sealed
+    /// under one name will not open under another.
     const CREDENTIAL_NAME: &str = "api-client-key";
 
     /// Both, where both are there; either on its own will do.
@@ -310,6 +314,8 @@ mod platform {
         Ok(output.stdout)
     }
 
+    /// What a key is found by. `api-client` is the app's old name, kept so
+    /// that keys made before the rename are still found.
     fn attributes(item: &str) -> HashMap<&str, &str> {
         HashMap::from([("application", "api-client"), ("key", item)])
     }
@@ -351,7 +357,7 @@ mod platform {
         collection
             .create_item(
                 // What KDE Wallet and Seahorse show for it.
-                "API Client: key for saved passwords",
+                "pidge: key for saved passwords",
                 attributes(item),
                 key.as_bytes(),
                 true,

@@ -64,7 +64,7 @@ export class Sidecar implements vscode.Disposable {
         `request engine exited (code ${code ?? "none"}, signal ${signal ?? "none"})`,
       );
       this.failAllPending(
-        new Error("The request engine stopped. Run “API Client: Restart Request Engine”."),
+        new Error("The request engine stopped. Run “pidge: Restart Request Engine”."),
       );
       this.child = null;
       this.starting = null;
@@ -213,7 +213,7 @@ export class Sidecar implements vscode.Disposable {
    */
   private resolveBinary(): string {
     const configured = vscode.workspace
-      .getConfiguration("apiClient")
+      .getConfiguration("pidge")
       .get<string>("sidecarPath", "")
       .trim();
     if (configured !== "") return configured;
@@ -234,12 +234,12 @@ export class Sidecar implements vscode.Disposable {
 
     throw new Error(
       `No request engine found for ${process.platform}-${process.arch}. ` +
-        `Run "pnpm build:sidecar", or set apiClient.sidecarPath.`,
+        `Run "pnpm build:sidecar", or set pidge.sidecarPath.`,
     );
   }
 
   private trace(message: string): void {
-    if (vscode.workspace.getConfiguration("apiClient").get<boolean>("trace", false)) {
+    if (vscode.workspace.getConfiguration("pidge").get<boolean>("trace", false)) {
       this.output.appendLine(message);
     }
   }

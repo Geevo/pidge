@@ -4,12 +4,24 @@ Everything is local. One human-readable JSON file per installation.
 
 ## Where
 
-| Platform | Location                                                                            |
-| -------- | ----------------------------------------------------------------------------------- |
-| Linux    | `$XDG_DATA_HOME/api-client/state.json`, else `~/.local/share/api-client/state.json` |
-| macOS    | `~/Library/Application Support/api-client/state.json`                               |
-| Windows  | `%APPDATA%\api-client\state.json`                                                   |
-| VS Code  | the extension's **global** storage directory                                        |
+| Platform | Location                                                                  |
+| -------- | ------------------------------------------------------------------------- |
+| Linux    | `$XDG_DATA_HOME/pidge/state.json`, else `~/.local/share/pidge/state.json` |
+| macOS    | `~/Library/Application Support/pidge/state.json`                          |
+| Windows  | `%APPDATA%\pidge\state.json`                                              |
+| VS Code  | the extension's **global** storage directory                              |
+
+Before 0.1.0 the app was called API Client and kept its data in an
+`api-client` directory in the same place. On startup, if there is no `pidge`
+directory yet and there is an `api-client` one, it is renamed into place, key
+file and all, so an upgrade opens on the same tabs, history and saved requests.
+It never moves over a `pidge` directory that already exists.
+
+The names that protect the key are the old ones and stay that way — the DPAPI
+entropy, the `systemd-creds` credential name and the keyring attribute — since
+a key protected under one name will not open under another. An export still
+imports whether it calls itself `pidge/saved-requests` or, from before the
+rename, `api-client/saved-requests`.
 
 VS Code uses global storage rather than workspace storage on purpose: the client
 works with no folder open, and your history should not depend on which project
@@ -122,7 +134,7 @@ version is fixed on load. `%APPDATA%` is already private on Windows.
   `state.undecryptable-<timestamp>.json`, the secrets are cleared, and the app
   says so. Everything else loads as normal.
 
-`API_CLIENT_KEYRING=off` skips the key entirely and saves secrets as plain text
+`PIDGE_KEYRING=off` skips the key entirely and saves secrets as plain text
 without the notice. The sidecar tests use it.
 
 ## Atomic writes

@@ -30,8 +30,8 @@ export class ApiClientPanel {
     }
 
     const panel = vscode.window.createWebviewPanel(
-      "apiClient.panel",
-      "API Client",
+      "pidge.panel",
+      "pidge",
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -267,7 +267,7 @@ export class ApiClientPanel {
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="${asset("webview.css")}" />
-    <title>API Client</title>
+    <title>pidge</title>
   </head>
   <body>
     <div id="root"></div>

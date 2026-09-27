@@ -1,5 +1,5 @@
 {
-  "name": "api-client",
+  "name": "pidge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -24,7 +24,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
-  "displayName": "API Client",
+  "displayName": "pidge",
   "description": "Type a URL, press Send. A local-first HTTP client inside VS Code.",
   "publisher": "apiclient",
   "license": "MIT",
@@ -39,51 +39,51 @@
   "contributes": {
     "commands": [
       {
-        "command": "apiClient.open",
+        "command": "pidge.open",
         "title": "Open",
-        "category": "API Client"
+        "category": "pidge"
       },
       {
-        "command": "apiClient.newRequest",
+        "command": "pidge.newRequest",
         "title": "New Request",
-        "category": "API Client"
+        "category": "pidge"
       },
       {
-        "command": "apiClient.restartSidecar",
+        "command": "pidge.restartSidecar",
         "title": "Restart Request Engine",
-        "category": "API Client"
+        "category": "pidge"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "apiClient",
-          "title": "API Client",
+          "id": "pidge",
+          "title": "pidge",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "apiClient": [
+      "pidge": [
         {
-          "id": "apiClient.launcher",
-          "name": "API Client",
+          "id": "pidge.launcher",
+          "name": "pidge",
           "type": "webview"
         }
       ]
     },
     "configuration": {
-      "title": "API Client",
+      "title": "pidge",
       "properties": {
-        "apiClient.sidecarPath": {
+        "pidge.sidecarPath": {
           "type": "string",
           "default": "",
           "description": "Path to a request engine binary. Leave empty to use the one bundled with the extension."
         },
-        "apiClient.trace": {
+        "pidge.trace": {
           "type": "boolean",
           "default": false,
-          "description": "Log protocol traffic to the API Client output channel. Secret header values are never logged."
+          "description": "Log protocol traffic to the pidge output channel. Secret header values are never logged."
         }
       }
     }

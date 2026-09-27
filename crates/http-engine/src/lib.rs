@@ -56,7 +56,7 @@ impl Default for EngineConfig {
             follow_redirects: true,
             max_redirects: DEFAULT_MAX_REDIRECTS,
             store_cookies: true,
-            user_agent: concat!("api-client/", env!("CARGO_PKG_VERSION")).to_string(),
+            user_agent: concat!("pidge/", env!("CARGO_PKG_VERSION")).to_string(),
             tls: TlsSettings::default(),
         }
     }

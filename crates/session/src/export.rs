@@ -13,7 +13,10 @@ use api_client_storage::SavedRequest;
 use serde::Serialize;
 
 /// What an export says it is, so an import can tell.
-pub(crate) const EXPORT_KIND: &str = "api-client/saved-requests";
+pub(crate) const EXPORT_KIND: &str = "pidge/saved-requests";
+
+/// What exports said they were before the app was called pidge.
+pub(crate) const LEGACY_EXPORT_KIND: &str = "api-client/saved-requests";
 
 /// The JSON form, labelled so a file can say what it is.
 #[derive(Serialize)]
@@ -217,7 +220,7 @@ mod tests {
         let json = export(std::slice::from_ref(&saved), ExportFormat::Json, true);
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(value["kind"], "api-client/saved-requests");
+        assert_eq!(value["kind"], "pidge/saved-requests");
         let back: Vec<SavedRequest> =
             serde_json::from_value(value["savedRequests"].clone()).unwrap();
         assert_eq!(back, vec![saved]);

@@ -16,7 +16,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 
-const BOUNDARY: &str = "api-client-boundary";
+const BOUNDARY: &str = "pidge-boundary";
 
 /// One block per request, in the order given, each headed by its name.
 pub fn http_file<'a>(requests: impl IntoIterator<Item = (&'a str, &'a HttpRequest)>) -> String {
@@ -420,9 +420,9 @@ mod tests {
         };
 
         let file = http_file([("Upload", &request)]);
-        assert!(file.contains("Content-Type: multipart/form-data; boundary=api-client-boundary\n"));
+        assert!(file.contains("Content-Type: multipart/form-data; boundary=pidge-boundary\n"));
         assert!(file.contains("name=\"photo\"; filename=\"beach.jpg\"\n\n< /home/ada/beach.jpg\n"));
-        assert!(file.ends_with("--api-client-boundary--\n"));
+        assert!(file.ends_with("--pidge-boundary--\n"));
     }
 
     #[test]

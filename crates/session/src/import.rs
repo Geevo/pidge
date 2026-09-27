@@ -10,7 +10,7 @@ use api_client_core::{HttpRequest, MultipartEntry, RequestBody, new_id};
 use api_client_storage::SavedRequest;
 use serde::Deserialize;
 
-use crate::export::EXPORT_KIND;
+use crate::export::{EXPORT_KIND, LEGACY_EXPORT_KIND};
 
 /// Larger than any export, and small enough not to hold the app up reading
 /// something that was never one.
@@ -67,12 +67,12 @@ pub fn parse(contents: &str) -> Result<Parsed, String> {
 fn from_json(contents: &str) -> Result<Parsed, String> {
     let file: ImportFile = serde_json::from_str(contents)
         .map_err(|err| format!("The file is not a file of saved requests: {err}."))?;
-    if file.kind.as_deref() != Some(EXPORT_KIND) {
-        return Err("This JSON is not a file of saved requests exported from API Client.".into());
+    if !matches!(file.kind.as_deref(), Some(EXPORT_KIND | LEGACY_EXPORT_KIND)) {
+        return Err("This JSON is not a file of saved requests exported from pidge.".into());
     }
     if file.version.unwrap_or(0) > 1 {
         return Err(
-            "This file was exported by a newer version of API Client. Update to import it.".into(),
+            "This file was exported by a newer version of pidge. Update to import it.".into(),
         );
     }
     Ok(Parsed {
@@ -159,6 +159,13 @@ mod tests {
                 token: "{{token}}".into()
             }
         );
+    }
+
+    #[test]
+    fn reads_an_export_from_before_the_rename() {
+        let json = export(&[saved()], ExportFormat::Json, true)
+            .replace("pidge/saved-requests", "api-client/saved-requests");
+        assert_eq!(parse(&json).unwrap().saved.len(), 1);
     }
 
     #[test]

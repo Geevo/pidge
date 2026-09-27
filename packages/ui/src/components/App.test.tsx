@@ -2906,9 +2906,7 @@ describe("importing saved requests", () => {
 
   it("says why a file was refused", async () => {
     const { user } = importing(() =>
-      Promise.reject(
-        new Error("This JSON is not a file of saved requests exported from API Client."),
-      ),
+      Promise.reject(new Error("This JSON is not a file of saved requests exported from pidge.")),
     );
     await ready();
 
@@ -2918,7 +2916,7 @@ describe("importing saved requests", () => {
 
     expect(
       await screen.findByText(
-        "Could not import: This JSON is not a file of saved requests exported from API Client.",
+        "Could not import: This JSON is not a file of saved requests exported from pidge.",
       ),
     ).toBeInTheDocument();
   });

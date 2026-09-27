@@ -1,6 +1,6 @@
 [package]
 name = "api-client-desktop"
-description = "Desktop shell for the API client."
+description = "pidge: a small HTTP client for your own machine."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,7 +13,7 @@ name = "api_client_desktop"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "api-client-desktop"
+name = "pidge"
 path = "src/main.rs"
 
 [build-dependencies]

@@ -8,7 +8,7 @@ import { Sidecar } from "./sidecar";
  * extension's global storage, not in a workspace.
  */
 export function activate(context: vscode.ExtensionContext): void {
-  const output = vscode.window.createOutputChannel("API Client");
+  const output = vscode.window.createOutputChannel("pidge");
   const sidecar = new Sidecar(context, output);
   context.subscriptions.push(output, sidecar);
 
@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await sidecar.start();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`API Client: ${message}`, "Show Log").then((choice) => {
+      void vscode.window.showErrorMessage(`pidge: ${message}`, "Show Log").then((choice) => {
         if (choice === "Show Log") output.show(true);
       });
       return;
@@ -26,9 +26,9 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("apiClient.open", open),
+    vscode.commands.registerCommand("pidge.open", open),
 
-    vscode.commands.registerCommand("apiClient.newRequest", async () => {
+    vscode.commands.registerCommand("pidge.newRequest", async () => {
       await open();
       ApiClientPanel.show(context, sidecar).post({
         kind: "event",
@@ -37,17 +37,17 @@ export function activate(context: vscode.ExtensionContext): void {
       });
     }),
 
-    vscode.commands.registerCommand("apiClient.restartSidecar", async () => {
+    vscode.commands.registerCommand("pidge.restartSidecar", async () => {
       try {
         await sidecar.restart();
-        void vscode.window.showInformationMessage("API Client: request engine restarted.");
+        void vscode.window.showInformationMessage("pidge: request engine restarted.");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`API Client: ${message}`);
+        void vscode.window.showErrorMessage(`pidge: ${message}`);
       }
     }),
 
-    vscode.window.registerWebviewViewProvider("apiClient.launcher", new LauncherView(), {
+    vscode.window.registerWebviewViewProvider("pidge.launcher", new LauncherView(), {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   );
@@ -82,7 +82,7 @@ class LauncherView implements vscode.WebviewViewProvider {
     </style>
   </head>
   <body>
-    <button id="open" type="button">Open API Client</button>
+    <button id="open" type="button">Open pidge</button>
     <p>Type a URL, press Send. Nothing to set up.</p>
     <script nonce="${nonce}">
       const vscodeApi = acquireVsCodeApi();
@@ -93,7 +93,7 @@ class LauncherView implements vscode.WebviewViewProvider {
 </html>`;
 
     view.webview.onDidReceiveMessage((message: unknown) => {
-      if (message === "open") void vscode.commands.executeCommand("apiClient.open");
+      if (message === "open") void vscode.commands.executeCommand("pidge.open");
     });
   }
 }

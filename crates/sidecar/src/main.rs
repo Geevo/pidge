@@ -58,7 +58,10 @@ fn main() -> ExitCode {
 
     let store = match state_dir {
         Some(dir) => api_client_storage::Store::in_dir(dir),
-        None => api_client_storage::Store::in_dir(api_client_storage::default_data_dir()),
+        None => {
+            api_client_storage::adopt_legacy_data_dir();
+            api_client_storage::Store::in_dir(api_client_storage::default_data_dir())
+        }
     }
     .with_system_keyring();
 
@@ -88,7 +91,7 @@ fn print_help() {
 fn init_tracing() {
     use tracing_subscriber::EnvFilter;
 
-    let filter = EnvFilter::try_from_env("API_CLIENT_LOG")
+    let filter = EnvFilter::try_from_env("PIDGE_LOG")
         .unwrap_or_else(|_| EnvFilter::new("api_client_sidecar=info,api_client_http_engine=info"));
 
     tracing_subscriber::fmt()

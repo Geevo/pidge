@@ -26,16 +26,16 @@ For the VS Code extension:
 
 ```bash
 pnpm build:sidecar --debug          # cargo build + stage the binary
-pnpm --filter api-client build
+pnpm --filter pidge build
 ```
 
-Then <kbd>F5</kbd> in VS Code, and **API Client: Open** in the Extension
+Then <kbd>F5</kbd> in VS Code, and **pidge: Open** in the Extension
 Development Host. When running from source without a staged binary, the
 extension falls back to `target/debug/api-client-sidecar`, so a plain
 `cargo build -p api-client-sidecar` is enough.
 
 `pnpm dev:vscode` watches the extension host. The webview is a separate bundle;
-rebuild it with `pnpm --filter api-client build:webview` and reload the
+rebuild it with `pnpm --filter pidge build:webview` and reload the
 window.
 
 ## Checks
@@ -62,7 +62,7 @@ that never responds at all.
 `crates/sidecar/tests/stdio.rs` drives the real binary over a pipe, the same way
 the extension host does: handshake, version mismatch, malformed input,
 concurrent requests, cancellation, state round trips, and a clean shutdown.
-It starts the sidecar with `API_CLIENT_KEYRING=off`, so the suite never adds
+It starts the sidecar with `PIDGE_KEYRING=off`, so the suite never adds
 items to the keyring of the machine running it, and behaves the same whether or
 not that machine has one. The storage tests
 use an in-memory keyring instead of the system one.

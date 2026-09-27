@@ -29,7 +29,7 @@ pub use migrate::{SCHEMA_VERSION, migrate};
 pub use model::{
     AppState, HistoryEntry, SavedRequest, ScratchTab, Settings, SyntaxTheme, Theme, now_ms,
 };
-pub use paths::default_data_dir;
+pub use paths::{adopt_legacy_data_dir, adopt_legacy_dir, default_data_dir};
 
 pub const STATE_FILE_NAME: &str = "state.json";
 
@@ -139,10 +139,10 @@ impl Store {
 
     /// [`Store::with_keyring`] with a key in `state.key` beside the state
     /// file, protected by the operating system; see [`SystemKeyring`].
-    /// `API_CLIENT_KEYRING=off` skips it, which the tests that start a real
+    /// `PIDGE_KEYRING=off` skips it, which the tests that start a real
     /// sidecar use to stay out of the user's keyring.
     pub fn with_system_keyring(self) -> Self {
-        if std::env::var_os("API_CLIENT_KEYRING").is_some_and(|value| value == "off") {
+        if std::env::var_os("PIDGE_KEYRING").is_some_and(|value| value == "off") {
             return self;
         }
         let keys = SystemKeyring::beside(&self.path);
