@@ -561,7 +561,7 @@ export function SettingsDialog({
               <h3 className="ac-about__name">pidge</h3>
               <p className="ac-about__version">{version || "unknown version"}</p>
 
-              <p className="ac-about__tagline">A no-thrills, local-first HTTP client.</p>
+              <p className="ac-about__tagline">A no-frills, local-first HTTP client.</p>
               <p className="ac-about__tagline ac-about__tagline--minor">
                 No cloud, no accounts, no workspaces. Just an API tester.
               </p>
