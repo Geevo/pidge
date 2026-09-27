@@ -4,7 +4,7 @@ use crate::StorageError;
 use crate::model::AppState;
 
 /// Bump this whenever the on-disk shape changes, and add a step below.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Brings a parsed state file up to [`SCHEMA_VERSION`].
 ///
@@ -42,6 +42,14 @@ fn step(from: u32, mut value: Value) -> Result<Value, StorageError> {
                 return Err(StorageError::Migration(
                     "the state file is not a JSON object".into(),
                 ));
+            }
+            Ok(value)
+        }
+        // Secrets may be encrypted from 2 on. A version 1 file is a version 2
+        // file with every secret in plain text, which the next save encrypts.
+        1 => {
+            if let Some(object) = value.as_object_mut() {
+                object.insert("version".into(), Value::from(2u32));
             }
             Ok(value)
         }

@@ -62,6 +62,10 @@ that never responds at all.
 `crates/sidecar/tests/stdio.rs` drives the real binary over a pipe, the same way
 the extension host does: handshake, version mismatch, malformed input,
 concurrent requests, cancellation, state round trips, and a clean shutdown.
+It starts the sidecar with `API_CLIENT_KEYRING=off`, so the suite never adds
+items to the keyring of the machine running it, and behaves the same whether or
+not that machine has one. The storage tests
+use an in-memory keyring instead of the system one.
 
 **TypeScript.** `pnpm test` runs Vitest with React Testing Library. The UI tests
 use a fake bridge rather than a process, and cover sending, response rendering

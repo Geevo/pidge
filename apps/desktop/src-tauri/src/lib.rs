@@ -11,7 +11,7 @@ use api_client_storage::{Store, default_data_dir};
 pub fn run() {
     init_tracing();
 
-    let store = Store::in_dir(default_data_dir());
+    let store = Store::in_dir(default_data_dir()).with_system_keyring();
     let session = match Session::start(store) {
         Ok(session) => session,
         Err(err) => {

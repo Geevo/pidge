@@ -10,11 +10,24 @@ repository.workspace = true
 [dependencies]
 api-client-core.workspace = true
 api-client-variables.workspace = true
+base64.workspace = true
+chacha20poly1305 = "0.11"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 ts-rs.workspace = true
+
+# The async-io flavour runs its own reactor, so a lookup made from inside the
+# sidecar's tokio runtime cannot collide with it.
+[target.'cfg(target_os = "linux")'.dependencies]
+secret-service = { version = "5", features = ["rt-async-io-crypto-rust"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -61,7 +61,7 @@ fn the_state_file_is_readable_json() {
 
     let raw = std::fs::read_to_string(store.path()).unwrap();
     assert!(
-        raw.contains("\n  \"version\": 1"),
+        raw.contains(&format!("\n  \"version\": {SCHEMA_VERSION}")),
         "should be pretty-printed"
     );
     assert!(serde_json::from_str::<serde_json::Value>(&raw).is_ok());

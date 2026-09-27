@@ -59,7 +59,8 @@ fn main() -> ExitCode {
     let store = match state_dir {
         Some(dir) => api_client_storage::Store::in_dir(dir),
         None => api_client_storage::Store::in_dir(api_client_storage::default_data_dir()),
-    };
+    }
+    .with_system_keyring();
 
     match runtime.block_on(session::run(store)) {
         Ok(()) => ExitCode::SUCCESS,

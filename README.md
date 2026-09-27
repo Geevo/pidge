@@ -152,7 +152,9 @@ packages/  ui — the React app both frontends mount
 
 No analytics, no telemetry, no remote configuration, no update check, no web
 fonts. Secret header values — `Authorization`, `Cookie`, `X-API-Key` and
-friends — are never written to a log.
+friends — are never written to a log. Saved passwords and tokens are encrypted
+with a key the operating system protects, without ever prompting for a
+password; see [Storage](docs/storage.md#secrets).
 
 ## Licence
 
