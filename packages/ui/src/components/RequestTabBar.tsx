@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import type { ScratchTab } from "../types";
 import { requestLabel } from "../lib/format";
+import { landingIndex, type Slot } from "../lib/tabDrag";
 import { MethodBadge } from "./MethodBadge";
 import type { WindowControls } from "../bridge";
 import { WindowButtons } from "./WindowChrome";
@@ -21,16 +22,6 @@ interface Props {
 
 /** How far a press has to travel before it is a drag rather than a click. */
 const DRAG_THRESHOLD = 4;
-
-/**
- * Where one tab sits in the strip, measured when the drag begins. Measured
- * along the strip's whole scrolled length rather than on screen, so the slots
- * still hold while the strip scrolls under a dragged tab.
- */
-interface Slot {
-  left: number;
-  width: number;
-}
 
 interface Drag {
   tabId: string;
@@ -247,11 +238,22 @@ export function RequestTabBar({
 
     if (!current.slots) {
       if (Math.abs(event.clientX - current.startX) < DRAG_THRESHOLD) return;
+      /*
+       * A tab still easing into place from the last drop is finished first,
+       * so every tab is measured where it rests rather than somewhere on the
+       * way. Grabbing again quickly otherwise measured the strip mid-flight.
+       */
+      const elements = tabElements();
+      for (const tab of elements) {
+        tab.style.transition = "none";
+        tab.style.left = "";
+      }
       const origin = list.getBoundingClientRect().left - list.scrollLeft;
-      current.slots = tabElements().map((tab) => {
+      current.slots = elements.map((tab) => {
         const rect = tab.getBoundingClientRect();
         return { left: rect.left - origin, width: rect.width };
       });
+      for (const tab of elements) tab.style.transition = "";
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {
@@ -271,8 +273,13 @@ export function RequestTabBar({
   };
 
   /*
-   * Draws the drag as it stands: the held tab under the pointer, kept to the
-   * visible strip, and the tabs it has passed stepped aside to make room.
+   * Draws the drag as it stands: the held tab under the pointer, and the tabs
+   * it has passed stepped aside to make room.
+   *
+   * The held tab is kept to the visible strip and to the tabs' own extent.
+   * Allowed past the last tab it poked out of the strip, which then took itself
+   * to overflow: the scroll arrows appeared, and holding at the end scrolled
+   * the strip, which carried the tab further out, which scrolled it further.
    */
   const place = () => {
     const current = drag.current;
@@ -281,30 +288,15 @@ export function RequestTabBar({
 
     const { slots, from } = current;
     const own = slots[from]!;
+    const first = slots[0]!;
+    const last = slots[slots.length - 1]!;
     const bounds = list.getBoundingClientRect();
-    const onScreen = Math.max(
-      bounds.left,
-      Math.min(current.x - current.grab, bounds.right - own.width),
-    );
-    const left = onScreen - bounds.left + list.scrollLeft;
-    const middle = left + own.width / 2;
-
-    /*
-     * Lands after every other tab whose middle its own middle has passed. Held
-     * hard against an end with nothing left to scroll, it is past every tab
-     * on that side: a tab wider than the last one could otherwise never get
-     * its middle beyond the last one's, since the strip ends where it does.
-     */
-    const hidden = list.scrollWidth - list.clientWidth;
-    if (current.x - current.grab >= bounds.right - own.width && list.scrollLeft >= hidden - 1) {
-      current.to = slots.length - 1;
-    } else if (current.x - current.grab <= bounds.left && list.scrollLeft <= 1) {
-      current.to = 0;
-    } else {
-      current.to = slots.filter(
-        (slot, index) => index !== from && slot.left + slot.width / 2 < middle,
-      ).length;
-    }
+    const origin = bounds.left - list.scrollLeft;
+    const lowest = Math.max(bounds.left, origin + first.left);
+    const highest = Math.min(bounds.right, origin + last.left + last.width) - own.width;
+    const wanted = current.x - current.grab;
+    const left = Math.max(lowest, Math.min(wanted, highest)) - origin;
+    current.to = landingIndex(slots, from, left);
 
     // The tabs it has passed move one place over, by its width and the gap.
     const step = own.width + (parseFloat(getComputedStyle(list).columnGap) || 0);
