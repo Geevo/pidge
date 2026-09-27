@@ -30,3 +30,12 @@ tauri-plugin-dialog = "2"
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+# Only to trim the webview's right-click menu (src/context_menu.rs). The
+# versions follow what Tauri itself uses.
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "2.0"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38"
+windows-core = "0.61"

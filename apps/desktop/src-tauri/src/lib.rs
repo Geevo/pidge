@@ -4,9 +4,11 @@
 //! `api-client-session`, which the VS Code sidecar drives through the same API.
 
 mod commands;
+mod context_menu;
 
 use api_client_session::Session;
 use api_client_storage::{Store, adopt_legacy_data_dir, default_data_dir};
+use tauri::Manager;
 
 pub fn run() {
     init_tracing();
@@ -26,6 +28,12 @@ pub fn run() {
         // The only plugin: a native file chooser for picking certificates.
         .plugin(tauri_plugin_dialog::init())
         .manage(session)
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                context_menu::keep_copy_and_paste(&window);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::send_http_request,
             commands::cancel_http_request,

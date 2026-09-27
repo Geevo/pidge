@@ -158,6 +158,16 @@ extension.
 `color-scheme` is set per theme as well as the colours, so the browser's own
 furniture — scrollbars, the caret, the right-click menu — follows.
 
+### The right-click menu
+
+The webview's own menu is trimmed to Copy and Paste in release builds
+(`apps/desktop/src-tauri/src/context_menu.rs`): WebKitGTK's `context-menu`
+signal on Linux, WebView2's `ContextMenuRequested` on Windows. Trimming the
+native menu rather than drawing one in the page keeps Paste working without a
+clipboard permission prompt. Debug builds keep the full menu, Inspect Element
+included. In VS Code the webview menu is VS Code's, which already offers only
+Cut, Copy and Paste.
+
 ### The controls the platform draws
 
 A native `<select>` can be styled shut but not open. The list that drops down is
