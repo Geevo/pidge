@@ -49,7 +49,7 @@ gh attestation verify pidge-<version>-x86_64.AppImage -R Geevo/pidge
 Nothing's code-signed yet, so Windows SmartScreen will still give you a
 talking-to the first time.
 
-## What it does
+## Features
 
 - All the methods you'd expect: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`,
   `HEAD`, `OPTIONS`.
