@@ -10,7 +10,7 @@
 
 # pidge
 
-A tiny HTTP client that lives on your machine.
+A tiny, local-only HTTP client.
 
 ```
 OPEN APP -> TYPE URL -> SEND REQUEST
