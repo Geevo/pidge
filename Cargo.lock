@@ -84,7 +84,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "api-client-codegen"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-core",
  "api-client-http-engine",
@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.23.1",
  "serde",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-desktop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-core",
  "api-client-session",
@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-http-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-core",
  "api-client-testserver",
@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-protocol"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-codegen",
  "api-client-core",
@@ -168,7 +168,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-session"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-codegen",
  "api-client-core",
@@ -187,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-sidecar"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-codegen",
  "api-client-core",
@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-storage"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-core",
  "api-client-variables",
@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-testserver"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.23.1",
  "hmac 0.12.1",
@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "api-client-variables"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "api-client-core",
  "serde",
