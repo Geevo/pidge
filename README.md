@@ -2,6 +2,12 @@
   <img src="packages/ui/src/assets/app-icon.png" width="128" alt="">
 </p>
 
+<p align="center">
+  <a href="https://github.com/Geevo/pidge/actions/workflows/ci.yml"><img src="https://github.com/Geevo/pidge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Geevo/pidge/releases/latest"><img src="https://img.shields.io/github/v/release/Geevo/pidge" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Geevo/pidge" alt="MIT licence"></a>
+</p>
+
 # pidge
 
 A tiny HTTP client that lives on your machine and minds its own business.
