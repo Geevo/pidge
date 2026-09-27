@@ -228,6 +228,23 @@ impl Default for ScratchTab {
     }
 }
 
+/// Where the desktop window was when it last moved, for the next launch.
+///
+/// Owned by the desktop shell: the UI neither sees it nor sends it back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowPlacement {
+    /// The monitor it was on, by the name the operating system gives it.
+    pub monitor: Option<String>,
+    /// Outer position in physical pixels, in desktop coordinates.
+    pub x: i32,
+    pub y: i32,
+    /// Inner size in logical pixels, so it survives a change of scale.
+    pub width: u32,
+    pub height: u32,
+    pub maximized: bool,
+}
+
 /// Everything persisted, in one file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
@@ -241,6 +258,9 @@ pub struct AppState {
     pub active_tab_id: Option<String>,
     pub environments: Vec<Environment>,
     pub active_environment_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(skip)]
+    pub window: Option<WindowPlacement>,
 }
 
 impl Default for AppState {
@@ -256,6 +276,7 @@ impl Default for AppState {
             tabs: vec![tab],
             environments: Vec::new(),
             active_environment_id: None,
+            window: None,
         }
     }
 }

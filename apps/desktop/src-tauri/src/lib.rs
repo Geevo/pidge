@@ -5,6 +5,7 @@
 
 mod commands;
 mod context_menu;
+mod window_state;
 
 use api_client_session::Session;
 use api_client_storage::{Store, adopt_legacy_data_dir, default_data_dir};
@@ -31,8 +32,23 @@ pub fn run() {
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 context_menu::keep_copy_and_paste(&window);
+                let placement = app.state::<Session>().window_placement();
+                window_state::restore(&window, placement);
             }
             Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+                window_state::remember(window, &window.state::<Session>());
+            }
+            tauri::WindowEvent::CloseRequested { .. } => {
+                let session = window.state::<Session>();
+                window_state::remember(window, &session);
+                if let Err(err) = session.persist() {
+                    tracing::warn!(error = %err, "could not save on close");
+                }
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::send_http_request,

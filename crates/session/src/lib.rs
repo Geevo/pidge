@@ -16,6 +16,7 @@ use api_client_core::{HttpRequest, HttpResponse, RequestError, RequestErrorKind}
 use api_client_http_engine::{CancellationRegistry, EngineConfig, HttpEngine};
 use api_client_storage::{
     AppState, HistoryEntry, LoadOutcome, Recovery, SavedRequest, Settings, StorageError, Store,
+    WindowPlacement,
 };
 pub use import::MAX_IMPORT_BYTES;
 use serde::Serialize;
@@ -239,6 +240,9 @@ impl Session {
     /// changes through [`Session::send`] and [`Session::clear_history`]. A UI
     /// saving a snapshot it took before its last send must not erase the row
     /// that send created.
+    ///
+    /// The window placement is kept the same way: only the desktop shell moves
+    /// the window, through [`Session::set_window_placement`].
     pub fn replace_state(&self, mut next: AppState) -> Result<(), SessionError> {
         next.ensure_one_tab();
 
@@ -248,6 +252,7 @@ impl Session {
         {
             let mut current = self.state();
             next.history = std::mem::take(&mut current.history);
+            next.window = current.window.take();
             *current = next;
         }
 
@@ -356,6 +361,16 @@ impl Session {
     pub fn clear_history(&self) -> Result<(), StorageError> {
         self.mutate(|state| state.history.clear());
         self.persist()
+    }
+
+    /// Where the desktop window was last. Kept in memory as the window moves;
+    /// it reaches the disk with the next save.
+    pub fn set_window_placement(&self, placement: WindowPlacement) {
+        self.mutate(|state| state.window = Some(placement));
+    }
+
+    pub fn window_placement(&self) -> Option<WindowPlacement> {
+        self.state().window.clone()
     }
 
     /// Writes the current state to disk.

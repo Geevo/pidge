@@ -39,9 +39,19 @@ you happen to have in the window.
   "activeTabId": "…",
   "environments": [ { "id": "…", "name": "Local", "variables": [ … ] } ],
   "activeEnvironmentId": null,
+  "window": { "monitor": "DP-1", "x": 120, "y": 80, "width": 1100, "height": 740, "maximized": false },
   "secrets": "keyring"
 }
 ```
+
+`window` is where the desktop window was last: position in physical pixels,
+size in logical ones, and the monitor by name. It belongs to the desktop shell,
+which updates it as the window moves; like `history`, it is never taken from
+what the UI saves. On launch it is only applied when that monitor is still there
+with the title bar on it, and otherwise the size is kept and the window centred.
+Wayland gives applications no position to read or set, so there only the size
+and the maximised state come back. The VS Code extension has no window of its
+own and never writes it.
 
 There is no workspace, collection, project, or folder. Saved requests are a flat
 list.

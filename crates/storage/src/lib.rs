@@ -27,7 +27,8 @@ use serde::Serialize;
 pub use keyring::{KeySource, SystemKeyring};
 pub use migrate::{SCHEMA_VERSION, migrate};
 pub use model::{
-    AppState, HistoryEntry, SavedRequest, ScratchTab, Settings, SyntaxTheme, Theme, now_ms,
+    AppState, HistoryEntry, SavedRequest, ScratchTab, Settings, SyntaxTheme, Theme,
+    WindowPlacement, now_ms,
 };
 pub use paths::{adopt_legacy_data_dir, adopt_legacy_dir, default_data_dir};
 

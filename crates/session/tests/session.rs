@@ -1,6 +1,6 @@
 use api_client_core::{HttpRequest, KeyValueEntry, RequestErrorKind};
 use api_client_session::{CodeTarget, Session};
-use api_client_storage::{AppState, Store};
+use api_client_storage::{AppState, Store, WindowPlacement};
 use api_client_testserver::TestServer;
 use api_client_variables::Environment;
 
@@ -481,4 +481,44 @@ fn importing_something_else_changes_nothing() {
         .unwrap();
     assert!(error.to_string().contains("not a file of saved requests"));
     assert!(session.snapshot().saved_requests.is_empty());
+}
+
+fn placement(x: i32) -> WindowPlacement {
+    WindowPlacement {
+        monitor: Some("DP-1".into()),
+        x,
+        y: 40,
+        width: 1200,
+        height: 800,
+        maximized: false,
+    }
+}
+
+#[test]
+fn the_window_placement_survives_a_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let session = Session::start(Store::in_dir(dir.path())).unwrap();
+    session.set_window_placement(placement(300));
+    session.persist().unwrap();
+
+    let reopened = Session::start(Store::in_dir(dir.path())).unwrap();
+    assert_eq!(reopened.window_placement(), Some(placement(300)));
+}
+
+#[test]
+fn a_ui_save_never_moves_the_window() {
+    let (_dir, session) = session();
+    session.set_window_placement(placement(300));
+    // The UI's copy predates the move, and carries the old placement along
+    // because it round-trips whatever it was given.
+    let mut stale = session.snapshot();
+    stale.window = Some(placement(0));
+    session.set_window_placement(placement(900));
+
+    session.replace_state(stale).unwrap();
+    assert_eq!(session.window_placement(), Some(placement(900)));
+
+    // Nor does one that has no placement at all.
+    session.replace_state(AppState::default()).unwrap();
+    assert_eq!(session.window_placement(), Some(placement(900)));
 }
