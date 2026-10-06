@@ -22,9 +22,10 @@ internal static class NativeLibraries
 
     /// <summary>
     /// Writes the libraries under <paramref name="root"/> unless they are
-    /// already there, and loads them. False if they could not be written.
+    /// already there, and loads them. Null once they are loaded; otherwise
+    /// why the app cannot start, in words for whoever launched it.
     /// </summary>
-    public static bool Load(string root)
+    public static string? Load(string root)
     {
         var names = Self.GetManifestResourceNames()
             .Where(name => name.StartsWith(ResourcePrefix, StringComparison.Ordinal))
@@ -32,7 +33,7 @@ internal static class NativeLibraries
             .ToArray();
         if (names.Length == 0)
         {
-            return true;
+            return null;
         }
 
         var files = names.Select(name => (Name: name[ResourcePrefix.Length..], Bytes: Read(name))).ToArray();
@@ -48,12 +49,24 @@ internal static class NativeLibraries
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Log.Warn($"could not write the window host to {dir}: {e.Message}");
-            return false;
+            return "the window host could not be written out";
         }
 
         RemoveOtherVersions(root, dir);
-        Register(dir, files.Select(file => file.Name));
-        return true;
+        try
+        {
+            Register(dir, files.Select(file => file.Name));
+        }
+        catch (DllNotFoundException e)
+        {
+            // The usual cause on Linux is a system library the host links to
+            // that isn't installed; the loader's message names it.
+            Log.Warn($"could not load the window host: {e.Message}");
+            return OperatingSystem.IsLinux()
+                ? "pidge needs GTK 3, WebKitGTK 4.1 and libnotify, and one of them is not installed"
+                : "the window host could not be loaded";
+        }
+        return null;
     }
 
     private static void Register(string dir, IEnumerable<string> names)

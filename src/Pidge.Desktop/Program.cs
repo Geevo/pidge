@@ -15,9 +15,9 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
-        if (!NativeLibraries.Load(Path.Combine(LocalDataRoot(), "native")))
+        if (NativeLibraries.Load(Path.Combine(LocalDataRoot(), "native")) is { } problem)
         {
-            Console.Error.WriteLine("could not start: the window host could not be written out");
+            Console.Error.WriteLine($"could not start: {problem}");
             return 1;
         }
 
