@@ -27,7 +27,12 @@
   "displayName": "pidge",
   "description": "Type a URL, press Send. A local-first HTTP client inside VS Code.",
   "publisher": "apiclient",
+  "icon": "media/pidge.png",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Geevo/pidge"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -59,7 +64,7 @@
         {
           "id": "pidge",
           "title": "pidge",
-          "icon": "media/icon.svg"
+          "icon": "media/activity-bar.svg"
         }
       ]
     },
