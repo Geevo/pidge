@@ -142,6 +142,12 @@ pnpm --filter pidge build     # extension host + webview
 pnpm --filter pidge package   # vsce package --no-dependencies
 ```
 
+A release does this on each runner and packages with `--target`, so there is
+one VSIX per platform (`pidge-vscode-<version>-linux-x64.vsix`,
+`pidge-vscode-<version>-win32-x64.vsix`), each holding only its own sidecar.
+The sidecar keeps its executable bit inside the VSIX, and VS Code keeps it on
+install.
+
 `Sidecar.resolveBinary` looks, in order, at:
 
 1. the `pidge.sidecarPath` setting,

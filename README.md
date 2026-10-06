@@ -192,7 +192,9 @@ details.
 ## In VS Code
 
 The same app runs as a VS Code panel, talking to the same engine through a
-sidecar process. `pnpm dev:vscode` watches it. It's not on the Marketplace yet.
+sidecar process. It's not on the Marketplace yet; each release has a
+`pidge-vscode-<version>-<platform>.vsix` for Linux and Windows instead, which
+**Extensions: Install from VSIX...** takes. `pnpm dev:vscode` watches it.
 
 ## Working on it
 
