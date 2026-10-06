@@ -38,7 +38,7 @@ something that would break only in the published build.
 ### Releases
 
 Releases are built by `.github/workflows/release.yml`, not on anyone's machine.
-Pushing a tag builds the Linux archive on Ubuntu 22.04, so it runs on older
+Pushing a tag builds the Linux packages on Ubuntu 22.04, so they run on older
 glibc, and the Windows zip on a Windows runner:
 
 ```bash
@@ -51,8 +51,21 @@ a **draft** with every file and a `SHA256SUMS`, so the notes are written and the
 release published by hand. Running the workflow from the Actions tab builds the
 same files as workflow artifacts without releasing anything.
 
-Each archive holds the executable, `LICENSE`,
-`THIRD-PARTY-LICENSES.md` and the font licences.
+The Windows zip holds the executable, `LICENSE`, `THIRD-PARTY-LICENSES.md`
+and the font licences. For Linux, `scripts/package-linux.sh` wraps the same
+executable three ways, all installing the same files: `/usr/bin/pidge`, a
+desktop entry, the 512 px icon, and the licences in `/usr/share/doc/pidge/`.
+
+- `pidge_<version>_amd64.deb`, built with `dpkg-deb` (xz, which older dpkg can
+  read). It depends on `libgtk-3-0`, `libwebkit2gtk-4.1-0`, `libnotify4` and
+  `libssl3`.
+- `pidge-<version>-1.x86_64.rpm`, built with `rpmbuild`. It requires `gtk3`,
+  `webkit2gtk4.1`, `libnotify` and `openssl-libs`, listed by hand because the
+  window host is inside the executable, where rpm's own scan can't see it.
+- `pidge-<version>-x86_64.AppImage`: the static AppImage runtime, pinned by
+  checksum, with a squashfs image of the app appended. Like the packages, it
+  uses the system's GTK and WebKitGTK rather than carrying its own, so it is a
+  few megabytes rather than the hundred or so a bundled WebKit would cost.
 
 Nothing is code-signed. What there is instead:
 
@@ -89,9 +102,10 @@ magick packages/ui/src/assets/app-icon.png -define icon:auto-resize=256,64,48,32
 On Wayland a window has no icon of its own: the compositor matches the window's
 app id to a desktop entry and shows that entry's icon. The app id is the binary
 name, `pidge`, so a desktop entry with `Icon=pidge` and `StartupWMClass=pidge`
-is what gives the window its icon there. Run straight from an unpacked archive,
-there is no entry to match and Wayland shows a generic icon. That is a property
-of the launch, not of the build.
+is what gives the window its icon there. The .deb and .rpm install that
+entry. Run as an AppImage, or straight from `artifacts/`, there is no entry to
+match unless something integrates the AppImage, and Wayland shows a generic
+icon. That is a property of the launch, not of the build.
 
 ## VS Code
 
@@ -148,10 +162,10 @@ Both are SIL Open Font License 1.1, which requires the licence to travel with
 the font, so `scripts/viteFontLicenses.ts` emits it as a build asset in the same
 pass that emits the font. There is nothing to remember at packaging time:
 
-| Artifact  | Fonts                                             | Licences                                                      |
-| --------- | ------------------------------------------------- | ------------------------------------------------------------- |
-| Desktop   | `dist/assets/*.woff2`, embedded in the executable | `dist/licenses/`, embedded too, and beside it in the archives |
-| Extension | `media/assets/*.woff2`                            | `media/licenses/`                                             |
+| Artifact  | Fonts                                             | Licences                                                       |
+| --------- | ------------------------------------------------- | -------------------------------------------------------------- |
+| Desktop   | `dist/assets/*.woff2`, embedded in the executable | `dist/licenses/`, embedded too, and beside it in every package |
+| Extension | `media/assets/*.woff2`                            | `media/licenses/`                                              |
 
 Verify what a VSIX would contain with:
 

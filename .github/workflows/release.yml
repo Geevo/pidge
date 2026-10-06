@@ -35,10 +35,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install native toolchain and webview
+      - name: Install native toolchain, webview and packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y clang zlib1g-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
+            rpm squashfs-tools
 
       - run: pnpm install --frozen-lockfile
 
@@ -56,17 +57,10 @@ jobs:
 
       # The executable is the whole app, with the window host inside it. GTK
       # and WebKitGTK come from the system; see docs/packaging.md.
-      - name: Collect
+      - name: Package
         run: |
           version=$(dotnet msbuild src/Pidge.Desktop -getProperty:Version)
-          name="pidge-$version-linux-x64"
-          mkdir -p out "$name"
-          cp artifacts/desktop/linux-x64/pidge \
-            LICENSE THIRD-PARTY-LICENSES.md \
-            packages/ui/src/fonts/IBMPlexSans-LICENSE.txt \
-            packages/ui/src/fonts/IBMPlexMono-LICENSE.txt "$name/"
-          tar -czf "out/$name.tar.gz" "$name"
-          ls -l out
+          bash scripts/package-linux.sh "$version" artifacts/desktop/linux-x64/pidge out
 
       - uses: actions/upload-artifact@v7
         with:

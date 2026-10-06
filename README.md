@@ -28,16 +28,18 @@ only request it ever makes is the one you told it to.
 
 ## Get it
 
-Grab a build from the [releases page](../../releases). There's nothing to
-install.
+Grab a build from the [releases page](../../releases).
 
-| Platform      | File                               | Notes                                                                 |
-| ------------- | ---------------------------------- | --------------------------------------------------------------------- |
-| Windows 10/11 | `pidge-<version>-windows-x64.zip`  | Unzip, run `pidge.exe`. Needs WebView2, which Windows 11 already has. |
-| Linux         | `pidge-<version>-linux-x64.tar.gz` | Unpack, run `pidge`. Uses the WebKitGTK 4.1 your desktop already has. |
+| Platform       | File                              | Notes                                                                 |
+| -------------- | --------------------------------- | --------------------------------------------------------------------- |
+| Windows 10/11  | `pidge-<version>-windows-x64.zip` | Unzip, run `pidge.exe`. Needs WebView2, which Windows 11 already has. |
+| Linux          | `pidge-<version>-x86_64.AppImage` | Make it executable and run it. Nothing to install.                    |
+| Debian, Ubuntu | `pidge_<version>_amd64.deb`       | `sudo apt install ./pidge_<version>_amd64.deb`                        |
+| Fedora         | `pidge-<version>-1.x86_64.rpm`    | `sudo dnf install ./pidge-<version>-1.x86_64.rpm`                     |
 
-Both are native builds, so there is no .NET runtime to install. More on that
-[below](#native-all-the-way-down).
+Every build is native, so there is no .NET runtime to install. More on that
+[below](#native-all-the-way-down). On Linux all three use the WebKitGTK 4.1
+your desktop already has; the .deb and .rpm also put pidge in your app menu.
 
 No macOS build yet. It should build there; nobody's tried.
 
@@ -45,7 +47,7 @@ Every release is built by GitHub Actions from the tagged source and comes with a
 `SHA256SUMS`. To check that a download is what that build produced:
 
 ```bash
-gh attestation verify pidge-<version>-linux-x64.tar.gz -R Geevo/pidge
+gh attestation verify pidge-<version>-x86_64.AppImage -R Geevo/pidge
 ```
 
 Nothing's code-signed yet, so Windows SmartScreen will still give you a
