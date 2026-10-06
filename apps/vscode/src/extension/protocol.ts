@@ -10,7 +10,7 @@ import type { ClientEnvelope, ServerEnvelope } from "@api-client/ui";
 export type { ClientEnvelope, ClientMessage, ServerEnvelope, ServerMessage } from "@api-client/ui";
 
 /** Must match `ProtocolVersion` in `src/Pidge.Protocol`. */
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export function encodeLine(envelope: ClientEnvelope): string {
   return `${JSON.stringify(envelope)}\n`;

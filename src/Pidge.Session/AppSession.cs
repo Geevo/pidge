@@ -374,6 +374,18 @@ public sealed class AppSession : IDisposable
         Persist();
     }
 
+    /// <exception cref="StorageException">The state could not be saved.</exception>
+    public bool DeleteHistoryEntry(string id)
+    {
+        bool removed;
+        lock (_stateLock)
+        {
+            removed = _state.History.RemoveAll(entry => entry.Id == id) > 0;
+        }
+        Persist();
+        return removed;
+    }
+
     /// <summary>
     /// Where the desktop window was last. Kept in memory as the window moves;
     /// it reaches the disk with the next save.

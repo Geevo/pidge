@@ -258,6 +258,9 @@ internal static class SidecarServer
             case ClientMessage.ClearHistory:
                 return Saving(session, id, session.ClearHistory);
 
+            case ClientMessage.DeleteHistoryEntry delete:
+                return Saving(session, id, () => session.DeleteHistoryEntry(delete.HistoryEntryId));
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(message), message.GetType().Name);
         }

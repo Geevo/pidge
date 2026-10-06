@@ -148,9 +148,9 @@ public class StdioTests
     public void StdoutCarriesNothingButProtocolLines()
     {
         using var sidecar = SidecarProcess.Start();
-        sidecar.SendRaw("""{"v":4,"id":"hs","msg":{"type":"handshake","clientName":"tést","clientVersion":"0"}}""");
-        sidecar.SendRaw("""{"v":4,"id":"code","msg":{"type":"generateCode","request":{"id":"r","method":"GET","url":"https://example.com/é","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"}},"target":"curl"}}""");
-        sidecar.SendRaw("""{"v":4,"msg":{"type":"shutdown"}}""");
+        sidecar.SendRaw("""{"v":5,"id":"hs","msg":{"type":"handshake","clientName":"tést","clientVersion":"0"}}""");
+        sidecar.SendRaw("""{"v":5,"id":"code","msg":{"type":"generateCode","request":{"id":"r","method":"GET","url":"https://example.com/é","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"}},"target":"curl"}}""");
+        sidecar.SendRaw("""{"v":5,"msg":{"type":"shutdown"}}""");
 
         using var bytes = new MemoryStream();
         sidecar.Child.StandardOutput.BaseStream.CopyTo(bytes);
@@ -280,5 +280,24 @@ public class StdioTests
         sidecar.Send("bad", new ClientMessage.ImportSavedRequests { Contents = """{"tabs": []}""" });
         var rejected = Assert.IsType<ServerMessage.ImportRejected>(sidecar.Recv().Msg);
         Assert.Contains("not a file of saved requests", rejected.Message);
+    }
+
+    [Fact]
+    public void OneHistoryEntryCanBeDeleted()
+    {
+        using var sidecar = SidecarProcess.Start();
+        sidecar.Handshake();
+
+        sidecar.Send("first", new ClientMessage.SendRequest { Request = HttpRequest.Get("{{missing}}") });
+        var first = Assert.IsType<ServerMessage.RequestError>(sidecar.Recv().Msg).HistoryEntry!;
+        sidecar.Send("second", new ClientMessage.SendRequest { Request = HttpRequest.Get("{{missing}}") });
+        var second = Assert.IsType<ServerMessage.RequestError>(sidecar.Recv().Msg).HistoryEntry!;
+
+        sidecar.Send("delete", new ClientMessage.DeleteHistoryEntry { HistoryEntryId = first.Id });
+        var left = Assert.Single(Assert.IsType<ServerMessage.StateSaved>(sidecar.Recv().Msg).State.History);
+        Assert.Equal(second.Id, left.Id);
+
+        sidecar.Send("again", new ClientMessage.DeleteHistoryEntry { HistoryEntryId = first.Id });
+        Assert.Single(Assert.IsType<ServerMessage.StateSaved>(sidecar.Recv().Msg).State.History);
     }
 }

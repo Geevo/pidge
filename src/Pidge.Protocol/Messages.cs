@@ -51,6 +51,7 @@ public sealed class ClientEnvelope
 [JsonDerivedType(typeof(SaveRequest), "saveRequest")]
 [JsonDerivedType(typeof(DeleteSavedRequest), "deleteSavedRequest")]
 [JsonDerivedType(typeof(ClearHistory), "clearHistory")]
+[JsonDerivedType(typeof(DeleteHistoryEntry), "deleteHistoryEntry")]
 [JsonDerivedType(typeof(ExportSavedRequests), "exportSavedRequests")]
 [JsonDerivedType(typeof(ImportSavedRequests), "importSavedRequests")]
 [JsonDerivedType(typeof(Shutdown), "shutdown")]
@@ -126,6 +127,13 @@ public abstract class ClientMessage
     }
 
     public sealed class ClearHistory : ClientMessage;
+
+    /// <summary>Removes one entry from history. An id that is not there is not an error.</summary>
+    public sealed class DeleteHistoryEntry : ClientMessage
+    {
+        [JsonRequired]
+        public string HistoryEntryId { get; set; } = "";
+    }
 
     /// <summary>
     /// Write saved requests out as a file's contents. The extension host asks

@@ -13,12 +13,12 @@ public static class WireFormat
     /// Bump on any breaking change to the message shapes.
     ///
     /// 2 added <c>GenerateCode</c>, 3 <c>ExportSavedRequests</c>, 4
-    /// <c>ImportSavedRequests</c>. A new message is additive for the sidecar,
+    /// <c>ImportSavedRequests</c>, 5 <c>DeleteHistoryEntry</c>. A new message is additive for the sidecar,
     /// but an extension that sends one to a build that predates it would get a
     /// protocol error in place of an answer — which is the mismatch this number
     /// exists to catch at the handshake instead.
     /// </summary>
-    public const uint ProtocolVersion = 4;
+    public const uint ProtocolVersion = 5;
 
     /// <summary>Serializes one message as a single line, newline included.</summary>
     public static string EncodeLine<T>(T message, JsonTypeInfo<T> typeInfo) =>

@@ -34,7 +34,7 @@ public class WireTests
 
         Assert.EndsWith("\n", line);
         Assert.Single(line, '\n');
-        Assert.Equal("{\"v\":4,\"id\":null,\"msg\":{\"type\":\"shutdown\"}}\n", line);
+        Assert.Equal("{\"v\":5,\"id\":null,\"msg\":{\"type\":\"shutdown\"}}\n", line);
     }
 
     [Fact]
@@ -51,6 +51,7 @@ public class WireTests
             new ClientMessage.CancelRequest { RequestId = "req-1" },
             new ClientMessage.LoadState(),
             new ClientMessage.ClearHistory(),
+            new ClientMessage.DeleteHistoryEntry { HistoryEntryId = "h-1" },
             new ClientMessage.Shutdown(),
         ];
 
@@ -67,16 +68,16 @@ public class WireTests
     public void ClientMessagesHaveTheShapeTheExtensionSends()
     {
         Assert.Equal(
-            """{"v":4,"id":"h","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}""",
+            """{"v":5,"id":"h","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}""",
             WireFormat.EncodeLine(new ClientEnvelope("h", new ClientMessage.Handshake { ClientName = "vscode", ClientVersion = "0.1.0" })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"c","msg":{"type":"cancelRequest","requestId":"req-1"}}""",
+            """{"v":5,"id":"c","msg":{"type":"cancelRequest","requestId":"req-1"}}""",
             WireFormat.EncodeLine(new ClientEnvelope("c", new ClientMessage.CancelRequest { RequestId = "req-1" })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"x","msg":{"type":"exportSavedRequests","savedRequestIds":["a"],"format":"http","includeSecrets":false}}""",
+            """{"v":5,"id":"x","msg":{"type":"exportSavedRequests","savedRequestIds":["a"],"format":"http","includeSecrets":false}}""",
             WireFormat.EncodeLine(new ClientEnvelope("x", new ClientMessage.ExportSavedRequests { SavedRequestIds = ["a"], Format = ExportFormat.Http })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"s","msg":{"type":"saveRequest","savedRequestId":null,"name":"n","request":{"id":"r","method":"GET","url":"","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"},"timeoutMs":null,"encodeQuery":true}}}""",
+            """{"v":5,"id":"s","msg":{"type":"saveRequest","savedRequestId":null,"name":"n","request":{"id":"r","method":"GET","url":"","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"},"timeoutMs":null,"encodeQuery":true}}}""",
             WireFormat.EncodeLine(new ClientEnvelope("s", new ClientMessage.SaveRequest { Name = "n", Request = new HttpRequest { Id = "r" } })).TrimEnd('\n'));
     }
 
@@ -84,7 +85,7 @@ public class WireTests
     public void VariablesMayBeLeftOut()
     {
         var decoded = WireFormat.DecodeClientLine(
-            """{"v":4,"id":"1","msg":{"type":"sendRequest","request":{"id":"r","method":"GET","url":"https://example.com","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"},"timeoutMs":null}}}""");
+            """{"v":5,"id":"1","msg":{"type":"sendRequest","request":{"id":"r","method":"GET","url":"https://example.com","queryParams":[],"headers":[],"auth":{"type":"none"},"body":{"type":"none"},"timeoutMs":null}}}""");
 
         var send = Assert.IsType<ClientMessage.SendRequest>(decoded.Msg);
         Assert.Empty(send.Variables);
@@ -94,7 +95,7 @@ public class WireTests
     [Fact]
     public void TheTypeNeedNotComeFirst()
     {
-        var decoded = WireFormat.DecodeClientLine("""{"msg":{"requestId":"r","type":"cancelRequest"},"id":null,"v":4}""");
+        var decoded = WireFormat.DecodeClientLine("""{"msg":{"requestId":"r","type":"cancelRequest"},"id":null,"v":5}""");
         Assert.Equal("r", Assert.IsType<ClientMessage.CancelRequest>(decoded.Msg).RequestId);
         Assert.Null(decoded.Id);
     }
@@ -175,7 +176,7 @@ public class WireTests
         Assert.Equal(WireFormat.ProtocolVersion + 1, mismatch.ReceivedProtocolVersion);
         Assert.Contains("Reinstall", mismatch.Message);
         Assert.Equal(
-            "Protocol mismatch: the extension speaks version 5, this sidecar speaks version 4. Reinstall the extension so the two match.",
+            "Protocol mismatch: the extension speaks version 6, this sidecar speaks version 5. Reinstall the extension so the two match.",
             mismatch.Message);
     }
 
@@ -189,8 +190,8 @@ public class WireTests
     [Fact]
     public void AMessageWithNoTypeFailsToDecode()
     {
-        Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("""{"v":4,"id":null,"msg":{}}"""));
-        Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("""{"v":4,"id":null}"""));
+        Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("""{"v":5,"id":null,"msg":{}}"""));
+        Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("""{"v":5,"id":null}"""));
         Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("null"));
         Assert.ThrowsAny<JsonException>(() => WireFormat.DecodeClientLine("not json"));
     }
@@ -270,22 +271,22 @@ public class WireTests
     public void ServerMessagesHaveTheShapeTheExtensionReads()
     {
         Assert.Equal(
-            """{"v":4,"id":"h","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"1.0.0","protocolVersion":4}}""",
-            WireFormat.EncodeLine(new ServerEnvelope("h", new ServerMessage.HandshakeOk { ServerName = "api-client-sidecar", ServerVersion = "1.0.0", ProtocolVersion = 4 })).TrimEnd('\n'));
+            """{"v":5,"id":"h","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"1.0.0","protocolVersion":5}}""",
+            WireFormat.EncodeLine(new ServerEnvelope("h", new ServerMessage.HandshakeOk { ServerName = "api-client-sidecar", ServerVersion = "1.0.0", ProtocolVersion = 5 })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"c","msg":{"type":"requestCancelled","wasInFlight":true}}""",
+            """{"v":5,"id":"c","msg":{"type":"requestCancelled","wasInFlight":true}}""",
             WireFormat.EncodeLine(new ServerEnvelope("c", new ServerMessage.RequestCancelled { WasInFlight = true })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":null,"msg":{"type":"protocolError","message":"bad"}}""",
+            """{"v":5,"id":null,"msg":{"type":"protocolError","message":"bad"}}""",
             WireFormat.EncodeLine(new ServerEnvelope(null, new ServerMessage.ProtocolError { Message = "bad" })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"i","msg":{"type":"importRejected","message":"no"}}""",
+            """{"v":5,"id":"i","msg":{"type":"importRejected","message":"no"}}""",
             WireFormat.EncodeLine(new ServerEnvelope("i", new ServerMessage.ImportRejected { Message = "no" })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"s","msg":{"type":"storageError","message":"disk"}}""",
+            """{"v":5,"id":"s","msg":{"type":"storageError","message":"disk"}}""",
             WireFormat.EncodeLine(new ServerEnvelope("s", new ServerMessage.StorageError { Message = "disk" })).TrimEnd('\n'));
         Assert.Equal(
-            """{"v":4,"id":"e","msg":{"type":"savedRequestsExported","contents":"x\ny"}}""",
+            """{"v":5,"id":"e","msg":{"type":"savedRequestsExported","contents":"x\ny"}}""",
             WireFormat.EncodeLine(new ServerEnvelope("e", new ServerMessage.SavedRequestsExported { Contents = "x\ny" })).TrimEnd('\n'));
     }
 
