@@ -2059,6 +2059,67 @@ th,
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * History and saved requests as a pane of their own (the VS Code side bar):
+ * a button, two tabs, and the drawer's list filling the rest.
+ */
+.ac-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.ac-sidebar__top {
+  display: flex;
+  flex: none;
+  padding: 8px 8px 4px;
+}
+
+.ac-sidebar__top .ac-button {
+  flex: 1;
+  justify-content: center;
+}
+
+.ac-sidebar__tabs {
+  display: flex;
+  flex: none;
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-sidebar__tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ac-text-muted);
+  cursor: pointer;
+  font-size: var(--ac-font-size-small);
+}
+
+.ac-sidebar__tab:hover {
+  color: var(--ac-text);
+}
+
+.ac-sidebar__tab[aria-selected="true"] {
+  border-bottom-color: var(--ac-accent);
+  color: var(--ac-text);
+}
+
+.ac-sidebar__panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ac-sidebar__panel .ac-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .ac-sidebar-rail {
   display: flex;
   flex-direction: column;

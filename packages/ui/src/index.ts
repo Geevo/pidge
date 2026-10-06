@@ -7,6 +7,8 @@
  * two platforms, which is the one thing this layout exists to prevent.
  */
 export { App } from "./components/App";
+/** The side bar of a host whose requests open in tabs of their own. */
+export { Sidebar, type SidebarProps, type SidebarTab } from "./components/Sidebar";
 
 export type {
   ExportInput,
