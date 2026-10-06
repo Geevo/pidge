@@ -8,7 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
-      "**/media/webview*.js",
+      "**/media/*.js",
       "**/node_modules/**",
       "**/artifacts/**",
       "**/bin/**",
