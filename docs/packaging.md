@@ -191,8 +191,11 @@ other workspace packages. The name doubles as the VS Code extension id and
 
 ## Webview bundle
 
-The webview is built by Vite to `apps/vscode/media/webview.js` and
-`webview.css`, with fixed names because the panel HTML references them directly.
+Vite builds two pages to `apps/vscode/media/`: `webview.js` for a request tab
+and `sidebar.js` for the side bar, with the code they share in a chunk beside
+them and one `webview.css` for both. The names are fixed because the pages'
+HTML references them directly, and asset URLs are relative so fonts and images
+resolve from the webview's resource URI.
 It runs under a strict CSP: scripts only from that bundle and only with a
 per-render nonce, no remote origins at all. Inline styles are allowed because
 CodeMirror injects its own stylesheet at runtime; inline scripts are not.

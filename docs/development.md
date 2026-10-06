@@ -35,13 +35,15 @@ pnpm build:sidecar --debug          # dotnet publish + stage the binary
 pnpm --filter pidge build
 ```
 
-Then <kbd>F5</kbd> in VS Code, and **pidge: Open** in the Extension
-Development Host. When running from source without a staged binary, the
+Then <kbd>F5</kbd> in VS Code, and the pidge icon in the Extension
+Development Host's activity bar: **New Request** opens a request as an editor
+tab. When running from source without a staged binary, the
 extension falls back to `artifacts/bin/Pidge.Sidecar/debug/`, so a plain
 `dotnet build src/Pidge.Sidecar` is enough.
 
-`pnpm dev:vscode` watches the extension host. The webview is a separate bundle;
-rebuild it with `pnpm --filter pidge build:webview` and reload the window.
+`pnpm dev:vscode` watches the extension host. The webviews, a request tab and
+the side bar, are a separate build; rebuild them with
+`pnpm --filter pidge build:webview` and reload the window.
 
 `PIDGE_LOG=debug` makes either host log more (to stderr for the sidecar).
 

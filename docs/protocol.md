@@ -29,8 +29,8 @@ build when the two disagree.
 The extension sends `handshake` first; nothing else is accepted before it.
 
 ```json
-{"v":4,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
-{"v":4,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":4}}
+{"v":5,"id":"hs","msg":{"type":"handshake","clientName":"vscode","clientVersion":"0.1.0"}}
+{"v":5,"id":"hs","msg":{"type":"handshakeOk","serverName":"api-client-sidecar","serverVersion":"0.1.0","protocolVersion":5}}
 ```
 
 If the versions do not match, the sidecar replies `handshakeError` and stops,
@@ -38,13 +38,13 @@ rather than guessing at a message shape it does not understand:
 
 ```json
 {
-  "v": 4,
+  "v": 5,
   "id": "hs",
   "msg": {
     "type": "handshakeError",
     "message": "Protocol mismatch: …",
-    "expectedProtocolVersion": 4,
-    "receivedProtocolVersion": 5
+    "expectedProtocolVersion": 5,
+    "receivedProtocolVersion": 6
   }
 }
 ```
@@ -67,6 +67,7 @@ Extension to sidecar:
 | `saveRequest`         | `savedRequestId`, `name`, `request`           |
 | `deleteSavedRequest`  | `savedRequestId`                              |
 | `clearHistory`        | —                                             |
+| `deleteHistoryEntry`  | `historyEntryId`                              |
 | `exportSavedRequests` | `savedRequestIds`, `format`, `includeSecrets` |
 | `importSavedRequests` | `contents`                                    |
 | `shutdown`            | —                                             |
@@ -88,6 +89,10 @@ Sidecar to extension:
 | `importRejected`        | `message`                                                            |
 | `storageError`          | `message`                                                            |
 | `protocolError`         | `message`                                                            |
+
+`deleteHistoryEntry` removes one entry and answers `stateSaved` like
+`clearHistory`. An id that is not there is not an error: the entry is gone
+either way.
 
 `sendRequest` uses the request's own id as its correlation id, so
 `cancelRequest` needs nothing the UI does not already have.

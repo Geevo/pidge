@@ -121,6 +121,7 @@ interface PlatformBridge {
   exportSavedRequests?(input: ExportInput): Promise<string | null>;
   importSavedRequests?(): Promise<ImportOutcome | null>;
   subscribe?(listener: (command: HostCommand) => void): () => void;
+  readonly editor?: EditorHost;
   readonly window?: WindowControls;
   readonly platform: string;
 }
@@ -136,6 +137,17 @@ UI thread and posts the answer back through the window's dispatcher. In VS Code
 the extension host turns the same calls into sidecar messages; see
 [protocol.md](protocol.md).
 
+`editor` is what makes VS Code more than a second window. Each request there is
+an editor tab with an app of its own, so with `editor` present the app shows a
+single request: no tab strip, no drawers, no palette, and the editor's theme
+rather than one of its own. Save goes through `editor.saveRequest`, which asks
+for the name in VS Code's own input box. History and saved requests are a
+separate page in the side bar, `Sidebar` from `packages/ui`, whose rows carry
+`data-vscode-context` so Open, Export and Delete are VS Code's own right-click
+menu. Every tab and the side bar share one state file through the extension
+host, which tells the other tabs (`HostCommand`) when settings or environments
+change.
+
 ## Who owns history
 
 History is owned by `AppSession`, not by the UI, and `AppSession.ReplaceState`
@@ -145,7 +157,8 @@ erase the row that send had just created.
 
 So that the panel still updates live, `AppSession.SendWithOverridesAsync`
 returns the `HistoryEntry` it recorded alongside the response, and the reducer
-prepends it. `ClearHistory` is the only way a frontend can empty it.
+prepends it. `ClearHistory` and `DeleteHistoryEntry` are the only ways a
+frontend can remove anything from it.
 
 ## Themes
 
@@ -169,9 +182,9 @@ theme at once, and a sample is not the document. Inheritance is what makes this
 need spelling out: a warm light sample inside a dark window would otherwise take
 the window's accent, since the warm blocks restate only the greys. So the two
 light themes are listed on the base block and the two dark ones on the dark
-block, and each warm block overrides from there. The root keeps the higher
-specificity, which is what lets a chosen theme beat the VS Code mapping in the
-extension.
+block, and each warm block overrides from there. In VS Code the mapping onto the
+editor's colours is keyed on `:root[data-theme]` too, and comes later, so the
+editor's colours win over whichever palette the editor's light or dark picked.
 
 `color-scheme` is set per theme as well as the colours, so the browser's own
 furniture — scrollbars, the caret, the right-click menu — follows.
@@ -185,7 +198,8 @@ Reload, Save As and Print, none of which mean anything in an app. Keeping the
 native menu rather than drawing one in the page keeps Paste working without a
 clipboard permission prompt. The UI served by the dev server keeps the full
 menu, Inspect Element included. In VS Code the webview menu is VS Code's, which already offers only
-Cut, Copy and Paste.
+Cut, Copy and Paste, and on a side bar row the row's own Open and Delete (and
+Export, for a saved request) instead.
 
 ### The controls the platform draws
 

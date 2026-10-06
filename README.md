@@ -72,7 +72,7 @@ machine code, not a .NET app that needs one installed first.
   the published build (reflection, dynamic code, trimming) is a build error
   instead.
 
-The sidecar that runs the VS Code panel is built the same way.
+The sidecar behind the VS Code extension is built the same way.
 
 ## Features
 
@@ -191,8 +191,9 @@ details.
 
 ## In VS Code
 
-The same app runs as a VS Code panel, talking to the same engine through a
-sidecar process. It's not on the Marketplace yet; each release has a
+Each request opens as a VS Code editor tab, with history and saved requests in
+the side bar, talking to the same engine through a sidecar process. The colours
+follow the editor's theme. It's not on the Marketplace yet; each release has a
 `pidge-vscode-<version>-<platform>.vsix` for Linux and Windows instead, which
 **Extensions: Install from VSIX...** takes. `pnpm dev:vscode` watches it.
 
