@@ -3,6 +3,8 @@ media/webview.js
 media/webview.css
 media/webview.js.map
 node_modules/
-target/
+artifacts/
+bin/
+obj/
 pnpm-lock.yaml
 packages/ui/src/generated/

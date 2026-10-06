@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Pidge.Session</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pidge.Codegen\Pidge.Codegen.csproj" />
+    <ProjectReference Include="..\Pidge.Core\Pidge.Core.csproj" />
+    <ProjectReference Include="..\Pidge.HttpEngine\Pidge.HttpEngine.csproj" />
+    <ProjectReference Include="..\Pidge.Storage\Pidge.Storage.csproj" />
+    <ProjectReference Include="..\Pidge.Variables\Pidge.Variables.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pidge.Session.Tests" />
+  </ItemGroup>
+
+</Project>

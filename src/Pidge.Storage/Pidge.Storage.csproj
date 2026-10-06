@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Pidge.Storage</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pidge.Core\Pidge.Core.csproj" />
+    <ProjectReference Include="..\Pidge.Variables\Pidge.Variables.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Secret Service keyring on Linux. -->
+    <PackageReference Include="Tmds.DBus.Protocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pidge.Storage.Tests" />
+  </ItemGroup>
+
+</Project>

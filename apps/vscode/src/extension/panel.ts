@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import { type WebviewEvent, type WebviewResponse, isWebviewRequest } from "./protocol";
 
 /**
- * `api_client_session::MAX_IMPORT_BYTES`. The sidecar refuses anything bigger
+ * `AppSession.MaxImportBytes`. The sidecar refuses anything bigger
  * whatever this says; checking first only saves reading it and sending it over.
  */
 const MAX_IMPORT_BYTES = 20 * 1024 * 1024;

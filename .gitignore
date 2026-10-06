@@ -1,5 +1,10 @@
-# Rust
-/target/
+# .NET
+artifacts/
+bin/
+obj/
+*.user
+.vs/
+TestResults/
 
 # Node
 node_modules/
@@ -16,7 +21,6 @@ apps/vscode/media/assets/
 apps/vscode/media/licenses/
 apps/vscode/bin/
 apps/vscode/*.vsix
-apps/desktop/src-tauri/gen/
 
 # Editors and OS
 .DS_Store

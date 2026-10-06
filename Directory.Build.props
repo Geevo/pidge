@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <!-- One artifacts directory for the repository, not one per Directory.Build.props. -->
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    <Version>0.1.1</Version>
+    <Authors>pidge</Authors>
+    <Product>pidge</Product>
+    <Copyright>MIT</Copyright>
+  </PropertyGroup>
+</Project>

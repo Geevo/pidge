@@ -1,7 +1,7 @@
 /**
  * The two message vocabularies the extension host sits between.
  *
- * Down to the sidecar: the generated protocol types, so the Rust definitions
+ * Down to the sidecar: the shared protocol types, so the .NET definitions
  * stay the single source of truth. Up to the webview: a tiny request/response
  * envelope, because a webview cannot be trusted to correlate anything itself.
  */
@@ -9,7 +9,7 @@ import type { ClientEnvelope, ServerEnvelope } from "@api-client/ui";
 
 export type { ClientEnvelope, ClientMessage, ServerEnvelope, ServerMessage } from "@api-client/ui";
 
-/** Must match `api_client_protocol::PROTOCOL_VERSION`. */
+/** Must match `ProtocolVersion` in `src/Pidge.Protocol`. */
 export const PROTOCOL_VERSION = 4;
 
 export function encodeLine(envelope: ClientEnvelope): string {

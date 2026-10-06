@@ -13,8 +13,8 @@ import type { Plugin } from "vite";
  * the source tree for a packager to remember.
  *
  * One source of truth: the files next to the woff2 in `packages/ui/src/fonts`.
- * The desktop bundle lists those same paths in `tauri.conf.json`, so nothing is
- * copied anywhere for it to find.
+ * The desktop app embeds the built `dist/` whole, licences included, so nothing
+ * is copied anywhere for it to find.
  */
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");

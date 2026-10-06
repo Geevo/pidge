@@ -31,11 +31,13 @@ only request it ever makes is the one you told it to.
 Grab a build from the [releases page](../../releases). There's nothing to
 install.
 
-| Platform        | File                              | Notes                                                                   |
-| --------------- | --------------------------------- | ----------------------------------------------------------------------- |
-| Windows 10/11   | `pidge-<version>-windows-x64.zip` | Unzip, run the `.exe`. Needs WebView2, which Windows 11 already has.    |
-| Linux           | `pidge-<version>-x86_64.AppImage` | `chmod +x` and go. Brings its own browser engine.                       |
-| Linux, packaged | `.deb` / `.rpm`                   | About a twentieth of the size, since they use the WebKitGTK you've got. |
+| Platform      | File                               | Notes                                                                 |
+| ------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| Windows 10/11 | `pidge-<version>-windows-x64.zip`  | Unzip, run `pidge.exe`. Needs WebView2, which Windows 11 already has. |
+| Linux         | `pidge-<version>-linux-x64.tar.gz` | Unpack, run `pidge`. Uses the WebKitGTK 4.1 your desktop already has. |
+
+Both are native builds, so there is no .NET runtime to install. More on that
+[below](#native-all-the-way-down).
 
 No macOS build yet. It should build there; nobody's tried.
 
@@ -43,11 +45,32 @@ Every release is built by GitHub Actions from the tagged source and comes with a
 `SHA256SUMS`. To check that a download is what that build produced:
 
 ```bash
-gh attestation verify pidge-<version>-x86_64.AppImage -R Geevo/pidge
+gh attestation verify pidge-<version>-linux-x64.tar.gz -R Geevo/pidge
 ```
 
 Nothing's code-signed yet, so Windows SmartScreen will still give you a
 talking-to the first time.
+
+## Native, all the way down
+
+pidge is C#, compiled ahead of time with NativeAOT. What you download is
+machine code, not a .NET app that needs one installed first.
+
+- **No runtime.** No .NET to install, no framework to keep patched, no
+  launcher shim. Unzip it and run it.
+- **One file.** The whole UI is embedded in it, and so is the native window
+  host (and, on Windows, the WebView2 loader), so `pidge` _is_ the app and
+  nothing sits beside it. The two native libraries unpack themselves into your
+  local app data on first start.
+- **Small.** The Windows download is about 5 MB, zipped.
+- **No warm-up.** There's no JIT, so it's native code from the first
+  instruction and it opens like it means it.
+- **Nothing left to chance at runtime.** Every JSON type is source-generated
+  and every library is marked AOT-compatible. Anything that would only break in
+  the published build (reflection, dynamic code, trimming) is a build error
+  instead.
+
+The sidecar that runs the VS Code panel is built the same way.
 
 ## Features
 
@@ -138,14 +161,13 @@ folder gets moved over on first launch.
 
 ## Build it yourself
 
-You'll need [Rust](https://rustup.rs) (stable), [Node](https://nodejs.org) 20+
-and [pnpm](https://pnpm.io) 10+, plus the
-[Tauri prerequisites](https://tauri.app/start/prerequisites/) for your
-platform. On Fedora that's:
+You'll need the [.NET 10 SDK](https://dotnet.microsoft.com/download),
+[Node](https://nodejs.org) 20+ and [pnpm](https://pnpm.io) 10+. On Linux the
+window needs GTK 3 and WebKitGTK 4.1, and a native build needs clang. On Fedora
+that's:
 
 ```bash
-sudo dnf install webkit2gtk4.1-devel gtk3-devel libsoup3-devel librsvg2-devel \
-  openssl-devel curl wget file libappindicator-gtk3-devel patchelf
+sudo dnf install gtk3-devel webkit2gtk4.1-devel clang zlib-devel
 ```
 
 Then:
@@ -158,12 +180,12 @@ pnpm dev:desktop     # the app, with hot reload
 To build what the releases ship:
 
 ```bash
-pnpm --filter @api-client/desktop build:app
+pnpm build:desktop   # lands in artifacts/desktop/<runtime>/
 ```
 
-On Linux, stick `NO_STRIP=1` in front of that or the AppImage step falls over.
-[docs/packaging.md](docs/packaging.md) explains why, and how the Windows build
-is cross-compiled from Linux.
+That's a native (ahead-of-time compiled) build, which only targets the
+operating system it runs on. [docs/packaging.md](docs/packaging.md) has the
+details.
 
 ## In VS Code
 
@@ -174,17 +196,19 @@ sidecar process. `pnpm dev:vscode` watches it. It's not on the Marketplace yet.
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm format:check
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace
+dotnet format Pidge.slnx --verify-no-changes
+dotnet build Pidge.slnx -warnaserror
+dotnet test Pidge.slnx
 ```
 
-Rust does the HTTP and React is the control panel. There's no second HTTP
+C# does the HTTP and React is the control panel. There's no second HTTP
 implementation: the UI can't touch the network by itself.
 
 ```
-crates/    core, http-engine, variables, storage, session, protocol, sidecar, testserver
-apps/      desktop (Tauri 2), vscode (extension host + webview)
+src/       Core, HttpEngine, Variables, Codegen, Storage, Session, Protocol,
+           Sidecar, Desktop (the Photino window)
+tests/     one test project per library, plus TestServer
+apps/      desktop (the web bundle the window loads), vscode (extension host + webview)
 packages/  ui — the React app both frontends mount
 ```
 

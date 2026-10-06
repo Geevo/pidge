@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Pidge.Desktop</RootNamespace>
+    <AssemblyName>pidge</AssemblyName>
+    <ApplicationIcon>icons\icon.ico</ApplicationIcon>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Where the frontend is built to; embedded whole, so the executable is the whole app. -->
+    <FrontendDist>$(MSBuildThisFileDirectory)..\..\apps\desktop\dist\</FrontendDist>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PhotinoX" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pidge.Codegen\Pidge.Codegen.csproj" />
+    <ProjectReference Include="..\Pidge.Core\Pidge.Core.csproj" />
+    <ProjectReference Include="..\Pidge.Session\Pidge.Session.csproj" />
+    <ProjectReference Include="..\Pidge.Storage\Pidge.Storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(FrontendDist)**\*" LogicalName="app/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="icons\icon.png" LogicalName="icon.png" />
+    <InternalsVisibleTo Include="Pidge.Desktop.Tests" />
+  </ItemGroup>
+
+  <!--
+    Built for a runtime, the window host's native libraries are embedded rather
+    than copied beside the executable, so the executable is the only file.
+    NativeLibraries writes them out on first start. Without a runtime (dotnet
+    run, the tests) they come from the package's runtimes folder as usual.
+  -->
+  <Target Name="EmbedNativeLibraries" BeforeTargets="PrepareResources" DependsOnTargets="ResolvePackageAssets" Condition="'$(RuntimeIdentifier)' != ''">
+    <ItemGroup>
+      <WindowHostLibrary Include="@(NativeCopyLocalItems)" Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'PhotinoX.Native'" />
+      <EmbeddedResource Include="@(WindowHostLibrary)" LogicalName="native/%(Filename)%(Extension)" WithCulture="false" Type="Non-Resx" />
+    </ItemGroup>
+    <Error Condition="'@(WindowHostLibrary)' == ''" Text="No native window host found for $(RuntimeIdentifier) in PhotinoX.Native." />
+  </Target>
+
+  <Target Name="LeaveOutNativeLibraries" AfterTargets="ComputeResolvedFilesToPublishList" DependsOnTargets="EmbedNativeLibraries">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(WindowHostLibrary)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    The frontend is built with pnpm, not by this project. A build without it
+    would still start, to an empty window, so it is stopped here instead.
+    Pointed at a dev server, the app loads the UI from there and needs none.
+  -->
+  <Target Name="CheckFrontend" BeforeTargets="BeforeBuild" Condition="!Exists('$(FrontendDist)index.html') And '$(PIDGE_DEV_SERVER)' == ''">
+    <Error Text="The frontend has not been built. Run `pnpm --filter @api-client/desktop build` first, or `pnpm build:desktop` to do both." />
+  </Target>
+
+</Project>

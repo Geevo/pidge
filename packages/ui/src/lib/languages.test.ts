@@ -57,7 +57,7 @@ describe("Rust", () => {
   });
 
   /*
-   * Every JSON body this app writes in Rust is a raw string, and the fence can
+   * Every JSON body this app writes as Rust is a raw string, and the fence can
    * be longer than one hash when the body carries one of its own.
    */
   it("carries a raw string across lines, whatever its fence", () => {

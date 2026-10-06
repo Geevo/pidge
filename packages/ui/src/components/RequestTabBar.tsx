@@ -455,10 +455,7 @@ export function RequestTabBar({
         handler covers both dragging and double-click to maximise, so there
         is deliberately no handler here: adding one toggled the window twice.
       */}
-      <div
-        className="ac-tabbar__drag"
-        {...(windowControls ? { "data-tauri-drag-region": true } : {})}
-      />
+      <div className="ac-tabbar__drag" {...(windowControls ? { "data-drag-region": true } : {})} />
 
       {windowControls ? <WindowButtons controls={windowControls} /> : null}
     </div>

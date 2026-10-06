@@ -27,7 +27,7 @@ export interface TabRuntime {
 export type DrawerPanel = "history" | "saved";
 
 export interface UiState {
-  /** The persisted shape, exactly as Rust sees it. */
+  /** The persisted shape, exactly as the host sees it. */
   readonly app: AppState;
   readonly runtime: Readonly<Record<string, TabRuntime>>;
   /** `null` means the drawer is closed; the editor is the point of the app. */
@@ -280,7 +280,7 @@ function withRuntime(state: UiState, tabId: string, patch: Partial<TabRuntime>):
 }
 
 /**
- * Prepends the row the engine recorded and trims to the same cap Rust uses, so
+ * Prepends the row the engine recorded and trims to the same cap the host uses, so
  * the panel matches what is on disk without a reload.
  */
 function withHistory(state: UiState, entry: HistoryEntry | null): UiState {

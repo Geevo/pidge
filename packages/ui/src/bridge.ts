@@ -13,7 +13,7 @@ import type {
  * Everything the UI needs from its host.
  *
  * Components never ask which platform they are on; they call the bridge. The
- * desktop implementation forwards to Tauri commands, the VS Code one posts
+ * desktop implementation messages its native host, the VS Code one posts
  * messages to the extension host, and the tests use a fake.
  */
 export interface PlatformBridge {
@@ -105,10 +105,6 @@ export type HostCommand = "newRequest";
  */
 export type WindowButtonStyle = "windows" | "kde" | "gnome";
 
-/** Which edge or corner a resize drag started from. */
-export type ResizeEdge =
-  "North" | "NorthEast" | "East" | "SouthEast" | "South" | "SouthWest" | "West" | "NorthWest";
-
 /**
  * Present only when the host expects the app to draw its own title bar.
  *
@@ -134,12 +130,10 @@ export interface WindowControls {
    * bar, a keyboard shortcut, a tiling drag.
    */
   onResized(listener: () => void): Promise<() => void>;
-  /** Undecorated windows get no resize edges for free; these supply them. */
-  startResizing(edge: ResizeEdge): Promise<void>;
 }
 
 /**
- * The result of one send, mirroring `api_client_session::SendOutcome`.
+ * The result of one send, mirroring the session's `SendOutcome`.
  *
  * `historyEntry` is the row the engine recorded, so the history panel stays
  * live without reloading the whole state. It is absent for a cancelled send.

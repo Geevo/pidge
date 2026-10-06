@@ -1,7 +1,8 @@
 /**
- * The wire types are generated from the Rust crates by `pnpm gen:types`
- * (ts-rs). Nothing in `generated/` should be edited by hand: change the Rust
- * struct and regenerate, so the two sides cannot drift.
+ * The wire types. The .NET types are the source of truth; each file in
+ * `generated/` mirrors one of them, and `TypeScriptMirrorTests` in
+ * `tests/Pidge.Protocol.Tests` fails when a field is added, renamed or dropped
+ * on one side only. Change the .NET type first, then its mirror here.
  */
 export type { AppState } from "./generated/AppState";
 export type { ApiKeyPlacement } from "./generated/ApiKeyPlacement";

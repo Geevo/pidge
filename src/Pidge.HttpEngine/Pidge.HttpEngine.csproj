@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Pidge.HttpEngine</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pidge.Core\Pidge.Core.csproj" />
+    <ProjectReference Include="..\Pidge.Variables\Pidge.Variables.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pidge.HttpEngine.Tests" />
+  </ItemGroup>
+
+</Project>

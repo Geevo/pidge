@@ -1,6 +1,6 @@
 # Sidecar protocol
 
-The VS Code extension host and the Rust sidecar exchange one JSON object per
+The VS Code extension host and the sidecar exchange one JSON object per
 line over stdin/stdout.
 
 - **stdout carries protocol messages and nothing else.** Logs go to stderr.
@@ -8,8 +8,9 @@ line over stdin/stdout.
   id where one applies.
 - Secret header values are never logged, at either end.
 
-Defined in `crates/protocol/src/lib.rs`; the TypeScript declarations are
-generated from it into `packages/ui/src/generated/`.
+Defined in `src/Pidge.Protocol/Messages.cs`. The TypeScript declarations in
+`packages/ui/src/generated/` mirror it, and `TypeScriptMirrorTests` fails the
+build when the two disagree.
 
 ## Envelope
 
@@ -17,11 +18,11 @@ generated from it into `packages/ui/src/generated/`.
 { "v": 4, "id": "req-1", "msg": { "type": "sendRequest", "...": "..." } }
 ```
 
-| Field | Meaning                                                     |
-| ----- | ----------------------------------------------------------- |
-| `v`   | protocol version; `PROTOCOL_VERSION` in Rust and TypeScript |
-| `id`  | correlation id, or `null` for a message with no reply       |
-| `msg` | the message, tagged by `type`                               |
+| Field | Meaning                                                                     |
+| ----- | --------------------------------------------------------------------------- |
+| `v`   | protocol version; `ProtocolVersion` in C#, `PROTOCOL_VERSION` in TypeScript |
+| `id`  | correlation id, or `null` for a message with no reply                       |
+| `msg` | the message, tagged by `type`                                               |
 
 ## Handshake
 
@@ -80,7 +81,7 @@ Sidecar to extension:
 | `requestError`          | `error`, `historyEntry`                                              |
 | `requestCancelled`      | `wasInFlight`                                                        |
 | `codeGenerated`         | `code`, `error`                                                      |
-| `stateLoaded`           | `state`, `recovery`, `storagePath`                                   |
+| `stateLoaded`           | `state`, `recovery`, `storagePath`, `version`                        |
 | `stateSaved`            | `state`                                                              |
 | `savedRequestsExported` | `contents`                                                           |
 | `savedRequestsImported` | `state`, `imported`, `undefinedVariables`, `skipped`, `plainSecrets` |
@@ -126,7 +127,7 @@ response that may be tens of megabytes.
 
 ## Concurrency
 
-Requests run concurrently inside the sidecar. A single writer task serializes
+Requests run concurrently inside the sidecar. A single writer serializes
 stdout, so two responses finishing at the same moment cannot interleave their
 lines. The extension host reassembles lines from stream chunks and routes each
 one by correlation id.
@@ -138,7 +139,7 @@ one by correlation id.
   at **pidge: Restart Request Engine**.
 - The extension never downloads a binary. It uses the one packaged for the
   current platform, or the path in `pidge.sidecarPath`, or a local
-  `target/{debug,release}` build when running from source.
+  `artifacts/bin/Pidge.Sidecar/{debug,release}` build when running from source.
 
 ## Tracing
 

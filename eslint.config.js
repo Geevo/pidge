@@ -10,8 +10,10 @@ export default tseslint.config(
       "**/dist/**",
       "**/media/webview*.js",
       "**/node_modules/**",
-      "target/**",
-      // Generated from the Rust types by `pnpm gen:types`.
+      "**/artifacts/**",
+      "**/bin/**",
+      "**/obj/**",
+      // Mirrors of the .NET wire types, laid out to match them rather than lint.
       "packages/ui/src/generated/**",
     ],
   },

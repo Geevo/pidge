@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Pidge.Sidecar</RootNamespace>
+    <!-- The name the VS Code extension looks for next to itself. -->
+    <AssemblyName>api-client-sidecar</AssemblyName>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+    <OptimizationPreference>Size</OptimizationPreference>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pidge.Codegen\Pidge.Codegen.csproj" />
+    <ProjectReference Include="..\Pidge.Core\Pidge.Core.csproj" />
+    <ProjectReference Include="..\Pidge.Protocol\Pidge.Protocol.csproj" />
+    <ProjectReference Include="..\Pidge.Session\Pidge.Session.csproj" />
+    <ProjectReference Include="..\Pidge.Storage\Pidge.Storage.csproj" />
+  </ItemGroup>
+
+</Project>

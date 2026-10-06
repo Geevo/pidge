@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Both executables publish with NativeAOT, so every library has to stay
+    trimmable and reflection-free: JSON goes through source-generated contexts.
+    In a .targets file so the project's own OutputType and IsTestProject are known.
+  -->
+  <PropertyGroup Condition="'$(IsTestProject)' != 'true' and '$(OutputType)' != 'Exe'">
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>

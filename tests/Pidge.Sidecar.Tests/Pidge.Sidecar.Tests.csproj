@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Pidge.Sidecar.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pidge.Sidecar\Pidge.Sidecar.csproj" />
+    <ProjectReference Include="..\..\tests\Pidge.TestServer\Pidge.TestServer.csproj" />
+  </ItemGroup>
+
+</Project>

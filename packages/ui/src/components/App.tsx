@@ -21,7 +21,6 @@ import { PromptDialog } from "./PromptDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { SplitPane, clampPercent } from "./SplitPane";
 import { StatusBar } from "./StatusBar";
-import { ResizeEdges } from "./WindowChrome";
 import { UrlBar } from "./UrlBar";
 import { BookmarkIcon, CloseIcon, ColumnsIcon, HistoryIcon, RowsIcon, SettingsIcon } from "./icons";
 
@@ -182,7 +181,6 @@ export function App({ bridge }: Props) {
 
   return (
     <div className="ac-app">
-      {bridge.window ? <ResizeEdges controls={bridge.window} /> : null}
       {state.notice ? (
         <div className="ac-notice" role="status">
           <span>{state.notice}</span>

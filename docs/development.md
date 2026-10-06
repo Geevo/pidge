@@ -2,102 +2,122 @@
 
 ## Setup
 
+You need the .NET 10 SDK, Node 20+ and pnpm. On Linux the desktop window also
+needs the GTK 3 and WebKitGTK 4.1 development packages (see the README).
+
 ```bash
 pnpm install
+dotnet build Pidge.slnx
 ```
 
-Rust dependencies are fetched on first build.
-
-For desktop builds you also need the
-[Tauri prerequisites](https://tauri.app/start/prerequisites/). Without them,
-`apps/desktop/src-tauri` cannot compile; the rest of the workspace is unaffected:
+NuGet packages are restored on the first build. The desktop project embeds the
+built frontend, so it refuses to build until `apps/desktop/dist` exists:
 
 ```bash
-cargo check --workspace --exclude api-client-desktop
+pnpm --filter @api-client/desktop build
 ```
 
 ## Running
 
 ```bash
-pnpm dev:desktop    # Vite + Tauri, hot reload
+pnpm dev:desktop    # Vite with hot reload, and the window pointed at it
 ```
+
+That starts the Vite dev server and `dotnet run`s `src/Pidge.Desktop` with
+`PIDGE_DEV_SERVER=http://localhost:5173`, which makes the window load the UI
+from the dev server instead of from the embedded files. Changes to the UI
+reload in place; changes to C# need the command restarted.
 
 For the VS Code extension:
 
 ```bash
-pnpm build:sidecar --debug          # cargo build + stage the binary
+pnpm build:sidecar --debug          # dotnet publish + stage the binary
 pnpm --filter pidge build
 ```
 
 Then <kbd>F5</kbd> in VS Code, and **pidge: Open** in the Extension
 Development Host. When running from source without a staged binary, the
-extension falls back to `target/debug/api-client-sidecar`, so a plain
-`cargo build -p api-client-sidecar` is enough.
+extension falls back to `artifacts/bin/Pidge.Sidecar/debug/`, so a plain
+`dotnet build src/Pidge.Sidecar` is enough.
 
 `pnpm dev:vscode` watches the extension host. The webview is a separate bundle;
-rebuild it with `pnpm --filter pidge build:webview` and reload the
-window.
+rebuild it with `pnpm --filter pidge build:webview` and reload the window.
+
+`PIDGE_LOG=debug` makes either host log more (to stderr for the sidecar).
 
 ## Checks
 
 ```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace
+dotnet format Pidge.slnx --verify-no-changes
+dotnet build Pidge.slnx -warnaserror
+dotnet test Pidge.slnx
 
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm format:check
 ```
+
+Every library is marked AOT-compatible, so the build reports trimming and
+native-compilation hazards as warnings, which `-warnaserror` turns into
+failures. The published apps are built the same way.
 
 ## Tests
 
-**Rust.** `cargo test --workspace`. The engine tests run against
-`crates/testserver`, a small local HTTP/1.1 server. Nothing in the suite touches
-the public internet. It has routes for JSON, echo, headers, arbitrary statuses,
-delays, binary bodies, deliberately invalid JSON, redirect chains and loops,
-cookies, multipart echo, large bodies, a body that dribbles out slowly, and one
-that never responds at all.
+**.NET.** `dotnet test Pidge.slnx`. The engine tests run against
+`tests/Pidge.TestServer`, a small local HTTP/1.1 server. Nothing in the suite
+touches the public internet. It has routes for JSON, echo, headers, arbitrary
+statuses, delays, binary bodies, deliberately invalid JSON, redirect chains and
+loops, cookies, multipart echo, large bodies, a body that dribbles out slowly,
+and one that never responds at all.
 
-`crates/sidecar/tests/stdio.rs` drives the real binary over a pipe, the same way
+`tests/Pidge.Sidecar.Tests` drives the real sidecar over a pipe, the same way
 the extension host does: handshake, version mismatch, malformed input,
-concurrent requests, cancellation, state round trips, and a clean shutdown.
-It starts the sidecar with `PIDGE_KEYRING=off`, so the suite never adds
-items to the keyring of the machine running it, and behaves the same whether or
-not that machine has one. The storage tests
-use an in-memory keyring instead of the system one.
+concurrent requests, cancellation, state round trips, and a clean shutdown. It
+starts the sidecar with `PIDGE_KEYRING=off`, so the suite never adds items to
+the keyring of the machine running it, and behaves the same whether or not that
+machine has one. The storage tests use an in-memory keyring instead of the
+system one.
 
 **TypeScript.** `pnpm test` runs Vitest with React Testing Library. The UI tests
 use a fake bridge rather than a process, and cover sending, response rendering
 (JSON, invalid JSON, binary), errors in the response pane, cancellation, tabs,
 keyboard shortcuts, URL/param sync, history, and saving.
 
-## Generated types
+## Wire types
 
-TypeScript declarations for the wire types are generated from the Rust types by
-`ts-rs` and committed under `packages/ui/src/generated/`:
+The TypeScript declarations for the wire types live under
+`packages/ui/src/generated/`, one file per .NET type. They are written by hand,
+and `TypeScriptMirrorTests` in `tests/Pidge.Protocol.Tests` compares each one
+with the JSON contract of its .NET type, so a field added, renamed or dropped on
+one side fails the build rather than a request.
+
+## Unicode tables
+
+Host names go through UTS 46 (international domain names) in
+`src/Pidge.Core/Idna`, which needs the Unicode mapping and property tables in
+`IdnaTables.g.cs`. To move to a newer Unicode version:
 
 ```bash
-pnpm gen:types
+node scripts/gen-idna-tables.mjs --unicode 17.0.0
 ```
-
-`cargo test` regenerates them as a side effect, so a stale binding shows up as a
-diff rather than as a runtime surprise. Never edit them by hand.
 
 ## Conventions
 
 - Boring, obvious code over clever abstractions.
 - Comments explain _why_, not _what_.
-- Behaviour lives in `crates/session` and below. Adapters stay thin.
+- Behaviour lives in `src/Pidge.Session` and below. Hosts stay thin.
+- No reflection-based serialization: JSON goes through source-generated
+  `JsonSerializerContext`s, so it survives native compilation.
 - New features start by asking whether the app needs them at all. If a product
   decision is ambiguous, favour less product.
 
 ## Adding a capability end to end
 
-1. Extend the models in `crates/core`.
-2. Implement it in `http-engine`, `storage`, or `variables`.
+1. Extend the models in `src/Pidge.Core`.
+2. Implement it in `Pidge.HttpEngine`, `Pidge.Storage` or `Pidge.Variables`.
 3. Expose it on `Session`.
-4. Add the Tauri command and the protocol message — both one-liners.
+4. Add the desktop bridge command and the protocol message.
 5. Add it to `PlatformBridge` and implement it in both bridges.
-6. `pnpm gen:types`, then build the UI against the generated types.
-7. Cover it in `cargo test` and in `pnpm test`.
+6. Mirror any new wire type in `packages/ui/src/generated/`.
+7. Cover it in `dotnet test` and in `pnpm test`.

@@ -16,51 +16,56 @@ permissions:
   contents: read
 
 env:
-  CARGO_TERM_COLOR: always
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   linux:
     name: Linux
-    # The oldest supported Ubuntu, so the AppImage and the deb run on older
-    # glibc too.
+    # The oldest supported Ubuntu, so the executable runs on older glibc too.
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Install Tauri system dependencies
+      - name: Install native toolchain and webview
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
-            libsoup-3.0-dev librsvg2-dev libayatana-appindicator3-dev \
-            libxdo-dev libssl-dev patchelf file
+          sudo apt-get install -y clang zlib1g-dev libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - run: pnpm install --frozen-lockfile
 
       - name: Check the tag matches the app version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          version=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          version=$(dotnet msbuild src/Pidge.Desktop -getProperty:Version)
           case "$GITHUB_REF_NAME" in
             "v$version" | "v$version"-*) ;;
             *) echo "::error::Tag $GITHUB_REF_NAME does not match app version $version"; exit 1 ;;
           esac
 
-      # NO_STRIP: see docs/packaging.md.
       - name: Build
-        run: NO_STRIP=1 pnpm --filter @api-client/desktop build:app
+        run: pnpm build:desktop --rid linux-x64
 
+      # The executable is the whole app, with the window host inside it. GTK
+      # and WebKitGTK come from the system; see docs/packaging.md.
       - name: Collect
         run: |
-          version=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
-          mkdir out
-          cp target/release/bundle/appimage/*.AppImage "out/pidge-$version-x86_64.AppImage"
-          cp target/release/bundle/deb/*.deb target/release/bundle/rpm/*.rpm out/
+          version=$(dotnet msbuild src/Pidge.Desktop -getProperty:Version)
+          name="pidge-$version-linux-x64"
+          mkdir -p out "$name"
+          cp artifacts/desktop/linux-x64/pidge \
+            LICENSE THIRD-PARTY-LICENSES.md \
+            packages/ui/src/fonts/IBMPlexSans-LICENSE.txt \
+            packages/ui/src/fonts/IBMPlexMono-LICENSE.txt "$name/"
+          tar -czf "out/$name.tar.gz" "$name"
           ls -l out
 
       - uses: actions/upload-artifact@v7
@@ -74,7 +79,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -83,16 +90,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Just the executable: the zip is the whole install.
       - name: Build
-        run: pnpm --filter @api-client/desktop exec tauri build --no-bundle
+        run: pnpm build:desktop --rid win-x64
 
+      # The executable is the whole app, with the window host and the WebView2
+      # loader inside it; the zip adds the licences.
       - name: Collect
         shell: pwsh
         run: |
-          $version = (Get-Content apps/desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $version = dotnet msbuild src/Pidge.Desktop -getProperty:Version
           New-Item -ItemType Directory out, zip | Out-Null
-          Copy-Item target/release/pidge.exe, LICENSE, THIRD-PARTY-LICENSES.md, `
+          Copy-Item artifacts/desktop/win-x64/pidge.exe, `
+            LICENSE, THIRD-PARTY-LICENSES.md, `
             packages/ui/src/fonts/IBMPlexSans-LICENSE.txt, `
             packages/ui/src/fonts/IBMPlexMono-LICENSE.txt zip/
           Compress-Archive zip/* "out/pidge-$version-windows-x64.zip"

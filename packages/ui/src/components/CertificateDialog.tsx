@@ -11,7 +11,7 @@ interface Props {
 /**
  * What the server presented, for the connection this response came back on.
  *
- * It is the leaf certificate only: reqwest hands back the peer certificate and
+ * It is the leaf certificate only: the engine keeps the peer certificate and
  * not the chain above it. Showing one certificate honestly beats implying a
  * chain that was never captured.
  */

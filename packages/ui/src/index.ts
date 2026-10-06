@@ -15,7 +15,6 @@ export type {
   HostCommand,
   LoadedState,
   PlatformBridge,
-  ResizeEdge,
   SaveRequestInput,
   SendOutcome,
   WindowButtonStyle,

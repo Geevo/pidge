@@ -3,15 +3,17 @@ import { defineConfig } from "vite";
 
 import { fontLicenses } from "../../scripts/viteFontLicenses";
 
-// Tauri serves this over a fixed port in development and from disk in a build.
+// The desktop host serves this from its own `app://` scheme in a build, and
+// loads the dev server over a fixed port in development.
 export default defineConfig({
   plugins: [
     react(),
     // The fonts are embedded in the frontend bundle, so their licences go with
-    // them. An installed app gets them as plain files too: tauri.conf.json
-    // lists the same sources under bundle.resources.
+    // them. The desktop executable embeds the whole dist folder, licences too.
     fontLicenses(),
   ],
+  // Relative, so the bundle loads the same from any origin the host picks.
+  base: "./",
   clearScreen: false,
   server: {
     port: 5173,
@@ -21,6 +23,7 @@ export default defineConfig({
     target: "es2022",
     outDir: "dist",
     emptyOutDir: true,
-    sourcemap: true,
+    // Embedded in the executable, so they would only make it bigger.
+    sourcemap: false,
   },
 });

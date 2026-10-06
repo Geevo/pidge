@@ -10,51 +10,52 @@
               ┌────────────────────┴────────────────────┐
               │                                         │
      ┌────────▼─────────┐                    ┌──────────▼───────────┐
-     │ Tauri commands   │                    │ extension host (TS)  │
-     │ apps/desktop     │                    │ apps/vscode          │
+     │ PhotinoX window  │                    │ extension host (TS)  │
+     │ src/Pidge.Desktop│                    │ apps/vscode          │
      └────────┬─────────┘                    └──────────┬───────────┘
               │                                         │ stdin/stdout
               │                              ┌──────────▼───────────┐
-              │                              │ crates/sidecar       │
+              │                              │ src/Pidge.Sidecar    │
               │                              └──────────┬───────────┘
               └────────────────┬─────────────────────────┘
                      ┌─────────▼──────────┐
-                     │ crates/session     │  the application service
+                     │ Pidge.Session      │  the application service
                      └─────────┬──────────┘
           ┌────────────────────┼────────────────────┐
   ┌───────▼────────┐  ┌────────▼────────┐  ┌────────▼────────┐
-  │ http-engine    │  │ storage         │  │ variables       │
+  │ HttpEngine     │  │ Storage         │  │ Variables       │
   └───┬────────┬───┘  └─────────────────┘  └─────────────────┘
       │        │
       │  ┌─────▼────────┐
-      │  │ codegen      │  the same request, written out
+      │  │ Codegen      │  the same request, written out
       │  └──────────────┘
    ┌──▼───────────┐
-   │ core         │  models + normalized errors
+   │ Core         │  models + normalized errors
    └──────────────┘
 ```
 
 ## The rule that keeps it honest
 
-`crates/session` is the only thing either frontend is allowed to drive. The
-Tauri commands in `apps/desktop/src-tauri/src/commands.rs` and the message
-handlers in `crates/sidecar/src/session.rs` are both thin: they deserialize,
-call one `Session` method, and serialize the result.
+`Pidge.Session` is the only thing either frontend is allowed to drive. The
+bridge commands in `src/Pidge.Desktop/Host.cs` and the message handlers in
+`src/Pidge.Sidecar/SidecarServer.cs` are both thin: they deserialize, call one
+`AppSession` method, and serialize the result.
 
 This is deliberate. If behaviour lived in the adapters, the two platforms would
 drift the moment one of them grew a feature. As it is, "does the desktop app do
 X?" and "does the VS Code extension do X?" have the same answer by construction.
 
-`crates/http-engine` goes further and knows nothing about persistence either.
-It takes an `HttpRequest`, sends it, and returns an `HttpResponse` or a
-`RequestError`. That is why the engine tests can drive it directly, and why a
-CLI could be added without touching it.
+`Pidge.HttpEngine` goes further and knows nothing about persistence either. It
+takes an `HttpRequest`, sends it, and returns an `HttpResponse` or throws a
+`RequestErrorException` carrying a `RequestError`. That is why the engine tests
+can drive it directly, and why a CLI could be added without touching it.
 
-`crates/codegen` sits on the engine rather than beside it, for the same reason.
+`Pidge.Codegen` sits on the engine rather than beside it, for the same reason.
 Writing a request out as curl means knowing the URL that will be requested, the
 headers that will go with it and the content type the body implies — and
-`http_engine::effective` is what works those out for the send itself. A snippet
-that computed them a second time would be right until one of them changed.
+`RequestPlanning.Effective` is what works those out for the send itself. A
+snippet that computed them a second time would be right until one of them
+changed.
 
 What it cannot take from the engine is the settings around a send: the timeout,
 whether redirects are followed, and the trust and identity settings. Generated
@@ -63,35 +64,44 @@ each generator writes them out. Where a client has no equivalent — `.NET` read
 trust from the machine store, and `requests` cannot open a PKCS#12 bundle — the
 snippet says so in a comment instead of looking complete and failing.
 
-## Crates
+## Projects
 
-| Crate         | Owns                                                                      |
-| ------------- | ------------------------------------------------------------------------- |
-| `core`        | `HttpRequest`, `HttpResponse`, `RequestError`, secret-header redaction    |
-| `variables`   | `{{name}}` substitution and `Environment`                                 |
-| `http-engine` | reqwest client, request building, cancellation, timing, response limits   |
-| `codegen`     | the request written out in ten languages, and the libraries for them      |
-| `storage`     | `AppState`, atomic writes, schema version and migrations, history cap     |
-| `session`     | engine + store + in-memory state; every operation a frontend can perform  |
-| `protocol`    | the newline-delimited JSON messages between the extension and the sidecar |
-| `sidecar`     | the binary: a line reader around `Session`                                |
-| `testserver`  | a local HTTP/1.1 server for the tests                                     |
+| Project            | Owns                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| `Pidge.Core`       | `HttpRequest`, `HttpResponse`, `RequestError`, secret-header redaction, URL parsing     |
+| `Pidge.Variables`  | `{{name}}` substitution and environments                                                |
+| `Pidge.HttpEngine` | the `SocketsHttpHandler` transport, request building, cancellation, timing, size limits |
+| `Pidge.Codegen`    | the request written out in ten languages, and the libraries for them                    |
+| `Pidge.Storage`    | `AppState`, atomic writes, schema version and migrations, history cap, secrets          |
+| `Pidge.Session`    | engine + store + in-memory state; every operation a frontend can perform                |
+| `Pidge.Protocol`   | the newline-delimited JSON messages between the extension and the sidecar               |
+| `Pidge.Sidecar`    | the `api-client-sidecar` executable: a line reader around `AppSession`                  |
+| `Pidge.Desktop`    | the `pidge` executable: one window, the embedded UI, and where the window was last      |
+| `Pidge.TestServer` | a local HTTP/1.1 server for the tests                                                   |
+
+`Pidge.Core` parses URLs itself, to the WHATWG URL Standard (`WebUrl`), with its
+own percent-encoding and UTS 46 host names, so a URL means the same thing here
+as it does in the browser the UI runs in.
+
+Both executables are published with NativeAOT.
 
 ## Types cross the boundary once
 
-The Rust types are the single source of truth. `ts-rs` derives TypeScript
-declarations from them and writes them to `packages/ui/src/generated/`, which is
-committed so a checkout typechecks without running `cargo`.
+The .NET types are the single source of truth. The TypeScript declarations in
+`packages/ui/src/generated/` mirror them, one file per type, and are committed so
+a checkout typechecks without building the .NET side. `TypeScriptMirrorTests` in
+`tests/Pidge.Protocol.Tests` holds each declaration to the JSON contract of its
+type — the same fields, the same nullability, the same tags on a tagged union,
+the same strings for an enum — so a field added, renamed or dropped on one side
+fails the tests rather than a request.
 
-```bash
-pnpm gen:types   # cargo test --workspace export_bindings
-```
+That contract is System.Text.Json with source-generated contexts —
+`CoreJsonContext`, `StorageJsonContext`, `SessionJsonContext`,
+`ProtocolJsonContext`, `DesktopJsonContext` — each built from
+`PidgeJson.CreateOptions`, so both hosts write the same JSON and native
+compilation has no reflection to lose.
 
-`.cargo/config.toml` sets `TS_RS_EXPORT_DIR`, so `cargo test` keeps the bindings
-current as a side effect of running the suite. Nothing in `generated/` should be
-edited by hand: change the Rust struct and regenerate.
-
-Response bodies are `Vec<u8>` in Rust and base64 `string` in TypeScript, because
+Response bodies are `byte[]` in C# and base64 `string` in TypeScript, because
 JSON has no byte array and an array of numbers would be ruinous for a 50 MB
 response. `packages/ui/src/lib/base64.ts` decodes it.
 
@@ -101,6 +111,7 @@ response. `packages/ui/src/lib/base64.ts` decodes it.
 interface PlatformBridge {
   sendRequest(request: HttpRequest): Promise<SendOutcome>;
   cancelRequest(requestId: string): Promise<void>;
+  generateCode(request: HttpRequest, target: CodeTarget): Promise<string>;
   loadState(): Promise<LoadedState>;
   saveState(state: AppState): Promise<AppState>;
   saveRequest(input: SaveRequestInput): Promise<AppState>;
@@ -118,16 +129,23 @@ interface PlatformBridge {
 Components never branch on the platform. `App` takes a bridge and that is the
 whole seam; the tests pass a fake in place of a process.
 
+On the desktop the bridge (`apps/desktop/src/bridge.ts`) posts each call to the
+host as `{ id, command, args }` through `window.external.sendMessage`, and
+`Host` answers with `{ id, ok, value | error }`. The host runs the work off the
+UI thread and posts the answer back through the window's dispatcher. In VS Code
+the extension host turns the same calls into sidecar messages; see
+[protocol.md](protocol.md).
+
 ## Who owns history
 
-History is owned by `Session`, not by the UI, and `Session::replace_state`
+History is owned by `AppSession`, not by the UI, and `AppSession.ReplaceState`
 deliberately ignores the `history` field of whatever the UI sends. Otherwise a
 UI that took a snapshot, sent a request, and then wrote its snapshot back would
 erase the row that send had just created.
 
-So that the panel still updates live, `Session::send` returns the `HistoryEntry`
-it recorded alongside the response, and the reducer prepends it. `clear_history`
-is the only way a frontend can empty it.
+So that the panel still updates live, `AppSession.SendWithOverridesAsync`
+returns the `HistoryEntry` it recorded alongside the response, and the reducer
+prepends it. `ClearHistory` is the only way a frontend can empty it.
 
 ## Themes
 
@@ -160,12 +178,13 @@ furniture — scrollbars, the caret, the right-click menu — follows.
 
 ### The right-click menu
 
-The webview's own menu is trimmed to Copy and Paste in release builds
-(`apps/desktop/src-tauri/src/context_menu.rs`): WebKitGTK's `context-menu`
-signal on Linux, WebView2's `ContextMenuRequested` on Windows. Trimming the
+In a production build of the UI the webview's own menu opens only where Copy and Paste mean
+something — in a text field, or over selected text — and nowhere else
+(`trimContextMenu` in `apps/desktop/src/bridge.ts`). Elsewhere it offers Back,
+Reload, Save As and Print, none of which mean anything in an app. Keeping the
 native menu rather than drawing one in the page keeps Paste working without a
-clipboard permission prompt. Debug builds keep the full menu, Inspect Element
-included. In VS Code the webview menu is VS Code's, which already offers only
+clipboard permission prompt. The UI served by the dev server keeps the full
+menu, Inspect Element included. In VS Code the webview menu is VS Code's, which already offers only
 Cut, Copy and Paste.
 
 ### The controls the platform draws
@@ -199,11 +218,10 @@ out of `useApiClient` when the dialog did. A hook that puts a dialog up cannot
 be driven by anything without a screen, and the sidecar has none.
 
 That leaves the menu the webview puts up on a right click, which is still the
-platform's and stays in the desktop's colours. Passing the palette down to the
-window was tried and removed: on Linux it sets
-`gtk-application-prefer-dark-theme`, which changes neither that menu under
-Breeze nor what `prefers-color-scheme` reports, so it was machinery that did
-nothing.
+platform's and stays in the desktop's colours. Nothing passes the palette down
+to the window: on Linux that would set `gtk-application-prefer-dark-theme`,
+which changes neither that menu under Breeze nor what `prefers-color-scheme`
+reports.
 
 A palette cannot be judged from its name, so the theme is picked from samples
 rather than from a list: the app in miniature — window, tab, URL bar, Send, two
@@ -249,8 +267,10 @@ already implements.
 
 ## The window
 
-The desktop window is undecorated. GTK on Wayland always draws its own header —
-it does not implement the protocol KDE and other compositors use for server-side
+The desktop window is a PhotinoX window — WebView2 on Windows, WebKitGTK on
+Linux — and it is chromeless (`SetChromeless(true)` in
+`src/Pidge.Desktop/Program.cs`). GTK on Wayland always draws its own header — it
+does not implement the protocol KDE and other compositors use for server-side
 decorations — and that header is far taller than the platform's own. Under
 XWayland the same app got a normal, thin titlebar, but XWayland costs a copy and
 composite per frame and made scrolling visibly laggy.
@@ -259,9 +279,26 @@ So the app draws its own: the tab strip doubles as the title bar, with the
 leftover space as a drag region and minimise/maximise/close at its end. That is
 one row of chrome rather than two.
 
-`tao` only calls `set_decorated(false)` on Linux and adds nothing back, so an
-undecorated window has no resize edges at all. `ResizeEdges` supplies eight
-invisible strips that call `startResizeDragging`.
+On Windows the window is chromeless only to begin with. `src/Pidge.Desktop/Windows/`
+gives it back the usual window styles, so it animates, snaps and minimises from
+the taskbar, and drops only the title bar. The sides and bottom keep the
+system's sizing border, invisible but for a line, so they resize from just
+outside the window, as any other window's do. The top edge, where the page
+reaches the top of the window, is a window of its own: all but transparent,
+owned by the main one so it stays just above it, and answering as the top of
+the sizing border, so a drag there resizes and a double click stretches the
+window to the height of the screen. That code goes by the window handle alone,
+and knows nothing of PhotinoX. The cost is the one every framed window pays:
+what shows is smaller than the window's size by the side and bottom borders.
+
+On Linux, PhotinoX gives the undecorated window resize edges of its own: a
+strip just inside each edge that starts the window manager's resize, and that
+steps aside while the window is maximised. The page draws none. The drag region
+works the same way on both: it is marked
+`data-drag-region`, a press there asks the host to begin a move and a double
+press toggles maximise. GTK only starts a move from the native press itself, so
+on Linux the page reports where those strips are and the window manager does
+the rest.
 
 Drawing the buttons means drawing the right ones. A single set looks foreign
 everywhere except where it came from, so `window_buttons` reports which desktop
@@ -275,20 +312,25 @@ time. The sizes and the 24px spacing were measured off real title bars on a
 Plasma desktop rather than guessed.
 
 The answer arrives before the first render, because swapping the buttons
-afterwards would be visible. It costs one `invoke` behind the boot screen.
+afterwards would be visible. It costs one round trip to the host behind the
+boot screen.
 
 Which of the two middle glyphs is drawn follows the window itself, through
-`onResized`, rather than the click that asked for it. A compositor maximises
-when it is ready, so `isMaximized()` straight after `toggleMaximize()` still
-reports the old state and the glyph ends up a step behind; the event also
-covers the ways a window is maximised without the button, such as a double
-click on the title bar or a keyboard shortcut.
+`onResized`, rather than the click that asked for it. The host posts a `resized`
+event whenever the window's size or state changes. A compositor maximises when
+it is ready, so `isMaximized()` straight after `toggleMaximize()` still reports
+the old state and the glyph ends up a step behind; the event also covers the
+ways a window is maximised without the button, such as a double click on the
+title bar or a keyboard shortcut.
 
 All of this hangs off `PlatformBridge.window`, which is optional and absent in
-VS Code, where the editor owns the frame. Every call through it is caught:
-`getCurrentWindow()` throws outright when the Tauri internals are missing, and
-an effect that throws unmounts the entire application — window chrome must not
-be able to do that.
+VS Code, where the editor owns the frame. Every call through it is caught: with
+no host to answer, a call rejects, and an effect that throws unmounts the entire
+application — window chrome must not be able to do that.
+
+Where the window was is remembered by the host as it moves, through
+`AppSession.SetWindowPlacement`, and restored before the window is first shown;
+[storage.md](storage.md) has the rules.
 
 ## Before the app has loaded
 
@@ -317,9 +359,9 @@ show earlier.
 a divider that drags, takes arrow keys, and resets to even on a double click.
 
 The layout is a preference and lives in `Settings`. The split position is
-per-tab: `ScratchTab::split_percent` holds it, so comparing a long response in
-one tab does not squash the request editor in another. `None` falls back to
-`Settings::split_percent`, which each drag also updates — that way existing tabs
+per-tab: `ScratchTab.SplitPercent` holds it, so comparing a long response in
+one tab does not squash the request editor in another. `null` falls back to
+`Settings.SplitPercent`, which each drag also updates — that way existing tabs
 stay where they were put, and a new tab opens where you were last working rather
 than always at the original default. Both persist with the tab.
 
@@ -460,23 +502,27 @@ Above 2 MB the body falls back to a plain `<pre>` with a note. Highlighting and
 folding a document that size costs more than it is worth, and the fallback still
 shows everything.
 
-### Why the content policy leaves `style-src` alone
+### Why the content policy allows inline styles
+
+The desktop's content policy is added by the host: `Assets.Open`
+(`src/Pidge.Desktop/Assets.cs`) serves the UI embedded in the executable from
+`app://localhost/`, and writes the policy into `index.html` as a `<meta>` on the
+way out. It allows the page itself and nothing else, with one exception —
+`style-src 'self' 'unsafe-inline'`.
 
 CodeMirror ships its styles as a stylesheet it inserts into the document at
-runtime, so the policy has to allow inline styles. The config asks for exactly
-that — `style-src 'self' 'unsafe-inline'` — but Tauri rewrites the policy as it
-serves the page and adds a nonce to that directive, and a policy that carries a
-nonce ignores `'unsafe-inline'` altogether. The editor's stylesheet was
-therefore blocked in release builds, though never in development, where the page
-comes from the dev server and is not rewritten.
+runtime, and the boot screen in `index.html` is an inline `<style>`, so both
+need inline styles. Nothing adds a nonce to that directive, which matters: a
+directive that carries a nonce ignores `'unsafe-inline'` altogether, and the
+editor's stylesheet would be blocked.
 
-What it looked like: the line numbers drew in one column, the body drew a
-thousand pixels below them in the wrong font, and nothing was highlighted,
-because every rule the editor relies on had been dropped.
+What that looks like: the line numbers draw in one column, the body draws a
+thousand pixels below them in the wrong font, and nothing is highlighted,
+because every rule the editor relies on has been dropped.
 
-`dangerousDisableAssetCspModification` names the directives Tauri must leave as
-written. Only `style-src` is listed, so scripts are still nonced and still
-locked down; the one directive we deliberately opened stays open.
+Scripts get no such allowance. `default-src 'self'` covers them, so only the
+bundle's own files run. With `PIDGE_DEV_SERVER` set the page comes from the dev
+server instead, and is not rewritten.
 
 ## Settings
 
@@ -504,10 +550,11 @@ leaves. The group's heading names the radio group, so the samples carry no
 second label.
 
 Each path field has a Browse button when `PlatformBridge.pickFile` is present:
-the desktop supplies it through Tauri's dialog plugin, VS Code through
-`showOpenDialog` on the extension host. It is optional like `window`, and the
-buttons are absent on a host without one — typing the path still works, which is
-what the field did before.
+the desktop supplies it through the host's `pick_file` command, which opens the
+platform's own file chooser, and VS Code through `showOpenDialog` on the
+extension host. It is optional like `window`, and the buttons are absent on a
+host without one — typing the path still works, which is what the field did
+before.
 
 About shows the host's own version, which travels with the state: `LoadedState`
 already carried the storage path, and the version goes the same way rather than
@@ -517,15 +564,16 @@ binary actually running.
 ## Errors
 
 `RequestError` has a `kind` the UI can switch on, a `message` written for a
-person, and an optional `detail` holding the flattened source chain. The detail
-goes behind a disclosure triangle; the message goes in the response pane. Errors
-are never only a toast — they appear where the response would have been, next to
-the request that caused them.
+person, and an optional `detail` holding the flattened chain of underlying
+exceptions. The detail goes behind a disclosure triangle; the message goes in
+the response pane. Errors are never only a toast — they appear where the
+response would have been, next to the request that caused them.
 
 ## Request building
 
-`crates/http-engine/src/build.rs` turns a resolved request into a reqwest
-builder. Two decisions worth knowing:
+`src/Pidge.HttpEngine/Prepare.cs` turns a resolved request into the method, URL,
+headers and body bytes that go out, by the rules in `RequestPlanning`
+(`Effective.cs`) that code generation shares. Decisions worth knowing:
 
 - **An explicit `Authorization` header wins.** If one is set and enabled, the
   Auth tab is skipped and a warning is attached to the response. Silently
@@ -535,8 +583,8 @@ builder. Two decisions worth knowing:
 - **A parameter in both the URL and the table is sent once.** They are one
   thing shown twice — editing the table rewrites the URL's query, and typing a
   query in the URL fills the table — so appending the table on top of the URL
-  sent every parameter twice. The match is on decoded pairs, against the URL as
-  it arrived, so two identical rows still send two copies.
+  would send every parameter twice. The match is on decoded pairs, against the
+  URL as it arrived, so two identical rows still send two copies.
 - **Encoding can be turned off per request.** `encodeQuery` is on by default
   and is what almost everyone wants. Off is for a value that is already encoded,
   or that holds a `/` or `:` a server wants to see unescaped; the text then goes
@@ -545,22 +593,21 @@ builder. Two decisions worth knowing:
   rather than a send away. The UI is where the app encodes — `paramsChanged`
   writes the query into the URL — and the engine applies the same rule to
   anything it appends itself.
-- **Query values are percent-encoded, and the typed query is left alone.** The
-  `url` crate's `query_pairs_mut` serialises as a form does — a space becomes
-  `+` — and rewrites the query already in the URL while it is there. `+` means
-  space in a form body, not in a URL: a server is entitled to read `SW1A+1AA`
-  as a postcode with a plus in it, and one did, answering 400 to a request that
-  curl and Bruno could make. The query string is assembled by hand instead:
-  what the user typed is carried across byte for byte, and appended pairs are
-  encoded to RFC 3986's unreserved set, which is what `encodeURIComponent` and
-  curl produce.
+- **Query values are percent-encoded, and the typed query is left alone.** A
+  form serialiser turns a space into `+`, and `+` means space in a form body,
+  not in a URL: a server is entitled to read `SW1A+1AA` as a postcode with a
+  plus in it, and one did, answering 400 to a request that curl and Bruno could
+  make. So the query string is assembled by hand rather than as a form: what the
+  user typed is carried across byte for byte, and appended pairs are encoded to
+  RFC 3986's unreserved set, which is what `encodeURIComponent` and curl
+  produce.
 
 ## Auth that needs a round trip
 
-Bearer, basic and an API key are headers, so they are applied in
-`build.rs` where the request is assembled. Digest is not: RFC 7616 is a
-conversation, and the response can only be computed once the server has sent a
-nonce. `HttpEngine::send` therefore sends, and on a 401 carrying a
+Bearer, basic and an API key are headers, so they are applied in `Prepare.cs`
+where the request is assembled. Digest is not: RFC 7616 is a conversation, and
+the response can only be computed once the server has sent a nonce.
+`HttpEngine.SendAsync` therefore sends, and on a 401 carrying a
 `WWW-Authenticate: Digest` challenge, answers it and sends again.
 
 Both attempts live inside the one timeout. Two round trips the user did not ask
@@ -572,7 +619,7 @@ was asked, so it is returned with a warning saying why there was no second
 attempt.
 
 OAuth 2 needs a round trip of a different shape: a token before anything can be
-sent at all. `crates/http-engine/src/oauth2.rs` posts the form, reads the access
+sent at all. `src/Pidge.HttpEngine/OAuth2.cs` posts the form, reads the access
 token and attaches it as a bearer token, for the three grants that are just a
 request — client credentials, password, refresh token. Authorization code and
 the other interactive flows are deliberately absent: they need a browser and a
@@ -585,17 +632,17 @@ minted for something else. A burst of requests to one API costs one token
 request.
 
 A token that cannot be got is an error rather than a response, with its own
-`RequestErrorKind::Auth`: the request never left, and reporting it as a failed
+`RequestErrorKind.Auth`: the request never left, and reporting it as a failed
 send would be a lie. The endpoint's own `error` field is quoted, since
 `invalid_client` says more than 401 does.
 
 OAuth 1 is neither: it is arithmetic. Every request carries a signature over its
-own method, URL and parameters, so `crates/http-engine/src/oauth1.rs` signs at
-build time and there is nothing to fetch or cache. The awkward part is the
-signature base string — percent-encoding applied twice, parameters sorted after
-encoding, a form-encoded body signed along with the query — and getting it wrong
-produces a rejection with no explanation. So the base string is tested against
-the worked example in RFC 5849 §3.4.1.1, character for character.
+own method, URL and parameters, so `src/Pidge.HttpEngine/OAuth1.cs` signs as the
+request is prepared and there is nothing to fetch or cache. The awkward part is
+the signature base string — percent-encoding applied twice, parameters sorted
+after encoding, a form-encoded body signed along with the query — and getting it
+wrong produces a rejection with no explanation. So the base string is tested
+against the worked example in RFC 5849 §3.4.1.1, character for character.
 
 The integration tests check the header's shape rather than recomputing the
 signature in the test server. A second implementation written by the same hand
@@ -606,11 +653,12 @@ test fails if the client's answer is merely well-formed rather than correct.
 
 ## Cancellation
 
-`CancellationHandle` wraps a `CancellationToken`. `HttpEngine::execute` selects
-on it both before sending and between body chunks, so cancelling mid-download
-works, not just cancelling before the connection opens. `CancellationRegistry`
-maps request ids to handles so `cancel_http_request(id)` needs no bookkeeping in
-the adapters.
+`CancellationHandle` wraps a `CancellationTokenSource`. The engine links its
+token with the timeout's and passes the result to the send and to every read of
+the body, so cancelling mid-download works, not just cancelling before the
+connection opens. `CancellationRegistry` maps request ids to handles so
+`AppSession.Cancel(id)` — `cancel_http_request` on the desktop, `cancelRequest`
+from the extension — needs no bookkeeping in the adapters.
 
 A cancelled request is not recorded in history: it never really happened.
 
@@ -628,65 +676,74 @@ holds its width so a long one cannot push the status code onto a second line.
 
 ## Response size
 
-Bodies are streamed and cut off at `max_response_bytes` (50 MB by default), with
+Bodies are streamed and cut off at `MaxResponseBytes` (50 MB by default), with
 `truncated: true` on the response and a note in the status line. Truncating
 beats erroring: you still get to look at the first 50 MB.
 
 ## TLS
 
-reqwest is built on rustls here, and reqwest's `rustls` feature pulls in
-`rustls-platform-verifier`. That means the client already trusts whatever the
-operating system trusts — the Windows certificate store, the macOS keychain, the
-system CA bundle on Linux — with no configuration at all.
+The transport is .NET's `SocketsHttpHandler`, and with nothing configured it
+verifies certificates the way the platform does. That means the client already
+trusts whatever the operating system trusts — the Windows certificate store, the
+macOS keychain, the system CA bundle on Linux — with no configuration at all.
 
-`crates/http-engine/src/tls.rs` covers the two things the OS store cannot:
+`src/Pidge.HttpEngine/TlsConfig.cs` covers the two things the OS store cannot:
 
-- **An extra CA.** `tls_certs_merge()` maps to `Verifier::new_with_extra_roots`,
-  so an internal root is _added_ to the system store rather than replacing it. A
-  corporate CA should not cost you the ability to reach the rest of the internet.
-  Turning `useSystemRoots` off switches to `tls_certs_only()`, for talking to one
+- **An extra CA.** A certificate validation callback accepts what the platform
+  accepted, and otherwise builds the chain again against the named CAs alone
+  (`X509ChainTrustMode.CustomRootTrust`), so an internal root is _added_ to the
+  system store rather than replacing it. A corporate CA should not cost you the
+  ability to reach the rest of the internet. Turning `useSystemRoots` off skips
+  the platform's answer and trusts only the named CAs, for talking to one
   internal host and nothing else. Asking for neither is refused rather than
   quietly trusting nothing.
-- **A client certificate.** rustls accepts PEM only, but Windows exports
-  `.p12`/`.pfx`, so a PKCS#12 bundle is unpacked in process with `p12-keystore`
-  and re-encoded as PEM. In process deliberately: shelling out to `openssl`
-  would add a tool Windows does not ship, and would put the password in the
-  process list where any other user could read it.
+- **A client certificate.** Windows exports `.p12`/`.pfx`, so a PKCS#12 bundle
+  is opened in process with `X509CertificateLoader`. In process deliberately:
+  shelling out to `openssl` would add a tool Windows does not ship, and would
+  put the password in the process list where any other user could read it. A
+  PEM certificate and key work too; the key is passed through PKCS#12 once on
+  loading, because Windows cannot present a key that only lives in memory.
 
 The format is detected from the file contents, not the extension, so a `.crt`
 holding PEM works and a `.pem` holding DER does too.
 
-reqwest defers parsing a DER certificate until the client is built, so a bad
-certificate surfaces at `build()` rather than where it was loaded. When any TLS
-setting is non-default, a build failure is reported as a TLS error naming the
-certificate settings, because that is what it will be.
+A CA file that will not parse is reported only once the rest of the settings
+have loaded, so a missing client certificate is still the error you see first.
+When any TLS setting is non-default, a failure to build the handler is reported
+as a TLS error naming the certificate settings, because that is what it will
+be.
 
 ### The padlock
 
-`ClientBuilder::tls_info(true)` puts reqwest's `TlsInfo` on the response, which
-carries the negotiated version and the peer's leaf certificate as DER.
-`crates/http-engine/src/peer_cert.rs` parses that with `x509-parser` into
-`TlsDetails`, and the response carries it: `None` for plain HTTP, so the padlock
-appears exactly when the connection was encrypted.
+The handler pools connections and says nothing about which one a response came
+back on, so `PlaintextStreamFilter` wraps each connection's stream in a
+`TrackedStream` (`TrackedStream.cs`). Writing a request marks the connection on
+a `ConnectionCapture` that travels with that request's async flow, and the
+response reads the negotiated protocol and the peer's leaf certificate from that
+connection's `SslStream`. Requests are sent as HTTP/1.1 so that one request and
+one connection can be matched up this way.
 
-It is the leaf only. reqwest hands back the peer certificate and not the chain
-above it, so the dialog shows one certificate honestly rather than implying a
-chain that was never captured.
+`src/Pidge.HttpEngine/PeerCert.cs` parses the certificate with
+`X509CertificateLoader` into `TlsDetails`, and the response carries it: `null`
+for plain HTTP, so the padlock appears exactly when the connection was
+encrypted.
 
-A certificate that will not parse gives `certificate: None` rather than failing
+It is the leaf only. The stream hands back the peer certificate and not the
+chain above it, so the dialog shows one certificate honestly rather than
+implying a chain that was never captured.
+
+A certificate that will not parse gives `certificate: null` rather than failing
 the response. The TLS layer has already accepted the connection by then; a gap
 in what we can display is not a reason to throw the response away.
 
-`TlsDetails` is boxed on `HttpResponse`. It is a few hundred bytes that most
-responses do not carry, and `HttpResponse` travels inside the sidecar's message
-enum, which is as large as its largest variant.
-
 ### Rebuilding the engine
 
-TLS settings shape the reqwest client, which is built once. `Session` therefore
-holds its engine behind a `Mutex` and rebuilds it when `replace_state` sees an
-`EngineConfig` that differs from the live one, so adding a CA takes effect on the
-next send rather than the next launch.
+TLS settings shape the handler, which is built once. `AppSession` therefore
+holds its engine behind a lock and replaces it when `ReplaceState` sees an
+`EngineConfig` that differs from the live one — a record, so the comparison is
+by value — and adding a CA takes effect on the next send rather than the next
+launch. The engine it replaces is not disposed, since a send that started on it
+may still be using it.
 
 State is saved _before_ the rebuild is attempted. If a certificate path is wrong
 the error still reaches the UI, but the setting persists — otherwise the dialog
@@ -694,8 +751,10 @@ reporting the error would have nothing left to correct.
 
 ## Room left deliberately
 
-Proxies and client-certificate selection per host are not wired up. The reqwest
-client builder in `HttpEngine::new` is the one place either would go.
+Proxy settings and client-certificate selection per host are not wired up; the
+handler uses .NET's default proxy, which follows the system's.
+`HttpEngine.CreateHandler`, where the `SocketsHttpHandler` is configured, is the
+one place either would go.
 
 ### NTLM
 
@@ -704,12 +763,13 @@ scheme, a negotiate message, the server's challenge, and an authenticate message
 computed from it — the last two on the same socket, or the server has no
 challenge to check the response against.
 
-Nothing in reqwest pins a connection to a sequence of requests. What makes this
-work is narrower: `HttpEngine::ntlm_client` builds a client whose pool holds one
-connection and which nothing else uses, then sends the two messages back to
-back. The idle connection the first leg returns is the only one the second can
-take. Redirects are off for that client, since following one mid-handshake would
-open a new connection and lose the challenge.
+Nothing in the handler's pool pins a connection to a sequence of requests. What
+makes this work is narrower: for NTLM, `CreateHandler(ntlm: true)` builds a
+handler whose pool holds one connection (`MaxConnectionsPerServer = 1`) and
+which nothing else uses, then sends the two messages back to back. The idle
+connection the first leg returns is the only one the second can take. Redirects
+are not followed during the handshake, since following one would open a new
+connection and lose the challenge.
 
 That is a property of the pool rather than a guarantee from an API, so the test
 server enforces it: `/ntlm` keeps its challenge in per-connection state and
@@ -717,11 +777,11 @@ refuses an authenticate message that arrives anywhere else. The test asserts
 both messages landed on one connection, and the server recomputes the NTLMv2
 proof rather than pattern-matching it.
 
-`crates/http-engine/src/ntlm.rs` builds the messages: NTLMv2 only, no signing or
+`src/Pidge.HttpEngine/Ntlm.cs` builds the messages: NTLMv2 only, no signing or
 sealing, no session key. The key derivation is pinned to the worked example in
 MS-NLMP §4.2.4.1.1, because a server that dislikes the response says only 401,
 which tells you nothing about which step was wrong.
 
 The first request of every NTLM exchange is unauthenticated, on the shared
-client, because the scheme is not known until the server names it. That is the
+handler, because the scheme is not known until the server names it. That is the
 protocol's cost, not an implementation choice.

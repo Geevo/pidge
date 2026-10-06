@@ -3,28 +3,56 @@
 ## Desktop
 
 ```bash
-pnpm --filter @api-client/desktop build:app
+pnpm build:desktop                    # this machine
+pnpm build:desktop --rid linux-x64    # a specific runtime identifier
 ```
 
-Tauri builds the frontend first (`beforeBuildCommand`) and produces installers
-for the host platform under `target/release/bundle/`. Windows, macOS, and Linux
-are all supported; each has to be built on its own platform, as usual for Tauri.
+`scripts/desktop.mjs publish` builds the frontend with Vite, then publishes
+`src/Pidge.Desktop` as a native (NativeAOT) executable into
+`artifacts/desktop/<rid>/`. The built `apps/desktop/dist/` is embedded into the
+executable as resources, and so are the native window host library PhotinoX
+loads and, on Windows, the WebView2 loader. The executable is the whole app,
+with nothing beside it.
+
+Native compilation can't link those two libraries in, so they are carried as
+resources and written out on first start, to a folder named for their contents
+under the machine-local data folder (`%LOCALAPPDATA%\pidge\native` on Windows,
+`~/.local/share/pidge/native` on Linux). Each start compares the files there
+with the ones it carries and rewrites any that differ, and a new version clears
+out the folders of older ones. `src/Pidge.Desktop/NativeLibraries.cs` does the
+writing, and the `EmbedNativeLibraries` target in `Pidge.Desktop.csproj` the
+embedding; a build without a runtime identifier (`dotnet run`, the tests)
+embeds nothing and loads the libraries from the package as usual.
+
+Native compilation only targets the operating system it runs on, so Windows is
+built on Windows and Linux on Linux. `--rid` picks the architecture, and needs
+the matching native toolchain installed.
+
+The browser engine is the system's: WebView2 on Windows (present on Windows 11
+and most of Windows 10) and WebKitGTK 4.1 on Linux. Neither is bundled.
+
+`-warnaserror` is on for every publish. Native compilation reports what it
+cannot see through (reflection, dynamic code) as warnings, and each one is
+something that would break only in the published build.
 
 ### Releases
 
 Releases are built by `.github/workflows/release.yml`, not on anyone's machine.
-Pushing a tag builds the Linux bundles on Ubuntu 22.04, so they run on older
+Pushing a tag builds the Linux archive on Ubuntu 22.04, so it runs on older
 glibc, and the Windows zip on a Windows runner:
 
 ```bash
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-The tag has to match the version in `tauri.conf.json`, optionally with a suffix
-such as `-pre.12`; one with a suffix becomes a pre-release. The result is a
-**draft** with every file and a `SHA256SUMS`, so the notes are written and the
+The tag has to match `<Version>` in `Directory.Build.props`, optionally with a
+suffix such as `-pre.12`; one with a suffix becomes a pre-release. The result is
+a **draft** with every file and a `SHA256SUMS`, so the notes are written and the
 release published by hand. Running the workflow from the Actions tab builds the
 same files as workflow artifacts without releasing anything.
+
+Each archive holds the executable, `LICENSE`,
+`THIRD-PARTY-LICENSES.md` and the font licences.
 
 Nothing is code-signed. What there is instead:
 
@@ -39,87 +67,31 @@ Nothing is code-signed. What there is instead:
 Windows SmartScreen still warns about an unsigned executable; only a
 code-signing certificate stops that.
 
-### Windows from Linux
-
-The MSVC target cross-compiles with `cargo-xwin`, which fetches the Windows SDK
-and CRT itself:
-
-```bash
-rustup target add x86_64-pc-windows-msvc
-cargo install cargo-xwin
-cd apps/desktop
-pnpm exec tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle
-```
-
-Four host tools have to be on `PATH`: `clang-cl` compiles the C, `lld-link`
-links, `llvm-lib` is the librarian `aws-lc-sys` looks for, and `llvm-rc`
-compiles the resource script that carries the icon and the manifest. On Fedora
-that is `clang`, `lld` and `llvm`; `lld-link` can also come from the Rust
-toolchain's own `rust-lld`, which is the same linker under another name.
-
-The result is `target/x86_64-pc-windows-msvc/release/pidge.exe`,
-about 10 MB, with the icon, the manifest and the version resource compiled in.
-It needs the WebView2 runtime on the machine that runs it — present on Windows
-11 and most of Windows 10, and the NSIS installer can fetch it when it is not.
-
-`--no-bundle` because the MSI is the one thing that cannot be built here: WiX is
-a Windows tool. NSIS cross-builds fine.
-
-### The AppImage needs `NO_STRIP=1`
-
-```bash
-NO_STRIP=1 pnpm --filter @api-client/desktop build:app
-```
-
-Without it the AppImage bundle fails with `failed to run linuxdeploy`, and the
-cause is two layers down: linuxdeploy strips every library it bundles using a
-`strip` from its own AppImage, which is old enough not to know `SHT_RELR`
-(`.relr.dyn`). Any library built by a current toolchain — `libyuv` here — is
-rejected as an unrecognised format, linuxdeploy treats that as fatal, and Tauri
-reports only that linuxdeploy failed. `NO_STRIP` skips the stripping, which
-costs nothing: the libraries come from the system and are already stripped.
-
-The deb and the rpm are unaffected, since neither bundles a library.
-
-### Sizes
-
-An AppImage carries the whole browser engine, because it cannot assume the host
-has one: 104 MB, of which the app is 12 MB. `libwebkit2gtk` is 89 MB of it,
-`libjavascriptcoregtk` 32 MB and `libicudata` 30 MB, before squashfs compresses
-the lot. The deb and the rpm are 5.3 MB each and link against the system's
-WebKitGTK.
-
-The app declares only `core:default` in
-`apps/desktop/src-tauri/capabilities/default.json`. It needs no filesystem,
-shell, or network permissions from Tauri: HTTP goes through the Rust engine, and
-storage goes through `crates/storage`.
-
 ## The icon
 
 `packages/ui/src/assets/app-icon.png` is the source: 1024 px, with the corners
-already transparent. Everything in
-`apps/desktop/src-tauri/icons/` is generated from it, and Settings shows the
-same file in About, so the artwork exists once:
+already transparent. Settings shows the same file in About, so the artwork
+exists once. The desktop app carries two copies derived from it in
+`src/Pidge.Desktop/icons/`:
+
+- `icon.ico` (16 to 256 px) is compiled into the Windows executable, which is
+  what Explorer and the taskbar show.
+- `icon.png` (512 px) is embedded as a resource and set as the window icon at
+  startup, which is what X11 and the Windows title bar show.
+
+To regenerate them, with ImageMagick:
 
 ```bash
-cd apps/desktop
-pnpm exec tauri icon ../../packages/ui/src/assets/app-icon.png
+magick packages/ui/src/assets/app-icon.png -resize 512x512 src/Pidge.Desktop/icons/icon.png
+magick packages/ui/src/assets/app-icon.png -define icon:auto-resize=256,64,48,32,24,16 src/Pidge.Desktop/icons/icon.ico
 ```
 
-That writes Android, iOS and Windows Store sizes too, which this project has no
-targets for; only the five files `bundle.icon` lists are kept.
-
-Where the icon comes from depends on how the app was started. An installed
-package puts the PNGs in `hicolor` and writes a desktop entry with
-`Icon=pidge` and `StartupWMClass=pidge`, and GTK
-derives the same app id from the binary name, so a Wayland taskbar matches the
-window to that entry. Run straight from `target/`, there is no desktop entry to
-match: X11 falls back to the window icon compiled into the binary, and Wayland
-shows a generic one. That is a property of the launch, not of the build.
-
-`app.enableGtkAppId` would set the app id to the bundle identifier instead,
-which is exactly what the desktop entry does not say — leaving it off is what
-makes the two agree.
+On Wayland a window has no icon of its own: the compositor matches the window's
+app id to a desktop entry and shows that entry's icon. The app id is the binary
+name, `pidge`, so a desktop entry with `Icon=pidge` and `StartupWMClass=pidge`
+is what gives the window its icon there. Run straight from an unpacked archive,
+there is no entry to match and Wayland shows a generic icon. That is a property
+of the launch, not of the build.
 
 ## VS Code
 
@@ -136,17 +108,18 @@ apps/vscode/bin/
   win32-x64/api-client-sidecar.exe
 ```
 
-`scripts/build-sidecar.mjs` builds and stages one:
+`scripts/build-sidecar.mjs` publishes one natively and stages it there:
 
 ```bash
-pnpm build:sidecar                                       # this host
-pnpm build:sidecar --target aarch64-apple-darwin         # a specific target
-pnpm build:sidecar --target x86_64-pc-windows-msvc
+pnpm build:sidecar                    # this machine
+pnpm build:sidecar --rid osx-arm64    # a specific runtime identifier
+pnpm build:sidecar --debug            # a debug build, quicker to make
 ```
 
-Cross-compilation needs the Rust target installed (`rustup target add …`) and a
-working linker for it; in practice each platform is built on its own runner and
-the binaries are collected before packaging.
+The runtime identifier is mapped to the platform and architecture names VS Code
+uses (`osx-arm64` is staged as `darwin-arm64`). As with the desktop app, native
+compilation only targets the operating system it runs on, so each platform is
+built on its own runner and the binaries are collected before packaging.
 
 Then:
 
@@ -159,29 +132,26 @@ pnpm --filter pidge package   # vsce package --no-dependencies
 
 1. the `pidge.sidecarPath` setting,
 2. `bin/<platform>-<arch>/`,
-3. `target/debug` then `target/release`, so the repo runs from source.
+3. `artifacts/bin/Pidge.Sidecar/debug` then `release`, so the repo runs from
+   source after a plain `dotnet build`.
 
 If none exist it says so, naming the platform it looked for, rather than failing
 at the first request.
 
 ## Fonts and their licences
 
-IBM Plex Sans and IBM Plex Mono are bundled from `packages/ui/src/fonts/` and emitted
-into the build output as hashed `.woff2` files. They are never fetched at
-runtime.
+IBM Plex Sans and IBM Plex Mono are bundled from `packages/ui/src/fonts/` and
+emitted into the build output as hashed `.woff2` files. They are never fetched
+at runtime.
 
 Both are SIL Open Font License 1.1, which requires the licence to travel with
 the font, so `scripts/viteFontLicenses.ts` emits it as a build asset in the same
 pass that emits the font. There is nothing to remember at packaging time:
 
-| Artifact  | Fonts                                               | Licences                                                                    |
-| --------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| Desktop   | `dist/assets/*.woff2` (embedded via `frontendDist`) | `dist/licenses/` and, via `bundle.resources`, `src-tauri/licenses/` on disk |
-| Extension | `media/assets/*.woff2`                              | `media/licenses/`                                                           |
-
-`src-tauri/licenses/` is written by the same plugin during the frontend build,
-which `tauri build` runs first through `beforeBuildCommand`, so the files exist
-by the time the bundler reads `bundle.resources`.
+| Artifact  | Fonts                                             | Licences                                                      |
+| --------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| Desktop   | `dist/assets/*.woff2`, embedded in the executable | `dist/licenses/`, embedded too, and beside it in the archives |
+| Extension | `media/assets/*.woff2`                            | `media/licenses/`                                             |
 
 Verify what a VSIX would contain with:
 
@@ -194,8 +164,8 @@ cannot read a pnpm workspace.
 
 ## A note on the extension's package name
 
-`apps/vscode/package.json` is named `api-client`, not `@api-client/vscode` like
-the other workspace packages. The name doubles as the VS Code extension id and
+`apps/vscode/package.json` is named `pidge`, not `@api-client/vscode` like the
+other workspace packages. The name doubles as the VS Code extension id and
 `vsce` rejects a scoped one. `@types/vscode` is pinned to the same minor as
 `engines.vscode` for the same reason — `vsce` refuses to package a mismatch.
 

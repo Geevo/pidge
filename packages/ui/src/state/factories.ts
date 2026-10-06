@@ -1,7 +1,7 @@
 import type { HttpRequest, KeyValueEntry, MultipartEntry, ScratchTab } from "../types";
 import { newId } from "../lib/ids";
 
-/** The state the app opens into. Mirrors `HttpRequest::blank` in Rust. */
+/** The state the app opens into. Mirrors `HttpRequest.Blank` in the host. */
 export function blankRequest(): HttpRequest {
   return {
     id: newId(),

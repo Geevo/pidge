@@ -1,18 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 
-import type { ResizeEdge, WindowButtonStyle, WindowControls } from "../bridge";
-
-/** The eight edges and corners, in the order they are stacked. */
-const EDGES: readonly ResizeEdge[] = [
-  "North",
-  "South",
-  "East",
-  "West",
-  "NorthWest",
-  "NorthEast",
-  "SouthWest",
-  "SouthEast",
-];
+import type { WindowButtonStyle, WindowControls } from "../bridge";
 
 /** The four glyphs one desktop draws, `restore` replacing `maximize` when maximised. */
 interface Glyphs {
@@ -185,32 +173,6 @@ export function WindowButtons({ controls }: { controls: WindowControls }) {
       >
         {glyphs.close}
       </button>
-    </div>
-  );
-}
-
-/**
- * Invisible strips around the window that start a resize.
- *
- * An undecorated window gets no resize edges from the platform — `tao` only
- * calls `set_decorated(false)` on Linux and adds nothing back — so without
- * these the window could not be resized at all.
- */
-export function ResizeEdges({ controls }: { controls: WindowControls }) {
-  return (
-    <div className="ac-resize-edges" aria-hidden="true">
-      {EDGES.map((edge) => (
-        <div
-          key={edge}
-          className={`ac-resize-edge ac-resize-edge--${edge.toLowerCase()}`}
-          onPointerDown={(event) => {
-            // Only a primary-button press should resize.
-            if (event.button !== 0) return;
-            event.preventDefault();
-            controls.startResizing(edge).catch(() => undefined);
-          }}
-        />
-      ))}
     </div>
   );
 }

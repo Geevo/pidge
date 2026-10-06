@@ -15,7 +15,7 @@ import {
 } from "./protocol";
 
 /**
- * One long-running Rust process per window.
+ * One long-running engine process per window.
  *
  * All HTTP goes through it, so the webview never has network access of its own
  * and both frontends share exactly one request engine.
@@ -209,7 +209,7 @@ export class Sidecar implements vscode.Disposable {
 
   /**
    * Finds the binary: an explicit setting, then the one bundled for this
-   * platform, then a local cargo build so the repo is usable from source.
+   * platform, then a local `dotnet build` so the repo is usable from source.
    */
   private resolveBinary(): string {
     const configured = vscode.workspace
@@ -227,8 +227,9 @@ export class Sidecar implements vscode.Disposable {
     );
     if (existsSync(bundled)) return bundled;
 
-    for (const profile of ["debug", "release"]) {
-      const local = path.join(this.context.extensionPath, "..", "..", "target", profile, name);
+    const artifacts = path.join(this.context.extensionPath, "..", "..", "artifacts");
+    for (const configuration of ["debug", "release"]) {
+      const local = path.join(artifacts, "bin", "Pidge.Sidecar", configuration, name);
       if (existsSync(local)) return local;
     }
 

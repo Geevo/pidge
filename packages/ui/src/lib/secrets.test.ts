@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
 
-import rust from "../../../../crates/core/src/redact.rs?raw";
+import redact from "../../../../src/Pidge.Core/Redact.cs?raw";
 import { SECRET_HEADERS, isSecretHeader, looksSecret } from "./secrets";
 
 it("masks the same headers the host keeps secret", () => {
-  const list = /const SECRET_HEADERS: &\[&str\] = &\[([\s\S]*?)\];/.exec(rust);
+  const list = /string\[\] SecretHeaders =\s*\[([\s\S]*?)\];/.exec(redact);
   expect(list).not.toBeNull();
   const names = [...list![1]!.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   expect([...SECRET_HEADERS]).toEqual(names);

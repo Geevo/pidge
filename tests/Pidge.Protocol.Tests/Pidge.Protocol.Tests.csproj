@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Pidge.Protocol.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pidge.Protocol\Pidge.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\Pidge.Session\Pidge.Session.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- TypeScriptMirrorTests reads the declarations from the source tree, wherever the build output went. -->
+    <AssemblyMetadata Include="RepositoryRoot" Value="$(MSBuildThisFileDirectory)..\.." />
+  </ItemGroup>
+
+</Project>

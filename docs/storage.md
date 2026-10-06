@@ -69,12 +69,12 @@ attachment to a bug report — gives none of them away.
 
 What counts as a secret:
 
-| Where               | What                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| A request's auth    | bearer token; Basic, Digest, NTLM and OAuth 2 passwords; OAuth 1 and 2 secrets; OAuth 2 refresh token; API key |
-| A request's headers | the value of any header `core::redact` treats as secret: `Authorization`, `Cookie`, `X-API-Key` and friends    |
-| Environments        | every variable's value, since a variable is where a token goes to be kept out of the requests that use it      |
-| Settings            | the client certificate's password                                                                              |
+| Where               | What                                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| A request's auth    | bearer token; Basic, Digest, NTLM and OAuth 2 passwords; OAuth 1 and 2 secrets; OAuth 2 refresh token; API key       |
+| A request's headers | the value of any header `Redact.IsSecretHeader` treats as secret: `Authorization`, `Cookie`, `X-API-Key` and friends |
+| Environments        | every variable's value, since a variable is where a token goes to be kept out of the requests that use it            |
+| Settings            | the client certificate's password                                                                                    |
 
 Usernames, client ids, OAuth 1 tokens and ordinary headers are identifiers, not
 secrets, and stay as typed. So do request bodies and URLs: a password typed into
@@ -149,14 +149,14 @@ without the notice. The sidecar tests use it.
 
 ## Atomic writes
 
-`Store::save` writes `state.json.tmp`, `fsync`s it, and renames it over
+`Store.Save` writes `state.json.tmp`, `fsync`s it, and renames it over
 `state.json`. A crash mid-write cannot leave a half-written file, because the
 rename is atomic and the old file stays intact until it completes.
 
 ## Migrations
 
-`state.json` carries a `version`. `crates/storage/src/migrate.rs` walks a chain
-of steps from that version up to `SCHEMA_VERSION`, one step per version, so
+`state.json` carries a `version`. `src/Pidge.Storage/Migration.cs` walks a chain
+of steps from that version up to `Migration.SchemaVersion`, one step per version, so
 adding a v3 means adding one function.
 
 Version 2 is the one that may hold encrypted secrets. A version 1 file is a
@@ -169,7 +169,7 @@ says so and starts from defaults rather than silently dropping fields it does
 not understand.
 
 Files written before versioning existed report version 0 and are read on a
-best-effort basis; `#[serde(default)]` on `AppState` and `Settings` fills in
+best-effort basis; the defaults `AppState` and `Settings` start with fill in
 anything missing, which is also what makes adding a field a non-event.
 
 ## Corruption

@@ -18,7 +18,7 @@ import { getVsCodeApi } from "./vscodeApi";
  * The VS Code bridge.
  *
  * The webview never opens a socket. Everything is an RPC to the extension host,
- * which forwards it to the Rust sidecar, so a request from here and a request
+ * which forwards it to the sidecar, so a request from here and a request
  * from the desktop app take exactly the same path.
  */
 class VsCodeBridge implements PlatformBridge {

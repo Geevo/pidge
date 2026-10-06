@@ -1408,10 +1408,9 @@ describe("window chrome", () => {
 
     // The fake bridge exposes no window controls, as VS Code does not.
     expect(screen.queryByRole("button", { name: "Close window" })).not.toBeInTheDocument();
-    expect(document.querySelectorAll(".ac-resize-edge")).toHaveLength(0);
   });
 
-  it("draws a title bar and resize edges when the host asks it to", async () => {
+  it("draws a title bar when the host asks it to", async () => {
     const bridge = new FakeBridge();
     const calls: string[] = [];
     const controls = {
@@ -1430,10 +1429,6 @@ describe("window chrome", () => {
       },
       isMaximized: () => Promise.resolve(false),
       onResized: () => Promise.resolve(() => undefined),
-      startResizing: (edge: string) => {
-        calls.push(`resize:${edge}`);
-        return Promise.resolve();
-      },
     };
     bridge.window = controls;
     const user = userEvent.setup();
@@ -1445,8 +1440,6 @@ describe("window chrome", () => {
     // The host said KDE, so it gets Breeze's buttons rather than Windows'.
     expect(document.querySelector(".ac-window-buttons--kde")).toBeInTheDocument();
     expect(document.querySelector(".ac-window-buttons--windows")).not.toBeInTheDocument();
-    // All eight edges and corners, or the undecorated window cannot be resized.
-    expect(document.querySelectorAll(".ac-resize-edge")).toHaveLength(8);
 
     await user.click(screen.getByRole("button", { name: "Minimise" }));
     expect(calls).toContain("minimize");
@@ -1472,7 +1465,6 @@ describe("window chrome", () => {
         resized = listener;
         return Promise.resolve(() => undefined);
       },
-      startResizing: () => Promise.resolve(),
     };
     render(<App bridge={bridge} />);
     await ready();
@@ -1499,7 +1491,6 @@ describe("window chrome", () => {
       // Rejecting here used to unmount the whole app from inside an effect.
       isMaximized: () => Promise.reject(new Error("no window")),
       onResized: () => Promise.reject(new Error("no window")),
-      startResizing: () => Promise.reject(new Error("no window")),
     };
     bridge.window = controls;
     const user = userEvent.setup();

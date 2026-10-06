@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Pidge.Codegen/Pidge.Codegen.csproj" />
+    <Project Path="src/Pidge.Core/Pidge.Core.csproj" />
+    <Project Path="src/Pidge.Desktop/Pidge.Desktop.csproj" />
+    <Project Path="src/Pidge.HttpEngine/Pidge.HttpEngine.csproj" />
+    <Project Path="src/Pidge.Protocol/Pidge.Protocol.csproj" />
+    <Project Path="src/Pidge.Session/Pidge.Session.csproj" />
+    <Project Path="src/Pidge.Sidecar/Pidge.Sidecar.csproj" />
+    <Project Path="src/Pidge.Storage/Pidge.Storage.csproj" />
+    <Project Path="src/Pidge.Variables/Pidge.Variables.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Pidge.Codegen.Tests/Pidge.Codegen.Tests.csproj" />
+    <Project Path="tests/Pidge.Core.Tests/Pidge.Core.Tests.csproj" />
+    <Project Path="tests/Pidge.Desktop.Tests/Pidge.Desktop.Tests.csproj" />
+    <Project Path="tests/Pidge.HttpEngine.Tests/Pidge.HttpEngine.Tests.csproj" />
+    <Project Path="tests/Pidge.Protocol.Tests/Pidge.Protocol.Tests.csproj" />
+    <Project Path="tests/Pidge.Session.Tests/Pidge.Session.Tests.csproj" />
+    <Project Path="tests/Pidge.Sidecar.Tests/Pidge.Sidecar.Tests.csproj" />
+    <Project Path="tests/Pidge.Storage.Tests/Pidge.Storage.Tests.csproj" />
+    <Project Path="tests/Pidge.TestServer/Pidge.TestServer.csproj" />
+    <Project Path="tests/Pidge.Variables.Tests/Pidge.Variables.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -21,7 +21,7 @@ import { blankTab } from "../state/factories";
 import { newId } from "../lib/ids";
 
 /**
- * A stand-in for the Rust host.
+ * A stand-in for the host.
  *
  * It records what it was asked to do and answers with whatever the test
  * queued, so the UI tests exercise real component behaviour without a process.
@@ -99,7 +99,7 @@ export class FakeBridge implements PlatformBridge {
 
   saveState(state: AppState): Promise<AppState> {
     this.saved.push(state);
-    // History is owned by the host, exactly as in Rust.
+    // History is owned by the host, exactly as in the real one.
     this.state = { ...state, history: this.state.history };
     return Promise.resolve(this.state);
   }

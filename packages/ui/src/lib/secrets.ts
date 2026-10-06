@@ -6,7 +6,7 @@
  * they look like here.
  */
 
-/** Mirrors `SECRET_HEADERS` in `crates/core/src/redact.rs`; a test holds them together. */
+/** Mirrors `SecretHeaders` in `src/Pidge.Core/Redact.cs`; a test holds them together. */
 export const SECRET_HEADERS: readonly string[] = [
   "authorization",
   "proxy-authorization",
