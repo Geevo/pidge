@@ -5,9 +5,12 @@ import "@api-client/ui/styles.css";
 import "./theme.css";
 
 import { vscodeBridge } from "./bridge";
+import { followEditorTheme } from "./theme";
 
 const container = document.getElementById("root");
 if (!container) throw new Error("missing #root");
+
+followEditorTheme();
 
 createRoot(container).render(
   <StrictMode>

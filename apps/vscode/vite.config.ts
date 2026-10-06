@@ -11,6 +11,9 @@ import { fontLicenses } from "../../scripts/viteFontLicenses";
 export default defineConfig({
   // vsce packages everything under media/, so emitting there is enough.
   plugins: [react(), fontLicenses()],
+  // Relative, so fonts and images resolve next to the bundle: a webview
+  // serves it from a resource URI, not from the root of an origin.
+  base: "./",
   build: {
     target: "es2022",
     outDir: "media",

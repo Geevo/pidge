@@ -2,9 +2,14 @@
  * Point the shared design tokens at VS Code's own theme variables, so the
  * client matches whatever theme the editor is using without a second palette
  * to maintain.
+ *
+ * `theme.ts` sets `data-theme` to light or dark to match the editor, which
+ * picks the shared palette for whatever is not remapped here. The selector
+ * carries the attribute too, so these win over that palette, which would
+ * otherwise outrank a bare `:root`.
  */
 
-:root {
+:root[data-theme] {
   --ac-bg: var(--vscode-editor-background);
   --ac-bg-subtle: var(--vscode-sideBar-background, var(--vscode-editor-background));
   --ac-bg-raised: var(--vscode-editorWidget-background, var(--vscode-editor-background));
@@ -45,7 +50,9 @@
   --ac-font-size: calc(var(--vscode-font-size, 13px) * var(--ac-font-scale));
 }
 
+/* VS Code pads a webview's body by default; the app fills the tab instead. */
 body {
+  padding: 0;
   background: var(--vscode-editor-background);
   color: var(--vscode-editor-foreground);
 }
