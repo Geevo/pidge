@@ -50,6 +50,16 @@
   --ac-font-size: calc(var(--vscode-font-size, 13px) * var(--ac-font-scale));
 }
 
+/* The side bar is drawn on the side bar's colour, not the editor's. */
+body:has(.ac-sidebar) {
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+}
+
+.ac-sidebar__tab[aria-selected="true"] {
+  border-bottom-color: var(--vscode-panelTitle-activeBorder, var(--ac-accent));
+}
+
 /* VS Code pads a webview's body by default; the app fills the tab instead. */
 body {
   padding: 0;

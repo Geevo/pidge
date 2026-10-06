@@ -1,6 +1,8 @@
 import type {
+  EditorHost,
   ExportInput,
   FilePickRequest,
+  HostCommand,
   LoadedState,
   PlatformBridge,
   SaveRequestInput,
@@ -39,6 +41,20 @@ export class FakeBridge implements PlatformBridge {
   exportSavedRequests?: (input: ExportInput) => Promise<string | null>;
   /** Set by tests that need a host that can open files. */
   importSavedRequests?: () => Promise<ImportOutcome | null>;
+  /** Set by tests of the app as one tab of an editor. */
+  editor?: EditorHost;
+
+  private readonly listeners = new Set<(command: HostCommand) => void>();
+
+  subscribe(listener: (command: HostCommand) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /** What the host says when something changes elsewhere. */
+  push(command: HostCommand): void {
+    for (const listener of this.listeners) listener(command);
+  }
 
   readonly sent: HttpRequest[] = [];
   readonly generated: { request: HttpRequest; target: CodeTarget }[] = [];

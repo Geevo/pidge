@@ -11,6 +11,7 @@ export { App } from "./components/App";
 export { Sidebar, type SidebarProps, type SidebarTab } from "./components/Sidebar";
 
 export type {
+  EditorHost,
   ExportInput,
   FilePickFilter,
   FilePickRequest,

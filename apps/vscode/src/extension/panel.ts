@@ -1,68 +1,130 @@
-import * as os from "node:os";
-
-import type { AppState, CodeTarget, ExportInput, HttpRequest, ServerMessage } from "@api-client/ui";
+import type { AppState, CodeTarget, HttpRequest, SavedRequest, ScratchTab } from "@api-client/ui";
 import * as vscode from "vscode";
 
+import { webviewHtml, webviewOptions } from "./html";
 import { type WebviewEvent, type WebviewResponse, isWebviewRequest } from "./protocol";
-
-/**
- * `AppSession.MaxImportBytes`. The sidecar refuses anything bigger
- * whatever this says; checking first only saves reading it and sending it over.
- */
-const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 import type { Sidecar } from "./sidecar";
+import { type Shared, type Store, describe, newTab } from "./store";
+
+export interface Services {
+  readonly context: vscode.ExtensionContext;
+  readonly sidecar: Sidecar;
+  readonly store: Store;
+}
+
+/** What VS Code keeps for a tab across a restart: which tab it was, and nothing more. */
+interface PanelState {
+  readonly tabId?: string;
+}
 
 /**
- * The main UI: one editor-tab webview per window.
+ * One request, in one editor tab.
  *
- * The webview has no network access of its own. Every request is an RPC to the
- * extension host, which forwards it to the sidecar.
+ * The tab strip, closing and reordering are VS Code's, and the tab itself is
+ * kept in the state file, where secrets are encrypted, rather than in what
+ * VS Code stores for a webview. The webview has no network access of its own:
+ * every request is an RPC to here, which forwards it to the sidecar.
  */
-export class ApiClientPanel {
-  private static current: ApiClientPanel | undefined;
+export class RequestPanel {
+  static readonly viewType = "pidge.request";
+
+  private static readonly open = new Set<RequestPanel>();
+  private static lastActive: RequestPanel | undefined;
 
   private readonly disposables: vscode.Disposable[] = [];
+  /** What this webview last had of the shared state, to tell its own changes apart. */
+  private seen: { settings: string; environments: string } | null = null;
+  /** The saved request this tab is, so opening that one again comes back here. */
+  private savedRequestId: string | null;
 
-  static show(context: vscode.ExtensionContext, sidecar: Sidecar): ApiClientPanel {
-    if (ApiClientPanel.current) {
-      ApiClientPanel.current.panel.reveal(vscode.ViewColumn.Active);
-      return ApiClientPanel.current;
-    }
-
+  /** Opens a new tab for the request, or a blank one. */
+  static create(services: Services, request?: HttpRequest, saved?: SavedRequest): RequestPanel {
+    const tab = newTab(request, saved);
     const panel = vscode.window.createWebviewPanel(
-      "pidge.panel",
-      "pidge",
+      RequestPanel.viewType,
+      title(tab),
       vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
-      },
+      RequestPanel.options(services.context),
     );
-
-    ApiClientPanel.current = new ApiClientPanel(panel, context, sidecar);
-    return ApiClientPanel.current;
+    return new RequestPanel(panel, services, tab.id, tab);
   }
 
+  /** A tab VS Code kept from last time. */
+  static revive(services: Services, panel: vscode.WebviewPanel, state: unknown): RequestPanel {
+    panel.webview.options = RequestPanel.options(services.context);
+    const tabId = (state as PanelState | undefined)?.tabId;
+    if (tabId) return new RequestPanel(panel, services, tabId, null);
+    const tab = newTab();
+    return new RequestPanel(panel, services, tab.id, tab);
+  }
+
+  /** Brings the tab that has this saved request open to the front, if there is one. */
+  static revealSaved(savedRequestId: string): boolean {
+    for (const each of RequestPanel.open) {
+      if (each.savedRequestId === savedRequestId) {
+        each.panel.reveal();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** The tab used last, for "pidge: Open". */
+  static revealLast(): boolean {
+    const last = RequestPanel.lastActive ?? [...RequestPanel.open].at(-1);
+    last?.panel.reveal();
+    return last !== undefined;
+  }
+
+  private static options(
+    context: vscode.ExtensionContext,
+  ): vscode.WebviewPanelOptions & vscode.WebviewOptions {
+    return { ...webviewOptions(context.extensionUri), retainContextWhenHidden: true };
+  }
+
+  /**
+   * `initial` is the tab when it is new. Revived tabs are looked up in the
+   * state file once it has loaded, and start blank if it no longer has them.
+   */
   private constructor(
     private readonly panel: vscode.WebviewPanel,
-    private readonly context: vscode.ExtensionContext,
-    private readonly sidecar: Sidecar,
+    private readonly services: Services,
+    private readonly tabId: string,
+    private initial: ScratchTab | null,
   ) {
-    panel.iconPath = vscode.Uri.joinPath(context.extensionUri, "media", "icon.svg");
-    panel.webview.html = this.render();
+    this.savedRequestId = initial?.savedRequestId ?? null;
+    RequestPanel.open.add(this);
+    RequestPanel.lastActive = this;
+
+    panel.iconPath = vscode.Uri.joinPath(services.context.extensionUri, "media", "pidge.png");
+    panel.webview.html = webviewHtml(panel.webview, services.context.extensionUri, "webview.js");
 
     this.disposables.push(
       panel.webview.onDidReceiveMessage((message: unknown) => {
         void this.onMessage(message);
       }),
+      panel.onDidChangeViewState(({ webviewPanel }) => {
+        if (webviewPanel.active) RequestPanel.lastActive = this;
+      }),
+      services.store.onDidChangeShared(({ shared, from }) => {
+        if (from !== this) this.share(shared);
+      }),
       panel.onDidDispose(() => this.dispose()),
     );
   }
 
-  /** Nudges the webview, e.g. when the palette asks for a new request. */
-  post(event: WebviewEvent): void {
+  private post(event: WebviewEvent): void {
     void this.panel.webview.postMessage(event);
+  }
+
+  /** Tells the webview what another tab changed. */
+  private share(shared: Shared): void {
+    if (!this.seen) return;
+    this.seen = {
+      settings: JSON.stringify(shared.settings),
+      environments: JSON.stringify([shared.environments, shared.activeEnvironmentId]),
+    };
+    this.post({ kind: "event", event: "shared", payload: shared });
   }
 
   private async onMessage(message: unknown): Promise<void> {
@@ -81,30 +143,29 @@ export class ApiClientPanel {
     }
   }
 
-  /**
-   * Each case is one sidecar message. Nothing is decided here; the engine owns
-   * the behaviour so the desktop app and this agree by construction.
-   */
+  /** Each case is one thing the webview asks for. The engine owns the behaviour. */
   private async dispatch(method: string, params: unknown): Promise<unknown> {
+    const { sidecar, store } = this.services;
+
     switch (method) {
       case "sendRequest": {
         const { request } = params as { request: HttpRequest };
-        const reply = await this.sidecar.call(
+        const reply = await sidecar.call(
           { type: "sendRequest", request, variables: {} },
           request.id,
         );
-        if (reply.type === "requestComplete") {
-          return { response: reply.response, error: null, historyEntry: reply.historyEntry };
+        if (reply.type !== "requestComplete" && reply.type !== "requestError") {
+          throw new Error(describe(reply));
         }
-        if (reply.type === "requestError") {
-          return { response: null, error: reply.error, historyEntry: reply.historyEntry };
-        }
-        throw new Error(describe(reply));
+        if (reply.historyEntry) store.recordHistory(reply.historyEntry);
+        return reply.type === "requestComplete"
+          ? { response: reply.response, error: null, historyEntry: reply.historyEntry }
+          : { response: null, error: reply.error, historyEntry: reply.historyEntry };
       }
 
       case "generateCode": {
         const { request, target } = params as { request: HttpRequest; target: CodeTarget };
-        const reply = await this.sidecar.call({
+        const reply = await sidecar.call({
           type: "generateCode",
           request,
           target,
@@ -117,19 +178,62 @@ export class ApiClientPanel {
 
       case "cancelRequest": {
         const { requestId } = params as { requestId: string };
-        this.sidecar.notify({ type: "cancelRequest", requestId });
+        sidecar.notify({ type: "cancelRequest", requestId });
         return null;
       }
 
       case "loadState": {
-        const reply = await this.sidecar.call({ type: "loadState" });
-        if (reply.type !== "stateLoaded") throw new Error(describe(reply));
-        return {
-          state: reply.state,
-          recovery: reply.recovery,
-          storagePath: reply.storagePath,
-          version: reply.version,
+        const loaded = await store.load();
+        const tab = this.initial ?? store.tab(this.tabId) ?? { ...newTab(), id: this.tabId };
+        this.initial = null;
+        this.savedRequestId = tab.savedRequestId;
+        this.panel.title = title(tab);
+        const state = store.viewFor(tab);
+        this.seen = {
+          settings: JSON.stringify(state.settings),
+          environments: JSON.stringify([state.environments, state.activeEnvironmentId]),
         };
+        return {
+          state,
+          recovery: store.takeRecovery(),
+          storagePath: loaded.storagePath,
+          version: loaded.version,
+        };
+      }
+
+      case "saveState": {
+        const { state } = params as { state: AppState };
+        const tab = state.tabs.find((each) => each.id === state.activeTabId) ?? state.tabs[0];
+        if (!tab) return state;
+        this.savedRequestId = tab.savedRequestId;
+        this.panel.title = title(tab);
+
+        // Only what this tab changed: the rest may be older than another tab's change.
+        const settings = JSON.stringify(state.settings);
+        const environments = JSON.stringify([state.environments, state.activeEnvironmentId]);
+        const changed: Partial<Shared> = {};
+        if (this.seen && settings !== this.seen.settings) {
+          Object.assign(changed, { settings: state.settings });
+        }
+        if (this.seen && environments !== this.seen.environments) {
+          Object.assign(changed, {
+            environments: state.environments,
+            activeEnvironmentId: state.activeEnvironmentId,
+          });
+        }
+        this.seen = { settings, environments };
+
+        await store.update(tab, changed, this);
+        return store.viewFor(tab);
+      }
+
+      case "saveRequest": {
+        const { request, name, savedRequestId } = params as {
+          request: HttpRequest;
+          name: string | null;
+          savedRequestId: string | null;
+        };
+        return this.saveRequest(request, name, savedRequestId);
       }
 
       case "pickFile": {
@@ -148,151 +252,59 @@ export class ApiClientPanel {
         return chosen?.[0]?.fsPath ?? null;
       }
 
-      case "exportSavedRequests": {
-        const input = params as ExportInput;
-        const folder = vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir());
-        const target = await vscode.window.showSaveDialog({
-          title: "Export saved requests",
-          defaultUri: vscode.Uri.joinPath(folder, input.fileName),
-          filters: input.format === "http" ? { "HTTP requests": ["http"] } : { JSON: ["json"] },
-        });
-        if (!target) return null;
-
-        const reply = await this.sidecar.call({
-          type: "exportSavedRequests",
-          savedRequestIds: [...input.savedRequestIds],
-          format: input.format,
-          includeSecrets: input.includeSecrets,
-        });
-        if (reply.type !== "savedRequestsExported") throw new Error(describe(reply));
-        await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(reply.contents));
-        return target.fsPath;
-      }
-
-      case "importSavedRequests": {
-        const chosen = await vscode.window.showOpenDialog({
-          title: "Import saved requests",
-          canSelectMany: false,
-          openLabel: "Import",
-          filters: { "Saved requests": ["json", "http", "rest"] },
-        });
-        const source = chosen?.[0];
-        if (!source) return null;
-
-        const { size } = await vscode.workspace.fs.stat(source);
-        if (size > MAX_IMPORT_BYTES) {
-          throw new Error("The file is too large to be a file of saved requests.");
-        }
-        const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(source));
-        const reply = await this.sidecar.call({ type: "importSavedRequests", contents });
-        if (reply.type === "importRejected") throw new Error(reply.message);
-        if (reply.type !== "savedRequestsImported") throw new Error(describe(reply));
-        return {
-          state: reply.state,
-          imported: reply.imported,
-          undefinedVariables: reply.undefinedVariables,
-          skipped: reply.skipped,
-          plainSecrets: reply.plainSecrets,
-        };
-      }
-
-      case "saveState": {
-        const { state } = params as { state: AppState };
-        return this.saved(await this.sidecar.call({ type: "saveState", state }));
-      }
-
-      case "saveRequest": {
-        const input = params as {
-          savedRequestId: string | null;
-          name: string;
-          request: HttpRequest;
-        };
-        return this.saved(
-          await this.sidecar.call({
-            type: "saveRequest",
-            savedRequestId: input.savedRequestId,
-            name: input.name,
-            request: input.request,
-          }),
-        );
-      }
-
-      case "deleteSavedRequest": {
-        const { savedRequestId } = params as { savedRequestId: string };
-        return this.saved(await this.sidecar.call({ type: "deleteSavedRequest", savedRequestId }));
-      }
-
-      case "clearHistory":
-        return this.saved(await this.sidecar.call({ type: "clearHistory" }));
-
       default:
         throw new Error(`Unknown request: ${method}`);
     }
   }
 
-  private saved(reply: ServerMessage): unknown {
-    if (reply.type !== "stateSaved") throw new Error(describe(reply));
-    return reply.state;
+  /**
+   * Saves the tab's request, asking for its name each time as the desktop app
+   * does, which is also how a saved request is renamed.
+   */
+  private async saveRequest(
+    request: HttpRequest,
+    name: string | null,
+    savedRequestId: string | null,
+  ): Promise<SavedRequest | null> {
+    const chosen = await vscode.window.showInputBox({
+      title: "Save request",
+      prompt: "Name",
+      value: name ?? (request.url.trim() || "Untitled request"),
+      validateInput: (value) => (value.trim() === "" ? "A saved request needs a name." : null),
+    });
+    if (chosen === undefined) return null;
+    const saved = await this.services.store.saveRequest(savedRequestId, chosen.trim(), request);
+    this.savedRequestId = saved.id;
+    return saved;
   }
 
   private reply(response: WebviewResponse): void {
     void this.panel.webview.postMessage(response);
   }
 
-  /**
-   * Strict CSP: scripts only from this bundle and only with the nonce, no
-   * remote anything. CodeMirror injects its own stylesheet at runtime, which is
-   * why inline styles are allowed and inline scripts are not.
-   */
-  private render(): string {
-    const { webview } = this.panel;
-    const nonce = makeNonce();
-    const asset = (file: string): string =>
-      webview
-        .asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, "media", file))
-        .toString();
-
-    const csp = [
-      `default-src 'none'`,
-      `img-src ${webview.cspSource} data:`,
-      `font-src ${webview.cspSource}`,
-      `style-src ${webview.cspSource} 'unsafe-inline'`,
-      `script-src 'nonce-${nonce}'`,
-    ].join("; ");
-
-    return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="${asset("webview.css")}" />
-    <title>pidge</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" nonce="${nonce}" src="${asset("webview.js")}"></script>
-  </body>
-</html>`;
-  }
-
   private dispose(): void {
-    ApiClientPanel.current = undefined;
+    RequestPanel.open.delete(this);
+    if (RequestPanel.lastActive === this) RequestPanel.lastActive = undefined;
     for (const disposable of this.disposables) disposable.dispose();
-    this.panel.dispose();
+    this.services.store.forget(this.tabId);
   }
 }
 
-function describe(reply: ServerMessage): string {
-  if ("message" in reply && typeof reply.message === "string") return reply.message;
-  return `Unexpected reply from the request engine: ${reply.type}`;
+/** The tab's title: its name, or where it goes, the way the desktop app titles tabs. */
+export function title(tab: ScratchTab): string {
+  return tab.name ?? requestLabel(tab.request.url, tab.request.method);
 }
 
-function makeNonce(): string {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let index = 0; index < 32; index += 1) {
-    nonce += alphabet[Math.floor(Math.random() * alphabet.length)];
+/** Mirrors `requestLabel` in the UI. */
+export function requestLabel(url: string, method: string): string {
+  const trimmed = url.trim();
+  if (trimmed === "") return "New request";
+
+  try {
+    const parsed = new URL(trimmed.includes("://") ? trimmed : `http://${trimmed}`);
+    const path = parsed.pathname === "/" ? "" : parsed.pathname;
+    return `${parsed.host}${path}` || method;
+  } catch {
+    return trimmed;
   }
-  return nonce;
 }

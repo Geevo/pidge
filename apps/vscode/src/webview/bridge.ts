@@ -1,14 +1,13 @@
 import type {
   AppState,
   CodeTarget,
-  ExportInput,
+  EditorHost,
   FilePickRequest,
-  ImportOutcome,
   HostCommand,
   HttpRequest,
   LoadedState,
   PlatformBridge,
-  SaveRequestInput,
+  SavedRequest,
   SendOutcome,
 } from "@api-client/ui";
 
@@ -20,9 +19,18 @@ import { getVsCodeApi } from "./vscodeApi";
  * The webview never opens a socket. Everything is an RPC to the extension host,
  * which forwards it to the sidecar, so a request from here and a request
  * from the desktop app take exactly the same path.
+ *
+ * Each editor tab is one of these, holding one request. Saved requests and
+ * history are in the side bar and kept by the extension host, so the parts of
+ * the bridge that manage them in the app are refused.
  */
 class VsCodeBridge implements PlatformBridge {
   readonly platform = "vscode";
+
+  readonly editor: EditorHost = {
+    saveRequest: (request, name, savedRequestId) =>
+      this.call<SavedRequest | null>("saveRequest", { request, name, savedRequestId }),
+  };
 
   private readonly api = getVsCodeApi();
   private nextId = 0;
@@ -54,32 +62,28 @@ class VsCodeBridge implements PlatformBridge {
     return this.call<string | null>("pickFile", request);
   }
 
-  exportSavedRequests(input: ExportInput): Promise<string | null> {
-    return this.call<string | null>("exportSavedRequests", input);
-  }
-
-  importSavedRequests(): Promise<ImportOutcome | null> {
-    return this.call<ImportOutcome | null>("importSavedRequests", {});
-  }
-
-  loadState(): Promise<LoadedState> {
-    return this.call<LoadedState>("loadState", {});
+  async loadState(): Promise<LoadedState> {
+    const loaded = await this.call<LoadedState>("loadState", {});
+    // All VS Code keeps of the tab is which one it was; the tab itself is in
+    // the state file, where its secrets are encrypted.
+    this.api.setState({ tabId: loaded.state.activeTabId });
+    return loaded;
   }
 
   saveState(state: AppState): Promise<AppState> {
     return this.call<AppState>("saveState", { state });
   }
 
-  saveRequest(input: SaveRequestInput): Promise<AppState> {
-    return this.call<AppState>("saveRequest", input);
+  saveRequest(): Promise<AppState> {
+    return Promise.reject(new Error("Requests are saved through the editor in VS Code."));
   }
 
-  deleteSavedRequest(savedRequestId: string): Promise<AppState> {
-    return this.call<AppState>("deleteSavedRequest", { savedRequestId });
+  deleteSavedRequest(): Promise<AppState> {
+    return Promise.reject(new Error("Saved requests are deleted from the side bar in VS Code."));
   }
 
   clearHistory(): Promise<AppState> {
-    return this.call<AppState>("clearHistory", {});
+    return Promise.reject(new Error("History is cleared from the side bar in VS Code."));
   }
 
   subscribe(listener: (command: HostCommand) => void): () => void {
@@ -100,9 +104,10 @@ class VsCodeBridge implements PlatformBridge {
     const message = data as { kind?: string };
 
     if (message.kind === "event") {
-      const event = (data as { event?: string }).event;
-      if (event === "newRequest") {
-        for (const listener of this.listeners) listener("newRequest");
+      const { event, payload } = data as { event?: string; payload?: unknown };
+      if (event === "shared") {
+        const command = { type: "shared", ...(payload as object) } as HostCommand;
+        for (const listener of this.listeners) listener(command);
       }
       return;
     }

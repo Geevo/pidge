@@ -40,6 +40,13 @@ export interface WebviewEvent {
   readonly payload: unknown;
 }
 
+/** side bar -> extension host. Opening a request opens an editor tab. */
+export type SidebarMessage =
+  | { readonly type: "ready" }
+  | { readonly type: "newRequest" }
+  | { readonly type: "openHistory"; readonly id: string }
+  | { readonly type: "openSaved"; readonly id: string };
+
 export function isWebviewRequest(value: unknown): value is WebviewRequest {
   return (
     typeof value === "object" &&

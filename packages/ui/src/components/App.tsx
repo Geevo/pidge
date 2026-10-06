@@ -38,6 +38,12 @@ export function App({ bridge }: Props) {
   const tab = activeTab(state);
   const runtime = runtimeFor(state, tab.id);
   const sending = runtime.status.state === "sending";
+  /*
+   * Inside an editor this is one of its tabs, and the editor already has the
+   * tab strip, the side bar and the colours: the app draws a request and no
+   * more.
+   */
+  const inEditor = bridge.editor !== undefined;
 
   const urlRef = useRef<HTMLInputElement>(null);
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
@@ -53,17 +59,25 @@ export function App({ bridge }: Props) {
   const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   /** The same, for the syntax colours: they are picked by looking at them. */
   const [previewSyntax, setPreviewSyntax] = useState<SyntaxTheme | null>(null);
-  useTheme(previewTheme ?? state.app.settings.theme);
-  useSyntaxTheme(previewSyntax ?? state.app.settings.syntaxTheme);
+  useTheme(inEditor ? null : (previewTheme ?? state.app.settings.theme));
+  useSyntaxTheme(inEditor ? null : (previewSyntax ?? state.app.settings.syntaxTheme));
   useFontScale(state.app.settings.fontScale);
 
-  // The host can ask for things too, e.g. the VS Code Command Palette.
+  // The host can tell the app things too, e.g. a change made in another tab.
+  const { dispatch } = client;
   useEffect(
     () =>
       bridge.subscribe?.((command) => {
-        if (command === "newRequest") client.newTab();
+        if (command.type === "shared") {
+          dispatch({ type: "setSettings", settings: command.settings });
+          dispatch({
+            type: "setEnvironments",
+            environments: command.environments,
+            activeEnvironmentId: command.activeEnvironmentId,
+          });
+        }
       }),
-    [bridge, client],
+    [bridge, dispatch],
   );
 
   const setRequest = useCallback(
@@ -96,7 +110,11 @@ export function App({ bridge }: Props) {
     [client, state.app.tabs],
   );
 
-  const save = useCallback(() => setSaveOpen(true), []);
+  const { saveActiveRequestToEditor } = client;
+  const save = useCallback(() => {
+    if (saveActiveRequestToEditor) void saveActiveRequestToEditor();
+    else setSaveOpen(true);
+  }, [saveActiveRequestToEditor]);
 
   /*
    * The text size, kept as it changes rather than on leaving a dialog, unlike
@@ -144,6 +162,8 @@ export function App({ bridge }: Props) {
 
       const shortcut = matchShortcut(event);
       if (!shortcut) return;
+      // The editor opens and closes its own tabs.
+      if (inEditor && (shortcut === "newTab" || shortcut === "closeTab")) return;
       event.preventDefault();
 
       switch (shortcut) {
@@ -177,7 +197,17 @@ export function App({ bridge }: Props) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [askCloseTab, client, save, send, sending, setFontScale, settings.fontScale, tab.id]);
+  }, [
+    askCloseTab,
+    client,
+    inEditor,
+    save,
+    send,
+    sending,
+    setFontScale,
+    settings.fontScale,
+    tab.id,
+  ]);
 
   return (
     <div className="ac-app">
@@ -196,15 +226,17 @@ export function App({ bridge }: Props) {
         </div>
       ) : null}
 
-      <RequestTabBar
-        tabs={state.app.tabs}
-        activeTabId={state.app.activeTabId}
-        onSelect={(tabId) => client.dispatch({ type: "selectTab", tabId })}
-        onClose={askCloseTab}
-        onMove={(tabId, toIndex) => client.dispatch({ type: "moveTab", tabId, toIndex })}
-        onNew={() => client.newTab()}
-        windowControls={bridge.window}
-      />
+      {inEditor ? null : (
+        <RequestTabBar
+          tabs={state.app.tabs}
+          activeTabId={state.app.activeTabId}
+          onSelect={(tabId) => client.dispatch({ type: "selectTab", tabId })}
+          onClose={askCloseTab}
+          onMove={(tabId, toIndex) => client.dispatch({ type: "moveTab", tabId, toIndex })}
+          onNew={() => client.newTab()}
+          windowControls={bridge.window}
+        />
+      )}
 
       <div className="ac-topbar">
         <UrlBar
@@ -256,45 +288,58 @@ export function App({ bridge }: Props) {
         >
           Save
         </button>
-      </div>
-
-      <div className="ac-body">
-        <nav className="ac-sidebar-rail" aria-label="Panels">
+        {inEditor ? (
           <button
             type="button"
-            className="ac-rail-button"
-            title="History"
-            aria-label="History"
-            aria-pressed={state.drawer === "history"}
-            onClick={() => client.setDrawer(state.drawer === "history" ? null : "history")}
-          >
-            <HistoryIcon size={16} />
-          </button>
-          <button
-            type="button"
-            className="ac-rail-button"
-            title="Saved requests"
-            aria-label="Saved requests"
-            aria-pressed={state.drawer === "saved"}
-            onClick={() => client.setDrawer(state.drawer === "saved" ? null : "saved")}
-          >
-            <BookmarkIcon size={16} />
-          </button>
-          <span className="ac-spacer" />
-          <button
-            type="button"
-            className="ac-rail-button"
+            className="ac-icon-button"
             title="Settings"
             aria-label="Settings"
             onClick={() => setSettingsOpen(true)}
           >
-            <SettingsIcon size={16} />
+            <SettingsIcon size={15} />
           </button>
-        </nav>
+        ) : null}
+      </div>
+
+      <div className="ac-body">
+        {inEditor ? null : (
+          <nav className="ac-sidebar-rail" aria-label="Panels">
+            <button
+              type="button"
+              className="ac-rail-button"
+              title="History"
+              aria-label="History"
+              aria-pressed={state.drawer === "history"}
+              onClick={() => client.setDrawer(state.drawer === "history" ? null : "history")}
+            >
+              <HistoryIcon size={16} />
+            </button>
+            <button
+              type="button"
+              className="ac-rail-button"
+              title="Saved requests"
+              aria-label="Saved requests"
+              aria-pressed={state.drawer === "saved"}
+              onClick={() => client.setDrawer(state.drawer === "saved" ? null : "saved")}
+            >
+              <BookmarkIcon size={16} />
+            </button>
+            <span className="ac-spacer" />
+            <button
+              type="button"
+              className="ac-rail-button"
+              title="Settings"
+              aria-label="Settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <SettingsIcon size={16} />
+            </button>
+          </nav>
+        )}
 
         <div className="ac-workspace">
           <div className="ac-workspace__panes">
-            {state.drawer ? (
+            {state.drawer && !inEditor ? (
               <aside className="ac-drawer">
                 {state.drawer === "history" ? (
                   <HistoryPanel
@@ -395,6 +440,7 @@ export function App({ bridge }: Props) {
           settings={state.app.settings}
           storagePath={state.storagePath}
           version={state.version}
+          followsEditor={inEditor}
           onBrowse={bridge.pickFile?.bind(bridge)}
           onPreviewTheme={setPreviewTheme}
           onPreviewSyntax={setPreviewSyntax}
@@ -438,8 +484,10 @@ function isTextEntry(target: EventTarget | null): boolean {
  * would leave the app light on a dark desktop with nothing to point at. The
  * query is still what paints the first frame, before this runs.
  */
-function useTheme(theme: Theme) {
+function useTheme(theme: Theme | null) {
   useEffect(() => {
+    // An editor host paints the document to match itself.
+    if (theme === null) return;
     const root = document.documentElement;
 
     if (theme !== "system") {
@@ -462,8 +510,9 @@ function useTheme(theme: Theme) {
  * A separate attribute rather than more values in `data-theme`: the two are
  * chosen separately, and every combination of them is legal.
  */
-function useSyntaxTheme(syntaxTheme: SyntaxTheme) {
+function useSyntaxTheme(syntaxTheme: SyntaxTheme | null) {
   useEffect(() => {
+    if (syntaxTheme === null) return;
     document.documentElement.setAttribute("data-syntax", syntaxTheme);
   }, [syntaxTheme]);
 }

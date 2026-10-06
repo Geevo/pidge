@@ -1,12 +1,15 @@
 import type {
   AppState,
   CodeTarget,
+  Environment,
   ExportFormat,
   ImportOutcome,
   HistoryEntry,
   HttpRequest,
   HttpResponse,
   RequestError,
+  SavedRequest,
+  Settings,
 } from "./types";
 
 /**
@@ -61,10 +64,19 @@ export interface PlatformBridge {
    */
   importSavedRequests?(): Promise<ImportOutcome | null>;
   /**
-   * Optional: commands the host initiates, such as a Command Palette entry.
-   * Returns an unsubscribe function. Hosts with no such commands omit it.
+   * Optional: commands the host initiates, such as a change made in another
+   * of its tabs. Returns an unsubscribe function. Hosts with no such commands
+   * omit it.
    */
   subscribe?(listener: (command: HostCommand) => void): () => void;
+  /**
+   * Present when the app is one tab of an editor that has tabs, a side bar,
+   * colours and file dialogs of its own: VS Code. The app then shows a single
+   * request and leaves the rest to the editor. There is no tab strip, no
+   * history or saved-request drawer and no palette, and Save asks for the
+   * name through here, in the editor's own prompt.
+   */
+  readonly editor?: EditorHost;
   /** Present only when this host has no native window frame of its own. */
   readonly window?: WindowControls;
   /** Name shown in diagnostics, e.g. "desktop" or "vscode". */
@@ -92,8 +104,31 @@ export interface ExportInput {
   readonly fileName: string;
 }
 
-/** Commands a host can push into the UI. */
-export type HostCommand = "newRequest";
+/**
+ * Commands a host can push into the UI.
+ *
+ * `shared` carries what every tab has in common, after another tab changed
+ * it: each editor tab is an app of its own, and they share one state file.
+ */
+export type HostCommand = {
+  readonly type: "shared";
+  readonly settings: Settings;
+  readonly environments: Environment[];
+  readonly activeEnvironmentId: string | null;
+};
+
+export interface EditorHost {
+  /**
+   * Asks for a name, then saves the request as the saved request
+   * `savedRequestId`, or as a new one. Resolves with what was saved, or
+   * `null` if the user backed out.
+   */
+  saveRequest(
+    request: HttpRequest,
+    name: string | null,
+    savedRequestId: string | null,
+  ): Promise<SavedRequest | null>;
+}
 
 /**
  * Which desktop's title-bar buttons to draw.

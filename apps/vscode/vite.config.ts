@@ -4,8 +4,8 @@ import { defineConfig } from "vite";
 import { fontLicenses } from "../../scripts/viteFontLicenses";
 
 /**
- * The webview bundle. Names are fixed rather than hashed because the panel's
- * HTML references them directly, and nothing is loaded from a CDN: the webview
+ * The webview bundles: a request tab and the side bar. Names are fixed rather
+ * than hashed because the pages' HTML references them directly, and nothing is loaded from a CDN: the webview
  * runs under a strict CSP that only allows this bundle.
  */
 export default defineConfig({
@@ -19,12 +19,14 @@ export default defineConfig({
     outDir: "media",
     emptyOutDir: false,
     sourcemap: true,
+    // One stylesheet for both pages: they share the UI's styles.
+    cssCodeSplit: false,
     rollupOptions: {
-      input: "src/webview/main.tsx",
+      input: { webview: "src/webview/main.tsx", sidebar: "src/webview/sidebar.tsx" },
       output: {
-        entryFileNames: "webview.js",
+        entryFileNames: "[name].js",
         chunkFileNames: "webview-[name].js",
-        // The panel HTML references webview.css by name; everything else
+        // The pages reference webview.css by name; everything else
         // (fonts, images) gets a hashed filename so nothing collides.
         assetFileNames: (asset: { names?: string[]; name?: string }) => {
           const name = asset.names?.[0] ?? asset.name ?? "";

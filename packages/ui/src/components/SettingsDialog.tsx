@@ -14,6 +14,11 @@ interface Props {
   /** The host's version, for the About section. */
   version: string;
   /**
+   * Set inside an editor, whose own theme the app follows and whose own tabs
+   * it restores: the palettes and the tab setting have nothing to do there.
+   */
+  followsEditor?: boolean;
+  /**
    * The host's file chooser, when it has one. Absent on a host that cannot show
    * one, and the Browse buttons go with it.
    */
@@ -142,6 +147,7 @@ export function SettingsDialog({
   settings,
   storagePath,
   version,
+  followsEditor = false,
   onBrowse,
   onPreviewTheme,
   onPreviewSyntax,
@@ -259,14 +265,16 @@ export function SettingsDialog({
                   <span className="ac-field__suffix">entries</span>
                 </div>
 
-                <label className="ac-field ac-field--toggle">
-                  <input
-                    type="checkbox"
-                    checked={draft.restoreTabs}
-                    onChange={(event) => patch({ restoreTabs: event.target.checked })}
-                  />
-                  <span>Reopen tabs on restart</span>
-                </label>
+                {followsEditor ? null : (
+                  <label className="ac-field ac-field--toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.restoreTabs}
+                      onChange={(event) => patch({ restoreTabs: event.target.checked })}
+                    />
+                    <span>Reopen tabs on restart</span>
+                  </label>
+                )}
               </div>
 
               <div className="ac-group">
@@ -321,90 +329,94 @@ export function SettingsDialog({
                 </p>
               </div>
 
-              <div className="ac-group">
-                <h3 className="ac-group__title" id="ac-theme-label">
-                  Theme
-                </h3>
+              {followsEditor ? null : (
+                <>
+                  <div className="ac-group">
+                    <h3 className="ac-group__title" id="ac-theme-label">
+                      Theme
+                    </h3>
 
-                <div className="ac-swatches" role="radiogroup" aria-labelledby="ac-theme-label">
-                  {THEMES.map((entry) => (
-                    <label className="ac-swatch" key={entry.value}>
-                      <input
-                        className="ac-visually-hidden"
-                        type="radio"
-                        name="ac-theme"
-                        value={entry.value}
-                        checked={draft.theme === entry.value}
-                        onChange={() => {
-                          patch({ theme: entry.value });
-                          onPreviewTheme(entry.value);
-                        }}
-                      />
-                      <span className="ac-swatch__sample ac-swatch__sample--mini" aria-hidden>
-                        {/*
-                         * "System" is both palettes, so it is drawn as both,
-                         * split corner to corner. Showing whichever the desktop
-                         * prefers today would make it a duplicate of Light or
-                         * Dark, with nothing to say it will follow.
-                         */}
-                        {entry.value === "system" ? (
-                          <>
-                            <span className="ac-mini-half">
-                              <ThemeSample theme="light" />
-                            </span>
-                            <span className="ac-mini-half ac-mini-half--far">
-                              <ThemeSample theme="dark" />
-                            </span>
-                          </>
-                        ) : (
-                          <ThemeSample theme={entry.value} />
-                        )}
-                      </span>
-                      <span className="ac-swatch__name">{entry.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                    <div className="ac-swatches" role="radiogroup" aria-labelledby="ac-theme-label">
+                      {THEMES.map((entry) => (
+                        <label className="ac-swatch" key={entry.value}>
+                          <input
+                            className="ac-visually-hidden"
+                            type="radio"
+                            name="ac-theme"
+                            value={entry.value}
+                            checked={draft.theme === entry.value}
+                            onChange={() => {
+                              patch({ theme: entry.value });
+                              onPreviewTheme(entry.value);
+                            }}
+                          />
+                          <span className="ac-swatch__sample ac-swatch__sample--mini" aria-hidden>
+                            {/*
+                             * "System" is both palettes, so it is drawn as both,
+                             * split corner to corner. Showing whichever the desktop
+                             * prefers today would make it a duplicate of Light or
+                             * Dark, with nothing to say it will follow.
+                             */}
+                            {entry.value === "system" ? (
+                              <>
+                                <span className="ac-mini-half">
+                                  <ThemeSample theme="light" />
+                                </span>
+                                <span className="ac-mini-half ac-mini-half--far">
+                                  <ThemeSample theme="dark" />
+                                </span>
+                              </>
+                            ) : (
+                              <ThemeSample theme={entry.value} />
+                            )}
+                          </span>
+                          <span className="ac-swatch__name">{entry.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="ac-group">
-                <h3 className="ac-group__title" id="ac-syntax-label">
-                  Syntax colours
-                </h3>
+                  <div className="ac-group">
+                    <h3 className="ac-group__title" id="ac-syntax-label">
+                      Syntax colours
+                    </h3>
 
-                <div
-                  className="ac-swatches ac-swatches--code"
-                  role="radiogroup"
-                  aria-labelledby="ac-syntax-label"
-                >
-                  {SYNTAX_THEMES.map((entry) => (
-                    <label className="ac-swatch" key={entry.value}>
-                      <input
-                        className="ac-visually-hidden"
-                        type="radio"
-                        name="ac-syntax"
-                        value={entry.value}
-                        checked={draft.syntaxTheme === entry.value}
-                        onChange={() => {
-                          patch({ syntaxTheme: entry.value });
-                          onPreviewSyntax(entry.value);
-                        }}
-                      />
-                      <span className="ac-swatch__sample" data-syntax={entry.value} aria-hidden>
-                        {SAMPLE.map((line, index) => (
-                          <span className="ac-swatch__line" key={index}>
-                            {line.map((token, position) => (
-                              <span className={`ac-tok-${token.role}`} key={position}>
-                                {token.text}
+                    <div
+                      className="ac-swatches ac-swatches--code"
+                      role="radiogroup"
+                      aria-labelledby="ac-syntax-label"
+                    >
+                      {SYNTAX_THEMES.map((entry) => (
+                        <label className="ac-swatch" key={entry.value}>
+                          <input
+                            className="ac-visually-hidden"
+                            type="radio"
+                            name="ac-syntax"
+                            value={entry.value}
+                            checked={draft.syntaxTheme === entry.value}
+                            onChange={() => {
+                              patch({ syntaxTheme: entry.value });
+                              onPreviewSyntax(entry.value);
+                            }}
+                          />
+                          <span className="ac-swatch__sample" data-syntax={entry.value} aria-hidden>
+                            {SAMPLE.map((line, index) => (
+                              <span className="ac-swatch__line" key={index}>
+                                {line.map((token, position) => (
+                                  <span className={`ac-tok-${token.role}`} key={position}>
+                                    {token.text}
+                                  </span>
+                                ))}
                               </span>
                             ))}
                           </span>
-                        ))}
-                      </span>
-                      <span className="ac-swatch__name">{entry.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                          <span className="ac-swatch__name">{entry.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : null}
 

@@ -61,6 +61,8 @@ export interface ApiClient {
   readonly newTab: (request?: HttpRequest, name?: string, savedRequestId?: string) => void;
   readonly closeTab: (tabId: string) => void;
   readonly saveActiveRequest: (name: string) => Promise<void>;
+  /** Saves through the editor host instead; absent unless there is one. */
+  readonly saveActiveRequestToEditor?: () => Promise<void>;
   readonly deleteSavedRequest: (savedRequestId: string) => Promise<void>;
   readonly clearHistory: () => Promise<void>;
   /** Absent when the host cannot save files. Says how it went in the notice. */
@@ -237,6 +239,20 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     [bridge],
   );
 
+  const saveActiveRequestToEditor = useCallback(async () => {
+    if (!bridge.editor) return;
+    const tab = activeTab(stateRef.current);
+    try {
+      const saved = await bridge.editor.saveRequest(tab.request, tab.name, tab.savedRequestId);
+      if (saved) dispatch({ type: "markTabSaved", tabId: tab.id, saved });
+    } catch (error) {
+      dispatch({
+        type: "showNotice",
+        notice: `Could not save: ${toRequestError(error).message}`,
+      });
+    }
+  }, [bridge]);
+
   const deleteSavedRequest = useCallback(
     async (savedRequestId: string) => {
       const next = await bridge.deleteSavedRequest(savedRequestId);
@@ -308,6 +324,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
     dispatch({ type: "setActiveEnvironment", environmentId });
   }, []);
 
+  const canSaveToEditor = bridge.editor !== undefined;
   const canExport = bridge.exportSavedRequests !== undefined;
   const canImport = bridge.importSavedRequests !== undefined;
 
@@ -322,6 +339,7 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       newTab,
       closeTab,
       saveActiveRequest,
+      saveActiveRequestToEditor: canSaveToEditor ? saveActiveRequestToEditor : undefined,
       deleteSavedRequest,
       clearHistory,
       exportSavedRequests: canExport ? exportSavedRequests : undefined,
@@ -340,6 +358,8 @@ export function useApiClient(bridge: PlatformBridge): ApiClient {
       newTab,
       closeTab,
       saveActiveRequest,
+      canSaveToEditor,
+      saveActiveRequestToEditor,
       deleteSavedRequest,
       clearHistory,
       canExport,

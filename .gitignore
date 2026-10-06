@@ -13,8 +13,8 @@ node_modules/
 # Build output
 apps/desktop/dist/
 apps/vscode/dist/
-apps/vscode/media/webview.js
-apps/vscode/media/webview.js.map
+apps/vscode/media/*.js
+apps/vscode/media/*.js.map
 apps/vscode/media/webview.css
 apps/vscode/media/webview.css.map
 apps/vscode/media/assets/

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ExportInput, FilePickRequest } from "../bridge";
+import type { EditorHost, ExportInput, FilePickRequest } from "../bridge";
 import type { ImportOutcome } from "../types";
 import { FakeBridge, defaultState, failure, historyEntry, ok, response } from "../test/fakeBridge";
 import { App } from "./App";
@@ -2922,5 +2922,103 @@ describe("importing saved requests", () => {
 
     await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
     expect(within(panel).getByText(/Nothing saved/)).toBeInTheDocument();
+  });
+});
+
+describe("inside an editor", () => {
+  function inEditor(
+    saveRequest: EditorHost["saveRequest"] = (request, _name, savedRequestId) =>
+      Promise.resolve({
+        id: savedRequestId ?? "saved-1",
+        name: "Users",
+        request,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+  ) {
+    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.removeAttribute("data-syntax");
+    const bridge = new FakeBridge();
+    const editor = { saveRequest: vi.fn(saveRequest) };
+    bridge.editor = editor;
+    const user = userEvent.setup();
+    render(<App bridge={bridge} />);
+    return { bridge, editor, user };
+  }
+
+  it("draws one request, with no tabs, drawers or palette of its own", async () => {
+    inEditor();
+    await ready();
+
+    expect(screen.queryByRole("tab", { name: /New request/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "History" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saved requests" })).not.toBeInTheDocument();
+    expect(document.documentElement).not.toHaveAttribute("data-theme");
+    expect(document.documentElement).not.toHaveAttribute("data-syntax");
+  });
+
+  it("saves through the editor, and again to the same saved request", async () => {
+    const { editor, user } = inEditor();
+    await ready();
+
+    await user.type(screen.getByRole("textbox", { name: "URL" }), "localhost:3000/users");
+    await user.keyboard("{Control>}s{/Control}");
+
+    await waitFor(() => expect(editor.saveRequest).toHaveBeenCalledTimes(1));
+    expect(editor.saveRequest.mock.calls[0]![0].url).toBe("localhost:3000/users");
+    expect(editor.saveRequest.mock.calls[0]![2]).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Save request" })).not.toBeInTheDocument();
+
+    await user.keyboard("{Control>}s{/Control}");
+    await waitFor(() => expect(editor.saveRequest).toHaveBeenCalledTimes(2));
+    expect(editor.saveRequest.mock.calls[1]![1]).toBe("Users");
+    expect(editor.saveRequest.mock.calls[1]![2]).toBe("saved-1");
+  });
+
+  it("says why a save failed", async () => {
+    const { user } = inEditor(() => Promise.reject(new Error("read-only folder")));
+    await ready();
+
+    await user.click(screen.getByRole("button", { name: /^Save/ }));
+
+    expect(await screen.findByText("Could not save: read-only folder")).toBeInTheDocument();
+  });
+
+  it("leaves opening and closing tabs to the editor", async () => {
+    inEditor();
+    await ready();
+
+    expect(fireEvent.keyDown(window, { key: "w", ctrlKey: true })).toBe(true);
+    expect(fireEvent.keyDown(window, { key: "n", ctrlKey: true })).toBe(true);
+  });
+
+  it("offers no palettes in Settings", async () => {
+    const { user } = inEditor();
+    await ready();
+
+    const dialog = await openSettings(user, "Appearance");
+    expect(within(dialog).getByText("Text size")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Theme")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Syntax colours")).not.toBeInTheDocument();
+  });
+
+  it("takes changes made in another tab", async () => {
+    const { bridge } = inEditor();
+    await ready();
+
+    const state = defaultState();
+    act(() =>
+      bridge.push({
+        type: "shared",
+        settings: { ...state.settings, paneLayout: "columns" },
+        environments: state.environments,
+        activeEnvironmentId: null,
+      }),
+    );
+
+    expect(await screen.findByRole("button", { name: "Toggle pane layout" })).toHaveAttribute(
+      "title",
+      "Put the response below the request",
+    );
   });
 });

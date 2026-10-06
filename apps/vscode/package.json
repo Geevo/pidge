@@ -40,23 +40,64 @@
     "Other"
   ],
   "main": "./dist/extension.cjs",
-  "activationEvents": [],
+  "activationEvents": [
+    "onWebviewPanel:pidge.request"
+  ],
   "contributes": {
     "commands": [
+      {
+        "command": "pidge.newRequest",
+        "title": "New Request",
+        "category": "pidge",
+        "icon": "$(add)"
+      },
       {
         "command": "pidge.open",
         "title": "Open",
         "category": "pidge"
       },
       {
-        "command": "pidge.newRequest",
-        "title": "New Request",
+        "command": "pidge.importSaved",
+        "title": "Import Saved Requests…",
         "category": "pidge"
+      },
+      {
+        "command": "pidge.exportSaved",
+        "title": "Export Saved Requests…",
+        "category": "pidge"
+      },
+      {
+        "command": "pidge.clearHistory",
+        "title": "Clear History",
+        "category": "pidge",
+        "icon": "$(clear-all)"
       },
       {
         "command": "pidge.restartSidecar",
         "title": "Restart Request Engine",
         "category": "pidge"
+      },
+      {
+        "command": "pidge.openSaved",
+        "title": "Open",
+        "category": "pidge"
+      },
+      {
+        "command": "pidge.openHistory",
+        "title": "Open",
+        "category": "pidge"
+      },
+      {
+        "command": "pidge.deleteSaved",
+        "title": "Delete",
+        "category": "pidge",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "pidge.deleteHistoryEntry",
+        "title": "Delete",
+        "category": "pidge",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -71,9 +112,73 @@
     "views": {
       "pidge": [
         {
-          "id": "pidge.launcher",
+          "id": "pidge.sidebar",
           "name": "pidge",
           "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "pidge.importSaved",
+          "when": "view == pidge.sidebar",
+          "group": "1_transfer@1"
+        },
+        {
+          "command": "pidge.exportSaved",
+          "when": "view == pidge.sidebar",
+          "group": "1_transfer@2"
+        },
+        {
+          "command": "pidge.clearHistory",
+          "when": "view == pidge.sidebar",
+          "group": "2_history"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "pidge.openSaved",
+          "when": "webviewId == 'pidge.sidebar' && webviewSection == 'saved'",
+          "group": "1_open"
+        },
+        {
+          "command": "pidge.exportSaved",
+          "when": "webviewId == 'pidge.sidebar' && webviewSection == 'saved'",
+          "group": "2_transfer"
+        },
+        {
+          "command": "pidge.deleteSaved",
+          "when": "webviewId == 'pidge.sidebar' && webviewSection == 'saved'",
+          "group": "3_delete"
+        },
+        {
+          "command": "pidge.openHistory",
+          "when": "webviewId == 'pidge.sidebar' && webviewSection == 'history'",
+          "group": "1_open"
+        },
+        {
+          "command": "pidge.deleteHistoryEntry",
+          "when": "webviewId == 'pidge.sidebar' && webviewSection == 'history'",
+          "group": "3_delete"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "pidge.openSaved",
+          "when": "false"
+        },
+        {
+          "command": "pidge.openHistory",
+          "when": "false"
+        },
+        {
+          "command": "pidge.deleteSaved",
+          "when": "false"
+        },
+        {
+          "command": "pidge.deleteHistoryEntry",
+          "when": "false"
         }
       ]
     },
