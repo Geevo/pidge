@@ -125,9 +125,13 @@ public class TlsTests
         using var engine = Engine(new TlsSettings { ExtraCaFiles = [caFile.Path] });
         var error = await FailsAsync(engine, server);
 
-        // The server closes the connection during the handshake.
+        // The server closes the connection during the handshake. Under TLS 1.3
+        // the client has already finished its side by then, and this server
+        // sends no alert on Linux, so all the client sees there is a response
+        // that ended before it began.
         Assert.True(
-            error.Kind is RequestErrorKind.Tls or RequestErrorKind.ConnectionFailed or RequestErrorKind.BodyRead,
+            error.Kind is RequestErrorKind.Tls or RequestErrorKind.ConnectionFailed or RequestErrorKind.BodyRead
+                or RequestErrorKind.Other,
             $"unexpected kind: {error.Kind} ({error.Message})");
     }
 
