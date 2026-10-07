@@ -3,9 +3,8 @@
 #
 #   scripts/package-linux.sh <version> <executable> <out-dir>
 #
-# All three install the same files. GTK, WebKitGTK and the rest come from the
-# system, so the packages declare them and the AppImage expects them; see
-# docs/packaging.md. Needs dpkg-deb, rpmbuild, mksquashfs and curl.
+# The installed packages declare GTK and WebKitGTK dependencies. The AppImage
+# carries them; see docs/packaging.md for the build dependencies.
 set -euo pipefail
 
 version=$1
@@ -107,10 +106,12 @@ rpmbuild -bb "$work/pidge.spec" --target x86_64 \
 # The runtime, with a squashfs image of the app directory appended.
 appdir="$work/AppDir"
 cp -a "$stage" "$appdir"
-ln -s usr/bin/pidge "$appdir/AppRun"
+install -m755 "$root/scripts/appimage/AppRun" "$appdir/AppRun"
 cp "$stage/usr/share/applications/pidge.desktop" "$appdir/pidge.desktop"
 cp "$stage/usr/share/icons/hicolor/512x512/apps/pidge.png" "$appdir/pidge.png"
 ln -s pidge.png "$appdir/.DirIcon"
+
+bash "$root/scripts/bundle-appimage.sh" "$appdir" "$work/tools"
 
 curl -fsSL "$runtime_url" -o "$work/runtime"
 echo "$runtime_sha256  $work/runtime" | sha256sum --check --quiet

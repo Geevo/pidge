@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+APPDIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export APPDIR
+export PIDGE_APPIMAGE_HOST_LIBRARY_PATH="${LD_LIBRARY_PATH-}"
+export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+export FONTCONFIG_PATH="$APPDIR/etc/fonts"
+export FONTCONFIG_FILE="$APPDIR/etc/fonts/fonts.conf"
+# WebKit's DMABUF renderer can disconnect Wayland clients on some drivers.
+# Keep an explicit user choice, including 0 to opt back into that renderer.
+export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER-1}"
+
+for hook in "$APPDIR"/apprun-hooks/*.sh; do
+    # shellcheck disable=SC1090
+    source "$hook"
+done
+
+# Keep the bundled GStreamer registry separate from the desktop's registry.
+export GST_REGISTRY_1_0="${XDG_CACHE_HOME:-$HOME/.cache}/pidge/gstreamer-registry.bin"
+mkdir -p "$(dirname "$GST_REGISTRY_1_0")"
+
+# The GTK plugin relocates WebKit's compiled /usr paths to ././. Its child
+# processes and injected bundle must therefore resolve from the bundled usr.
+cd "$APPDIR/usr"
+exec "$APPDIR/usr/bin/pidge" "$@"
