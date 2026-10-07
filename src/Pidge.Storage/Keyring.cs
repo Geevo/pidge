@@ -351,6 +351,21 @@ public sealed class SystemKeyring : IKeySource
                 UseShellExecute = false,
                 StandardInputEncoding = new UTF8Encoding(false),
             };
+            // A system utility needs the host's libraries. In an AppImage it
+            // would otherwise load our older OpenSSL, which may lack symbols
+            // required by the system's newer systemd. AppRun saves this path
+            // before prepending the bundled libraries for the app itself.
+            if (start.Environment.Remove("PIDGE_APPIMAGE_HOST_LIBRARY_PATH", out var hostLibraryPath))
+            {
+                if (string.IsNullOrEmpty(hostLibraryPath))
+                {
+                    start.Environment.Remove("LD_LIBRARY_PATH");
+                }
+                else
+                {
+                    start.Environment["LD_LIBRARY_PATH"] = hostLibraryPath;
+                }
+            }
             start.ArgumentList.Add("--user");
             start.ArgumentList.Add("--no-ask-password");
             foreach (var arg in args)
