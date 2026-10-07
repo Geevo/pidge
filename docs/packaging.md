@@ -28,8 +28,9 @@ Native compilation only targets the operating system it runs on, so Windows is
 built on Windows and Linux on Linux. `--rid` picks the architecture, and needs
 the matching native toolchain installed.
 
-The browser engine is the system's: WebView2 on Windows (present on Windows 11
-and most of Windows 10) and WebKitGTK 4.1 on Linux. Neither is bundled.
+The Windows executable uses the system's WebView2 (present on Windows 11 and
+most of Windows 10). Linux executables and installed packages use system
+WebKitGTK 4.1; the AppImage carries GTK and WebKitGTK with it.
 
 `-warnaserror` is on for every publish. Native compilation reports what it
 cannot see through (reflection, dynamic code) as warnings, and each one is
@@ -53,7 +54,7 @@ same files as workflow artifacts without releasing anything.
 
 The Windows zip holds the executable, `LICENSE`, `THIRD-PARTY-LICENSES.md`
 and the font licences. For Linux, `scripts/package-linux.sh` wraps the same
-executable three ways, all installing the same files: `/usr/bin/pidge`, a
+executable three ways, each including `/usr/bin/pidge`, a
 desktop entry, the 512 px icon, and the licences in `/usr/share/doc/pidge/`.
 
 - `pidge_<version>_amd64.deb`, built with `dpkg-deb` (xz, which older dpkg can
@@ -63,9 +64,42 @@ desktop entry, the 512 px icon, and the licences in `/usr/share/doc/pidge/`.
   `webkit2gtk4.1`, `libnotify` and `openssl-libs`, listed by hand because the
   window host is inside the executable, where rpm's own scan can't see it.
 - `pidge-<version>-x86_64.AppImage`: the static AppImage runtime, pinned by
-  checksum, with a squashfs image of the app appended. Like the packages, it
-  uses the system's GTK and WebKitGTK rather than carrying its own, so it is a
-  few megabytes rather than the hundred or so a bundled WebKit would cost.
+  checksum, with a squashfs image of the app appended. It bundles GTK,
+  WebKitGTK 4.1, matching WebKit child processes and the injected bundle,
+  GStreamer plugins, GIO modules, OpenSSL, ICU, and their dependencies and
+  runtime resources, including text-rendering libraries and a fallback font.
+  Installing WebKitGTK on the host is unnecessary. The
+  host supplies glibc and graphics drivers; the build targets Ubuntu 22.04
+  (glibc 2.35) or newer compatible x86_64 systems.
+
+`scripts/bundle-appimage.sh` uses checksum-pinned linuxdeploy and GTK/GStreamer
+plugins to collect the AppImage dependencies. The native window host is inside
+the executable, so the script supplies its GTK, WebKitGTK and libnotify roots
+explicitly rather than relying on scanning the executable alone. Build on
+Ubuntu 22.04 with the packages installed by the Linux release job. Copyright
+and source notices and the builder's package versions travel in
+`usr/share/doc/pidge/bundled/`.
+
+`scripts/appimage/AppRun` loads the bundled libraries and runtime hooks and
+starts from the bundled `usr/` directory, where WebKit's relocated helper and
+resource paths resolve. It defaults `WEBKIT_DISABLE_DMABUF_RENDERER=1` to
+avoid the Wayland protocol error on affected graphics drivers, preserving an
+explicit environment setting. To opt into the DMABUF renderer:
+
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=0 ./pidge-<version>-x86_64.AppImage
+```
+
+The launcher also saves the host's original library search path. When the
+storage layer runs `systemd-creds`, it restores that path for the child process
+so a newer host systemd can use its own OpenSSL. The app and WebKit processes
+continue to use the bundled libraries.
+
+The release job exercises the AppImage in a fresh Ubuntu container without
+system GTK or WebKitGTK: it starts the UI and sends a request to a local test
+server through the desktop bridge. `scripts/test-appimage.sh` can also be run
+under `dbus-run-session -- xvfb-run -a` in another clean environment. The test
+uses `APPIMAGE_EXTRACT_AND_RUN=1` so CI does not need FUSE.
 
 Nothing is code-signed. What there is instead:
 
