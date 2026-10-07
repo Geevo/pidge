@@ -76,6 +76,7 @@ internal static class Program
         }
 
         var host = new Host(window, session);
+        var contentLoaded = false;
         window.RegisterWebMessageReceivedHandler(host.OnMessage);
         window.RegisterNavigationStartingHandler((_, e) =>
         {
@@ -88,18 +89,34 @@ internal static class Program
             {
                 e.Cancel = true;
             }
+            else
+            {
+                contentLoaded = false;
+            }
+        });
+        window.RegisterContentLoadedHandler((_, _) =>
+        {
+            // Photino's document-start bridge exists once the content loads.
+            contentLoaded = true;
+            host.Resized();
         });
 
         window.RegisterLocationChangedHandler((_, _) => WindowState.Remember(window, session));
         window.RegisterSizeChangedHandler((_, _) =>
         {
             WindowState.Remember(window, session);
-            host.Resized();
+            if (contentLoaded)
+            {
+                host.Resized();
+            }
         });
         window.RegisterStateChangedHandler((_, _) =>
         {
             WindowState.Remember(window, session);
-            host.Resized();
+            if (contentLoaded)
+            {
+                host.Resized();
+            }
         });
         window.RegisterClosingHandler((_, _) =>
         {
