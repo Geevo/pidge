@@ -62,6 +62,18 @@ jobs:
           version=$(dotnet msbuild src/Pidge.Desktop -getProperty:Version)
           bash scripts/package-linux.sh "$version" artifacts/desktop/linux-x64/pidge out
 
+      - name: Smoke test AppImage without system WebKitGTK
+        run: |
+          docker run --rm --cap-add SYS_ADMIN \
+            -v "$PWD:/src:ro" ubuntu:22.04 bash -c '
+              set -e
+              apt-get update
+              apt-get install -y --no-install-recommends xvfb xauth xdotool dbus-x11 python3 libgl1-mesa-dri libegl1 libwayland-client0
+              ! dpkg-query -W libwebkit2gtk-4.1-0
+              useradd -m tester
+              runuser -u tester -- dbus-run-session -- xvfb-run -a bash /src/scripts/test-appimage.sh /src/out/*.AppImage
+            '
+
       # The extension, with this platform's sidecar inside.
       - name: VS Code extension
         shell: bash
