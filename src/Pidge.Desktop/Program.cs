@@ -89,11 +89,10 @@ internal static class Program
             {
                 e.Cancel = true;
             }
-            else
-            {
-                contentLoaded = false;
-            }
         });
+        // Cleared when a new page commits rather than when navigation starts:
+        // a same-document navigation starts but never finishes loading.
+        window.RegisterContentLoadingHandler((_, _) => contentLoaded = false);
         window.RegisterContentLoadedHandler((_, _) =>
         {
             // Photino's document-start bridge exists once the content loads.
