@@ -40,8 +40,6 @@ if [ -d /usr/share/webkitgtk-4.1 ]; then
 fi
 # GdkPixbuf uses MIME data when identifying images, including the window icon.
 cp -a /usr/share/mime "$appdir/usr/share/"
-# /lib and /usr/lib are aliases on the builder; WebKit may embed either path.
-ln -s usr/lib "$appdir/lib"
 
 libraries=()
 for name in libgtk-3.so.0 libwebkit2gtk-4.1.so.0 libnotify.so.4 \
