@@ -1,5 +1,6 @@
 using Photino.NET;
 using Pidge.Core;
+using Pidge.Desktop.Gtk;
 using Pidge.Desktop.Windows;
 using Pidge.Session;
 using Pidge.Storage;
@@ -136,6 +137,10 @@ internal static class Program
         if (OperatingSystem.IsWindows())
         {
             WindowsFrame.Apply(window.WindowHandle);
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            window.SetLinuxChromelessResizeBorderThickness(GtkFrame.Apply(window.WindowHandle));
         }
         WindowState.Restore(window, session.GetWindowPlacement());
 

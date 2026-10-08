@@ -305,14 +305,22 @@ window to the height of the screen. That code goes by the window handle alone,
 and knows nothing of PhotinoX. The cost is the one every framed window pays:
 what shows is smaller than the window's size by the side and bottom borders.
 
-On Linux, PhotinoX gives the undecorated window resize edges of its own: a
-strip just inside each edge that starts the window manager's resize, and that
-steps aside while the window is maximised. The page draws none. The drag region
-works the same way on both: it is marked
-`data-drag-region`, a press there asks the host to begin a move and a double
-press toggles maximise. GTK only starts a move from the native press itself, so
-on Linux the page reports where those strips are and the window manager does
-the rest.
+On Linux the frame is `src/Pidge.Desktop/Gtk/`, which likewise goes by the
+GtkWindow alone. Under Wayland the window takes GTK's own frame back, for its
+shadow and for resizing from just outside the edges, with an empty titlebar
+that is kept hidden, so the tall header never shows. Under X11 it stays
+undecorated and resizes from a strip just inside each edge, which steps aside
+while the window is maximised. The page draws none of it.
+
+The drag region works the same way on both: it is marked `data-drag-region`, a
+press there moves the window and a double press toggles maximise. GTK only
+starts a move from the native press itself, so on Linux the page reports where
+those strips are and the host watches the webview's presses. The move starts
+once the pointer passes GTK's drag threshold, as it would on a GTK title bar.
+Started on the press, it hands the pointer to the compositor, and under KDE
+Plasma on Wayland the page then never sees the release or the second press of a
+double click: the window jumps to the pointer instead of maximising, and the
+next clicks go missing.
 
 Drawing the buttons means drawing the right ones. A single set looks foreign
 everywhere except where it came from, so `window_buttons` reports which desktop

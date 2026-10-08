@@ -3,6 +3,7 @@ using System.Text.Json;
 using Photino.NET;
 using Pidge.Codegen;
 using Pidge.Core;
+using Pidge.Desktop.Gtk;
 using Pidge.Desktop.Windows;
 using Pidge.Session;
 using Pidge.Storage;
@@ -208,16 +209,14 @@ internal sealed class Host(PhotinoWindow window, AppSession session)
 
             case "window_drag_regions":
                 {
-                    if (OperatingSystem.IsLinux())
+                    var regions = JsonArgs.Optional(args, "regions", Json.ListDragRegion) ?? [];
+                    await OnUi(() =>
                     {
-                        var regions = JsonArgs.Optional(args, "regions", Json.ListDragRegion) ?? [];
-                        var layout = regions
-                            .Select(r => new LayoutRegion(
-                                r.Width, r.Height, new Thickness(r.X, r.Y, 0, 0),
-                                HorizontalAlignment.Left, VerticalAlignment.Top))
-                            .ToList();
-                        await OnUi(() => window.SetLinuxChromelessDragRegions(layout, []));
-                    }
+                        if (OperatingSystem.IsLinux())
+                        {
+                            GtkFrame.SetDragRegions(regions);
+                        }
+                    });
                     return "null";
                 }
 
