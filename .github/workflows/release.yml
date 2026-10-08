@@ -69,7 +69,10 @@ jobs:
               set -e
               apt-get update
               apt-get install -y --no-install-recommends xvfb xauth xdotool dbus-x11 python3 libgl1-mesa-dri libegl1 libwayland-client0
-              ! dpkg-query -W libwebkit2gtk-4.1-0
+              if dpkg -s libwebkit2gtk-4.1-0 >/dev/null 2>&1; then
+                echo "libwebkit2gtk-4.1-0 is installed in the test container" >&2
+                exit 1
+              fi
               useradd -m tester
               runuser -u tester -- dbus-run-session -- xvfb-run -a bash /src/scripts/test-appimage.sh /src/out/*.AppImage
             '
