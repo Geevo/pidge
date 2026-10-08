@@ -158,18 +158,25 @@ internal static class SecretService
 
     private static Task<(ObjectPath[] Unlocked, ObjectPath[] Locked)> SearchItemsAsync(Connection connection, string item)
     {
-        using var writer = connection.GetMessageWriter();
-        writer.WriteMethodCallHeader(Bus, ServicePath, ServiceInterface, "SearchItems", "a{ss}");
-        WriteAttributes(writer, item);
-        return connection.CallMethodAsync(
-            writer.CreateMessage(),
-            static (Message message, object? _) =>
-            {
-                var reader = message.GetBodyReader();
-                var unlocked = reader.ReadArrayOfObjectPath();
-                var locked = reader.ReadArrayOfObjectPath();
-                return (unlocked, locked);
-            });
+        var writer = connection.GetMessageWriter();
+        try
+        {
+            writer.WriteMethodCallHeader(Bus, ServicePath, ServiceInterface, "SearchItems", "a{ss}");
+            WriteAttributes(ref writer, item);
+            return connection.CallMethodAsync(
+                writer.CreateMessage(),
+                static (Message message, object? _) =>
+                {
+                    var reader = message.GetBodyReader();
+                    var unlocked = reader.ReadArrayOfObjectPath();
+                    var locked = reader.ReadArrayOfObjectPath();
+                    return (unlocked, locked);
+                });
+        }
+        finally
+        {
+            writer.Dispose();
+        }
     }
 
     private static Task<byte[]> GetSecretAsync(Connection connection, string item, string session)
@@ -214,44 +221,53 @@ internal static class SecretService
     /// <summary>The prompt the service wants run, "/" for none.</summary>
     private static Task<string> CreateItemAsync(Connection connection, string collection, string session, string item, string key)
     {
-        using var writer = connection.GetMessageWriter();
-        writer.WriteMethodCallHeader(Bus, collection, CollectionInterface, "CreateItem", "a{sv}(oayays)b");
+        var writer = connection.GetMessageWriter();
+        try
+        {
+            writer.WriteMethodCallHeader(Bus, collection, CollectionInterface, "CreateItem", "a{sv}(oayays)b");
 
-        var properties = writer.WriteDictionaryStart();
-        writer.WriteDictionaryEntryStart();
-        writer.WriteString("org.freedesktop.Secret.Item.Label");
-        writer.WriteVariantString(Label);
-        writer.WriteDictionaryEntryStart();
-        writer.WriteString("org.freedesktop.Secret.Item.Attributes");
-        // A variant is its signature followed by the value.
-        writer.WriteSignature("a{ss}");
-        WriteAttributes(writer, item);
-        writer.WriteDictionaryEnd(properties);
+            var properties = writer.WriteDictionaryStart();
+            writer.WriteDictionaryEntryStart();
+            writer.WriteString("org.freedesktop.Secret.Item.Label");
+            writer.WriteVariantString(Label);
+            writer.WriteDictionaryEntryStart();
+            writer.WriteString("org.freedesktop.Secret.Item.Attributes");
+            // A variant is its signature followed by the value.
+            writer.WriteSignature("a{ss}");
+            WriteAttributes(ref writer, item);
+            writer.WriteDictionaryEnd(properties);
 
-        writer.WriteStructureStart();
-        writer.WriteObjectPath(session);
-        writer.WriteArray(Array.Empty<byte>());
-        writer.WriteArray(System.Text.Encoding.UTF8.GetBytes(key));
-        writer.WriteString("text/plain");
+            writer.WriteStructureStart();
+            writer.WriteObjectPath(session);
+            writer.WriteArray(Array.Empty<byte>());
+            writer.WriteArray(System.Text.Encoding.UTF8.GetBytes(key));
+            writer.WriteString("text/plain");
 
-        // Replace an item with the same attributes.
-        writer.WriteBool(true);
+            // Replace an item with the same attributes.
+            writer.WriteBool(true);
 
-        return connection.CallMethodAsync(
-            writer.CreateMessage(),
-            static (Message message, object? _) =>
-            {
-                var reader = message.GetBodyReader();
-                reader.ReadObjectPath();
-                return reader.ReadObjectPathAsString();
-            });
+            return connection.CallMethodAsync(
+                writer.CreateMessage(),
+                static (Message message, object? _) =>
+                {
+                    var reader = message.GetBodyReader();
+                    reader.ReadObjectPath();
+                    return reader.ReadObjectPathAsString();
+                });
+        }
+        finally
+        {
+            writer.Dispose();
+        }
     }
 
     /// <summary>
     /// What a key is found by. <c>api-client</c> is the app's old name, kept so
-    /// that keys made before the rename are still found.
+    /// that keys made before the rename are still found. The writer is a
+    /// struct that tracks its own position, so it has to be passed by ref: a
+    /// copy writes the attributes but leaves the caller's message empty.
     /// </summary>
-    private static void WriteAttributes(MessageWriter writer, string item)
+    private static void WriteAttributes(ref MessageWriter writer, string item)
     {
         var attributes = writer.WriteDictionaryStart();
         writer.WriteDictionaryEntryStart();
