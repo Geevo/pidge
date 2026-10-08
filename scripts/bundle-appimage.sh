@@ -86,9 +86,11 @@ install -m755 "$root/scripts/appimage/AppRun" "$appdir/AppRun"
 find "$appdir/usr/lib" -name 'libwebkit*' -type f -exec sed -i 's|/usr|././|g' {} +
 
 for file in libwebkit2gtk-4.1.so.0 libjavascriptcoregtk-4.1.so.0 \
-    libgtk-3.so.0 libssl.so.3 libicuuc.so.70; do
+    libgtk-3.so.0 libssl.so.3; do
     test -f "$appdir/usr/lib/$file"
 done
+# ICU's soname carries its version, which follows the builder's release.
+compgen -G "$appdir/usr/lib/libicuuc.so.*" > /dev/null
 test -f "$appdir/usr/lib/gstreamer-1.0/libgstapp.so"
 test -x "$appdir/usr/lib/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner"
 test -f "$appdir/usr/share/glib-2.0/schemas/gschemas.compiled"
