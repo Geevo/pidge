@@ -76,9 +76,9 @@ desktop entry, the 512 px icon, and the licences in `/usr/share/doc/pidge/`.
 plugins to collect the AppImage dependencies. The native window host is inside
 the executable, so the script supplies its GTK, WebKitGTK and libnotify roots
 explicitly rather than relying on scanning the executable alone. Build on
-Ubuntu 22.04 with the packages installed by the Linux release job. Copyright
-and source notices and the builder's package versions travel in
-`usr/share/doc/pidge/bundled/`.
+Ubuntu 22.04 with the packages installed by the Linux release job. The
+copyright notices and versions of the builder's packages that supplied
+bundled files travel in `usr/share/doc/pidge/bundled/`.
 
 `scripts/appimage/AppRun` loads the bundled libraries and runtime hooks and
 starts from the bundled `usr/` directory, where WebKit's relocated helper and

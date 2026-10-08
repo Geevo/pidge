@@ -95,15 +95,31 @@ test -f "$appdir/usr/lib/gstreamer-1.0/libgstapp.so"
 test -x "$appdir/usr/lib/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner"
 test -f "$appdir/usr/share/glib-2.0/schemas/gschemas.compiled"
 
-# linuxdeploy carries each library's copyright/source notice under share/doc.
-# Also record builder versions so the source packages can be identified.
+# Record which of the builder's packages supplied the AppDir's files, with
+# their versions and copyright notices, so the sources can be identified.
+# linuxdeploy flattens libraries into usr/lib, so look for those under the
+# builder's library directories as well.
 notices="$appdir/usr/share/doc/pidge/bundled"
 mkdir -p "$notices"
-dpkg-query -W -f='${binary:Package}\t${Version}\n' > "$notices/builder-packages.tsv"
+multiarch=$(basename "$libdir")
+(cd "$appdir" && find . ! -type d -printf '%P\n') | while IFS= read -r file; do
+    case $file in
+        usr/lib/*) set -- "/$file" "$libdir/${file#usr/lib/}" "/lib/$multiarch/${file#usr/lib/}" ;;
+        *) set -- "/$file" ;;
+    esac
+    for source; do
+        if [ -e "$source" ]; then
+            printf '%s\0' "$source"
+        fi
+    done
+done > "$tools/bundled-files"
+# dpkg -S fails for files no package owns, such as generated caches.
+{ xargs -0 dpkg -S < "$tools/bundled-files" 2>/dev/null || true; } |
+    grep -Ev '^(local )?diversion ' | sed 's/: .*//' | tr ',' '\n' | sed 's/^ *//' |
+    sort -u > "$tools/bundled-packages"
+test -s "$tools/bundled-packages"
+while IFS= read -r package; do
+    dpkg-query -W -f='${binary:Package}\t${Version}\n' "$package"
+    cp -L "/usr/share/doc/${package%%:*}/copyright" "$notices/${package%%:*}.copyright"
+done < "$tools/bundled-packages" > "$notices/builder-packages.tsv"
 install -m644 "$tools/tauri-LICENSE-MIT" "$notices/tauri-plugins-LICENSE-MIT"
-# GTK copies schemas and module data beyond the ELF files. Preserve their
-# notices too, including those supplied by other packages on the builder.
-while IFS= read -r -d '' copyright; do
-    package=$(basename "$(dirname "$copyright")")
-    cp -L "$copyright" "$notices/$package.copyright"
-done < <(find /usr/share/doc -name copyright -print0)
