@@ -68,9 +68,9 @@ desktop entry, the 512 px icon, and the licences in `/usr/share/doc/pidge/`.
   WebKitGTK 4.1, matching WebKit child processes and the injected bundle,
   GStreamer plugins, GIO modules, OpenSSL, ICU, and their dependencies and
   runtime resources, including text-rendering libraries and a fallback font.
-  Installing WebKitGTK on the host is unnecessary. The
-  host supplies glibc and graphics drivers; the build targets Ubuntu 22.04
-  (glibc 2.35) or newer compatible x86_64 systems.
+  Installing WebKitGTK on the host is unnecessary. The host supplies glibc
+  and graphics drivers; the build targets Ubuntu 22.04 (glibc 2.35) or newer
+  compatible x86_64 systems.
 
 `scripts/bundle-appimage.sh` uses checksum-pinned linuxdeploy and GTK/GStreamer
 plugins to collect the AppImage dependencies. The native window host is inside
@@ -84,7 +84,9 @@ bundled files travel in `usr/share/doc/pidge/bundled/`.
 starts from the bundled `usr/` directory, where WebKit's relocated helper and
 resource paths resolve. It defaults `WEBKIT_DISABLE_DMABUF_RENDERER=1` to
 avoid the Wayland protocol error on affected graphics drivers, preserving an
-explicit environment setting. To opt into the DMABUF renderer:
+explicit environment setting. The GTK hook also sets `GTK_THEME` to
+Adwaita, light or dark to match the desktop, so the AppImage does not pick
+up the host's GTK theme. To opt into the DMABUF renderer:
 
 ```bash
 WEBKIT_DISABLE_DMABUF_RENDERER=0 ./pidge-<version>-x86_64.AppImage

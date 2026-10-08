@@ -38,8 +38,9 @@ Grab a build from the [releases page](../../releases).
 | Fedora         | `pidge-<version>-1.x86_64.rpm`    | `sudo dnf install ./pidge-<version>-1.x86_64.rpm`                     |
 
 Every build is native, so there is no .NET runtime to install. More on that
-[below](#native-all-the-way-down). On Linux all three use the WebKitGTK 4.1
-your desktop already has; the .deb and .rpm also put pidge in your app menu.
+[below](#native-all-the-way-down). The AppImage carries its own WebKitGTK;
+the .deb and .rpm use the WebKitGTK 4.1 your desktop already has, and put
+pidge in your app menu.
 
 No macOS build yet. It should build there; nobody's tried.
 
