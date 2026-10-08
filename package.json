@@ -2,7 +2,7 @@
   "name": "api-client-monorepo",
   "private": true,
   "type": "module",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A local-first HTTP client for the desktop and VS Code.",
   "license": "MIT",
   "packageManager": "pnpm@12.4.2",
