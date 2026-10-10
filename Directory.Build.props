@@ -7,7 +7,7 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <!-- One artifacts directory for the repository, not one per Directory.Build.props. -->
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>pidge</Authors>
     <Product>pidge</Product>
     <Copyright>MIT</Copyright>
