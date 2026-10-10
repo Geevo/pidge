@@ -2947,6 +2947,26 @@ body.ac-dragging--columns * {
   width: 140px;
 }
 
+/* ---------- curl import ---------- */
+
+.ac-curl-import__status {
+  padding: 0 4px;
+  overflow: hidden;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-font-size-small);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* What the paste could not carry over, said once above the command. */
+.ac-curl-import__notes {
+  margin: 0;
+  padding: 4px 8px 4px 24px;
+  border-bottom: 1px solid var(--ac-border);
+  color: var(--ac-text-faint);
+  font-size: var(--ac-font-size-small);
+}
+
 /* ---------- rich response body ---------- */
 
 .ac-response-body__rich {
