@@ -2,6 +2,7 @@ import type { CodeTarget, HttpRequest, RequestPane } from "../types";
 import { AuthEditor } from "./AuthEditor";
 import { BodyEditor } from "./BodyEditor";
 import { CodeView } from "./CodeView";
+import { CurlImportView } from "./CurlImportView";
 import { HeadersEditor } from "./HeadersEditor";
 import { ParamsEditor } from "./ParamsEditor";
 
@@ -37,6 +38,8 @@ export function RequestEditor({
     // Last, and never marked: it is a view of the other four rather than a
     // fifth thing to fill in.
     { id: "code", label: "Code" },
+    // The way back from the Code pane: a command pasted in fills the others.
+    { id: "curl", label: "cURL" },
   ];
 
   /*
@@ -45,10 +48,12 @@ export function RequestEditor({
    *
    * The Code pane takes the same treatment for a different reason: its toolbar
    * carries the language and the Copy button, and if the panel scrolled they
-   * would scroll away from the snippet they belong to.
+   * would scroll away from the snippet they belong to. The cURL pane is laid
+   * out the same way, with what the paste did in place of the toolbar.
    */
   const editorOwnsScrolling =
     pane === "code" ||
+    pane === "curl" ||
     (pane === "body" && (request.body.type === "json" || request.body.type === "text"));
 
   return (
@@ -84,6 +89,9 @@ export function RequestEditor({
             onTargetChange={onCodeTargetChange}
             generate={generateCode}
           />
+        ) : null}
+        {pane === "curl" ? (
+          <CurlImportView request={request} onChange={onChange} onSubmit={onSubmit} />
         ) : null}
       </div>
     </section>

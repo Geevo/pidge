@@ -108,6 +108,12 @@ built from what would actually be sent: variables filled in, query in the URL,
 your timeout, redirect and certificate settings included. Anything a snippet
 can't do, like an OAuth 1 signature, is called out in a comment.
 
+It works the other way too: paste a curl command into the **cURL** tab, from a
+browser's "Copy as cURL" or an API's docs, and the method, URL, params, body,
+headers and auth are filled in from it. An `Authorization` header becomes the
+matching auth setting where there is one, and anything that can't be carried
+over, like a body read from a file, is listed above the command.
+
 ### Masked and encrypted secrets
 
 ![OAuth 2 settings with the client secret covered and an eye to show it](docs/screenshots/secrets.png)

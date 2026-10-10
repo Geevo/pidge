@@ -56,7 +56,7 @@ export const HTTP_METHODS: readonly HttpMethod[] = [
 ];
 
 /** Which tab of the request editor is showing. */
-export type RequestPane = "params" | "body" | "headers" | "auth" | "code";
+export type RequestPane = "params" | "body" | "headers" | "auth" | "code" | "curl";
 
 /** Which tab of the response pane is showing. */
 export type ResponsePane = "body" | "headers";

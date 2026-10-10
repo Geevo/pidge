@@ -5,6 +5,7 @@ obj/
 *.user
 .vs/
 TestResults/
+.vscode
 
 # Node
 node_modules/
