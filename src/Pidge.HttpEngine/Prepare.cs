@@ -53,6 +53,7 @@ internal static class Prepare
         RequestPlanning.AppendQueryParams(url, request);
 
         var warnings = new List<string>();
+        request = RequestPlanning.WithoutUnsentBody(request, warnings);
         var headers = new List<(string Name, string Value)>();
 
         // Credentials written into the URL go out as basic auth, and never as

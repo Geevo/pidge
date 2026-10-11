@@ -153,7 +153,8 @@ public static partial class CodeGenerator
     public static string Generate(HttpRequest request, ClientOptions options, CodeTarget target)
     {
         var effective = RequestPlanning.Effective(request);
-        var plan = new Plan(request, effective, options);
+        // Effective has already said why a body was dropped.
+        var plan = new Plan(RequestPlanning.WithoutUnsentBody(request, []), effective, options);
         return GenerateFor(plan, target);
     }
 

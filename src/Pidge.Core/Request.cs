@@ -44,6 +44,14 @@ public static class RequestMethodExtensions
         _ => throw new ArgumentOutOfRangeException(nameof(method)),
     };
 
+    /// <summary>
+    /// False for GET and HEAD, whose bodies have no defined meaning and which
+    /// many servers and proxies refuse outright. Whatever is in the Body tab
+    /// stays there for when the method changes back.
+    /// </summary>
+    public static bool SendsBody(this RequestMethod method) =>
+        method is not (RequestMethod.Get or RequestMethod.Head);
+
     /// <summary>The method for an upper-case name, as <c>.http</c> files and curl write it.</summary>
     public static RequestMethod? Parse(string name) => name switch
     {

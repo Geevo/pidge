@@ -76,6 +76,7 @@ public static class RequestPlanning
         AppendQueryParams(url, request);
 
         var warnings = new List<string>();
+        request = WithoutUnsentBody(request, warnings);
         var userContentType = request.FindHeader("content-type") is not null;
         var multipart = request.Body is MultipartBody;
 
@@ -98,6 +99,27 @@ public static class RequestPlanning
         }
 
         return new EffectiveRequest(url.ToString(), headers, auth, warnings);
+    }
+
+    /// <summary>
+    /// The request with its body taken off when the method does not send one.
+    /// The engine and the code generator both start here, so neither sends,
+    /// validates, signs, or writes out a body the other would leave behind.
+    /// </summary>
+    public static HttpRequest WithoutUnsentBody(HttpRequest request, List<string> warnings)
+    {
+        if (request.Method.SendsBody() || request.Body is NoBody)
+        {
+            return request;
+        }
+
+        if (!request.Body.IsEmpty)
+        {
+            warnings.Add($"{request.Method.AsString()} requests are sent without a body, so the Body tab was ignored.");
+        }
+        var stripped = request.Clone();
+        stripped.Body = new NoBody();
+        return stripped;
     }
 
     /// <summary>

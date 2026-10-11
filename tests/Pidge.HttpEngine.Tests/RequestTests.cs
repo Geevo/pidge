@@ -178,6 +178,46 @@ public class RequestTests
     }
 
     [Fact]
+    public async Task AGetLeavesItsBodyBehindAndSaysSo()
+    {
+        await using var server = await LocalServer.StartAsync();
+        var request = HttpRequest.Get(server.Url("/echo"));
+        request.Body = new JsonBody { Text = """{"name":"ada"}""" };
+
+        var response = await SendAsync(request);
+        var echoed = BodyJson(response.Body);
+
+        Assert.Equal("GET", Text(echoed, "method"));
+        Assert.Equal("", Text(echoed, "body"));
+        Assert.Null(Text(echoed, "contentType"));
+        Assert.Contains("without a body", Assert.Single(response.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AGetIsNotRefusedOverJsonItWillNotSend()
+    {
+        await using var server = await LocalServer.StartAsync();
+        var request = HttpRequest.Get(server.Url("/echo"));
+        request.Body = new JsonBody { Text = "{ not json" };
+
+        Assert.Equal(200, (await SendAsync(request)).Status);
+    }
+
+    [Fact]
+    public async Task ADeleteStillCarriesItsBody()
+    {
+        await using var server = await LocalServer.StartAsync();
+        var request = HttpRequest.Get(server.Url("/echo"));
+        request.Method = RequestMethod.Delete;
+        request.Body = new TextBody { Text = "id=7" };
+
+        var response = await SendAsync(request);
+
+        Assert.Equal("id=7", Text(BodyJson(response.Body), "body"));
+        Assert.Empty(response.Warnings);
+    }
+
+    [Fact]
     public async Task AnExplicitContentTypeIsNotOverwritten()
     {
         await using var server = await LocalServer.StartAsync();

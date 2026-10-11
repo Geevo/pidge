@@ -183,6 +183,25 @@ public class GenerateTests
     }
 
     /// <summary>
+    /// A GET goes out without its body, from the Send button and from every
+    /// snippet alike.
+    /// </summary>
+    [Fact]
+    public void AGetLeavesItsBodyOut()
+    {
+        var request = Get("https://example.com/");
+        request.Body = new JsonBody { Text = "{\"marker\": 1}" };
+
+        foreach (var (target, code) in Everywhere(request))
+        {
+            Assert.False(code.Contains("marker", StringComparison.Ordinal), $"{target} kept the body:\n{code}");
+            Assert.False(
+                code.Contains("application/json", StringComparison.Ordinal),
+                $"{target} kept the content type:\n{code}");
+        }
+    }
+
+    /// <summary>
     /// A form body is encoded once, here, the way the engine encodes it — so the
     /// bytes in the snippet are the bytes on the wire.
     /// </summary>
