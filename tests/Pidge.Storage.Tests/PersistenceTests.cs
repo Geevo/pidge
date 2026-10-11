@@ -58,8 +58,12 @@ public class PersistenceTests
         Assert.NotNull(JsonNode.Parse(raw));
     }
 
+    /// <summary>
+    /// Pinned key for key, because state files written by 0.x installs have to
+    /// keep loading, and a downgrade has to read what this build writes.
+    /// </summary>
     [Fact]
-    public void TheStateFileIsLaidOutTheWaySerdeWritesIt()
+    public void TheStateFileLayoutDoesNotDrift()
     {
         using var dir = new TempDir();
         var store = Store.InDir(dir.Path);
